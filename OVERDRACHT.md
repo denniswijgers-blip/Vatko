@@ -42,7 +42,7 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 
 ## Waar we staan
 
-Stap **6 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
+Stap **7 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 14:
 
 | | Stap | Status |
 |---|---|---|
@@ -52,12 +52,26 @@ Stap **6 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
 | 4 | Metingen en afwijkingen | ✅ |
 | 5 | Uitgaand: reserveren, picken, manco | ✅ |
 | 6 | Zelfcontrole en optimalisatie | ✅ |
-| 7 | Import van klantbestanden | ← nu |
-| 8 | Schermen en scanmodus | |
+| 7 | Import van klantbestanden | ✅ |
+| 8 | Schermen en scanmodus | ← nu |
 | 9 | Inloggen, rollen, back-up, server | |
 
-Alles groen: **175 Python-tests** en **167 SQL-controles**, plus twee tests met
+Alles groen: **243 Python-tests** en **198 SQL-controles**, plus twee tests met
 twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren).
+
+**Wat stap 7 opleverde.** De import zit in `server/vakto/inlezen.py` (lezen, kolommen
+raden, eenheid raden, controleren) en `server/import.sql` (overnemen, in één transactie).
+De drie rommelige oefenbestanden uit `verkoop/voorbeeldbestanden/` geven op de server
+exact hetzelfde rapport als in de browserversie — dat is waar deze stap op afgerekend
+werd, en het lukte in één keer.
+
+De specificatie had geen hoofdstuk over import, terwijl er wel degelijk rekenregels in
+zitten. Dat is nu **hoofdstuk 11 (R-IMP-01 t/m R-IMP-07)**; Instellingen, Testgevallen en
+Volgorde zijn daardoor 12, 13 en 14 geworden. Eén regel is er nieuw bij: een import is een
+nulmeting en weigert zodra er al een journaal staat.
+
+Ook gedaan: **stap 3 van de herindeling**. `import.js` (667 regels) is gesplitst in zeven
+bestanden, op de kopbalken die er zelf al in stonden.
 
 **Wat stap 6 opleverde.** Hoofdstuk 9 en 10 zijn bijna helemaal rekenwerk, dus die staan
 in Python: `server/vakto/zelfcontrole.py` (meldingen beoordelen, taken laten vervallen) en
@@ -77,19 +91,17 @@ niet in Python: ze vergrendelen rijen en boeken voorraad, dus geldt R-BOEK-03 ne
 als bij `boek()`. Python heeft wat er zonder database moet gelden — de looproute, de
 statusreeks en het inpakken — in `server/vakto/uitgaand.py`.
 
-**Herindeling:** stap 0 t/m 2 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
-één projectmap, `router.js` opgesplitst). Stap 3 (`import.js`) en stap 4 (de schermen
-hernoemen) staan bewust nog open: die betalen zich pas terug vlak vóór stap 8, als je
-de serverschermen bouwt met de browserversie ernaast.
+**Herindeling:** stap 0 t/m 3 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
+één projectmap, `router.js` en `import.js` opgesplitst). Stap 4 — de zeven `ui`-bestanden
+hernoemen — is nu aan de beurt: die betaalt zich terug vlak vóór stap 8, als je de
+serverschermen bouwt met de browserversie ernaast.
 
 Bij stap 4 moet er nog één keuze gemaakt worden: je krijgt dan
 `2-logica/uitgaand.js` én `4-schermen/uitgaand.js`. Verschillende mappen, dus het
 werkt — maar verwarrend in een foutmelding. Noem het scherm `uitgaand-scherm.js`, of
 de logica `orders.js`.
 
-Stap 3 van de herindeling gaat over `import.js`, en dat is precies waar stap 7 van de
-serverversie over gaat. Het is dus het moment om ze samen te doen: eerst `import.js`
-opsplitsen, dan de serverkant ernaast bouwen.
+Dat is nu het laatste stuk herindeling dat nog openstaat, en het hoort bij stap 8.
 
 ---
 
@@ -120,13 +132,13 @@ Deze gelden zonder dat ze elke keer opnieuw gezegd hoeven te worden.
 Vakto/
 ├── OVERDRACHT.md          dit bestand
 ├── server/                het product — Python + PostgreSQL
-│   ├── vakto/             de rekenkern, twaalf modules
+│   ├── vakto/             de rekenkern, dertien modules
 │   ├── tests/  tests-sql/
 │   └── *.sql  opzetten.sh
 ├── demo/                  de browserversie
 │   ├── bron/1-kern/       passen, voorstellen, grafieken
 │   │      2-logica/       boeken, meten, uitgaand, optimaliseren, scannen
-│   │      3-import/       klantbestanden inlezen
+│   │      3-import/       klantbestanden inlezen — zeven bestanden
 │   │      4-schermen/     ui.js t/m ui7.js — nog te hernoemen (stap 4)
 │   │      5-schil/        menu, tekenen, klikken, toetsen, bovenbalk
 │   ├── test/              browsertests + testbestanden
@@ -154,6 +166,7 @@ psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_import.sql
 bash tests-sql/test_gelijktijdig.sh
 bash tests-sql/test_gelijktijdig_reserveren.sh
 
@@ -187,7 +200,7 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Links
 
-- Specificatie (v1.5): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.6): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133
@@ -196,11 +209,11 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Een nieuw gesprek beginnen
 
-Stuur dit bestand mee plus de map waar je aan werkt (`server/` voor stap 7, `demo/`
-als het over de browserversie gaat). Niet allebei tegelijk: dat is de helft duurder
+Stuur dit bestand mee plus de map waar je aan werkt. Voor stap 8 heb je ze
+uitzonderlijk allebei nodig: je bouwt de serverschermen met de browserversie ernaast. Niet allebei tegelijk: dat is de helft duurder
 en meestal niet nodig.
 
 Openingszin die werkt:
 
 > Dit is mijn WMS-project Vakto. In OVERDRACHT.md staat waar we zijn en welke
-> afspraken gelden. Ik wil verder met stap 7 (import van klantbestanden).
+> afspraken gelden. Ik wil verder met stap 8 (schermen en scanmodus).

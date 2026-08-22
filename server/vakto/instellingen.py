@@ -8,7 +8,7 @@ rekenkern testbaar zonder PostgreSQL.
 from __future__ import annotations
 from typing import Mapping
 
-# De standaardwaarden. Gelijk aan hoofdstuk 11 van de specificatie en aan
+# De standaardwaarden. Gelijk aan hoofdstuk 12 van de specificatie en aan
 # seed_config.sql — die twee moeten altijd hetzelfde zeggen.
 STANDAARD: dict[str, str] = {
     "putaway.fill_factor":          "0.85",

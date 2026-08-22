@@ -81,7 +81,8 @@ fi
 
 # ---------------------------------------------------------------- schema
 kop "4. Schema en configuratie"
-for bestand in schema.sql seed_config.sql boeken.sql meten.sql uitgaand.sql zelfcontrole.sql; do
+for bestand in schema.sql seed_config.sql boeken.sql meten.sql uitgaand.sql zelfcontrole.sql \
+                import.sql; do
   [ -f "$bestand" ] || stop "Bestand $bestand ontbreekt. Zit je wel in de juiste map?"
   if P -d "$DB" -v ON_ERROR_STOP=1 -q -f "$bestand" >/tmp/vakto_sql.log 2>&1; then
     ok "$bestand geladen"
@@ -111,7 +112,8 @@ fi
 kop "6. Tests tegen de database"
 : > /tmp/vakto_db.log
 for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql \
-         tests-sql/test_uitgaand.sql tests-sql/test_zelfcontrole.sql; do
+         tests-sql/test_uitgaand.sql tests-sql/test_zelfcontrole.sql \
+         tests-sql/test_import.sql; do
   if P -d "$DB" -v ON_ERROR_STOP=1 -f "$t" >>/tmp/vakto_db.log 2>&1; then
     :
   else
@@ -119,7 +121,7 @@ for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql \
   fi
 done
 GOED=$(grep -c 'OK ' /tmp/vakto_db.log)
-ok "$GOED controles geslaagd (boeken, meten, uitgaand, zelfcontrole, checks, views)"
+ok "$GOED controles geslaagd (boeken, meten, uitgaand, zelfcontrole, import, views)"
 
 kop "7. Twee mensen tegelijk"
 if PSQL="$PSQL -U $GEBRUIKER" PGDATABASE="$DB" bash tests-sql/test_gelijktijdig.sh >/tmp/vakto_glt.log 2>&1; then
@@ -148,6 +150,8 @@ cat <<KLAAR
       verzenden — met de vergrendeling die dubbel verkopen tegenhoudt
     - een zelfcontrole die zijn eigen werk aanmaakt, zijn eigen taken
       laat vervallen en zijn eigen meldingen sluit
+    - een import die de rommelige bestanden van een klant inleest en
+      eerst laat zien wat eruit komt
 
   Rondkijken in de database:
       $PSQL -U $GEBRUIKER -d $DB

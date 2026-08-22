@@ -1,6 +1,6 @@
 -- =====================================================================
 --  Testgevallen die alleen in de database te bewijzen zijn.
---  T-13 uit hoofdstuk 12, plus de checks uit het schema.
+--  T-13 uit hoofdstuk 13, plus de checks uit het schema.
 --
 --  Draaien:  psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 --  Alles wat het doet wordt aan het eind teruggedraaid.

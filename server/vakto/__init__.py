@@ -22,6 +22,13 @@ from .uitgaand import (Order, Orderregel, Pickregel, Inpak,
                        ORDERSTATUS, STATUSNAAM, OVERGANGEN, mag_naar,
                        open_status, looproute_seq, vak_positie,
                        inpakgegevens, teltaak_reden)
+from .inlezen import (Bestand, Leesfout, Eenheden, Standaard, Rapport,
+                      Probleem, Locatieregel, Artikelregel, Voorraadregel as
+                      ImportVoorraadregel, Plek, VELDEN, getal,
+                      lees_bestand, raad_scheiding, herken_kolommen,
+                      ontbrekende_velden, raad_maat, raad_gewicht,
+                      raad_eenheden, controleer, ontleed_code,
+                      soort_naar_type, plat)
 from .optimalisatie import (Pick, Advies, Pickplek, Bijwerking, snelheden,
                             ruimte_voor, bulkbron, aanvultaken,
                             samenvoegtaken, telplan, drempeladvies,
@@ -34,7 +41,7 @@ from .opslag import (boek, Boekfout, laad_magazijn, laad_instellingen,
                      pak_in, verzend, laad_order, orderregels, picklijst,
                      laad_taken, laad_ordervraag, laad_picks, werklijst,
                      draai_zelfcontrole, schrijf_uitkomst, voer_taak_uit,
-                     tel_locatie, QUERIES)
+                     tel_locatie, neem_over, QUERIES)
 
 __all__ = [
     "Instellingen", "STANDAARD",
@@ -46,6 +53,11 @@ __all__ = [
     "Maat", "Meting", "Afwijking", "Knelpunt", "Melding",
     "bepaal_afwijking", "gevolgen", "gevolg_tekst", "leg_meting_vast",
     "te_meten", "GEEN_GEVOLGEN",
+    "Bestand", "Leesfout", "Eenheden", "Standaard", "Rapport", "Probleem",
+    "Locatieregel", "Artikelregel", "ImportVoorraadregel", "Plek", "VELDEN",
+    "getal", "lees_bestand", "raad_scheiding", "herken_kolommen",
+    "ontbrekende_velden", "raad_maat", "raad_gewicht", "raad_eenheden",
+    "controleer", "ontleed_code", "soort_naar_type", "plat",
     "Pick", "Advies", "Pickplek", "Bijwerking", "snelheden", "ruimte_voor",
     "bulkbron", "aanvultaken", "samenvoegtaken", "telplan", "drempeladvies",
     "pickplekvoorstellen",
@@ -61,5 +73,6 @@ __all__ = [
     "laad_order", "orderregels", "picklijst",
     "laad_taken", "laad_ordervraag", "laad_picks", "werklijst",
     "draai_zelfcontrole", "schrijf_uitkomst", "voer_taak_uit", "tel_locatie",
+    "neem_over",
     "QUERIES",
 ]

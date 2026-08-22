@@ -172,11 +172,11 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.5</span>
+    <span><b>Versie</b> 1.6</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
-    <span><b>Regels</b> 42</span>
-    <span><b>Testgevallen</b> 21</span>
+    <span><b>Regels</b> 49</span>
+    <span><b>Testgevallen</b> 26</span>
   </div>
 </header>
 
@@ -192,9 +192,10 @@ html{scroll-behavior:smooth}
   <a href="#uitgaand"><i>8</i>Uitgaand</a>
   <a href="#zelf"><i>9</i>Zelfcontrole</a>
   <a href="#opt"><i>10</i>Optimalisatie</a>
-  <a href="#inst"><i>11</i>Instellingen</a>
-  <a href="#test"><i>12</i>Testgevallen</a>
-  <a href="#volgorde"><i>13</i>Volgorde</a>
+  <a href="#imp"><i>11</i>Import</a>
+  <a href="#inst"><i>12</i>Instellingen</a>
+  <a href="#test"><i>13</i>Testgevallen</a>
+  <a href="#volgorde"><i>14</i>Volgorde</a>
 </nav>
 
 <main>
@@ -293,7 +294,7 @@ html{scroll-behavior:smooth}
             een tekort bij reserveren (R-UIT-02), een melding die vanzelf sluit (R-ZC-01).</td></tr>
       <tr><td class="mono"><strong>setting</strong></td>
         <td>sleutel, waarde, groep, uitleg</td>
-        <td>Alles uit hoofdstuk 11 staat hier. Waarde altijd als tekst opslaan, bij lezen omzetten.</td></tr>
+        <td>Alles uit hoofdstuk 12 staat hier. Waarde altijd als tekst opslaan, bij lezen omzetten.</td></tr>
     </tbody>
   </table></div>
 
@@ -832,8 +833,121 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
 </section>
 
 <!-- ============================================================ -->
+<section id="imp">
+  <h2><span class="nr">11</span> Import</h2>
+  <p class="inleiding">Het verschil tussen "kijk eens wat een mooie demo" en "kijk, dit is
+  jouw magazijn". Niemand levert een bestand aan met de kolomnamen die jij wilt, in de
+  eenheid die jij wilt, zonder gaten. Dus raden we, en laten we zien wat we geraden hebben
+  &mdash; want raden zonder tonen is precies hoe imports stilletjes fout gaan.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-01</span>
+    <span class="rtitel">Bestand lezen</span></div>
+    <p>CSV of xlsx. Bij CSV wordt het scheidingsteken geraden op de kopregel: de kandidaat
+    (<code>;</code> <code>,</code> tab <code>|</code>) die er buiten aanhalingstekens het
+    vaakst in staat wint. Een Nederlandse Excel-export gebruikt de puntkomma, een Engelse
+    de komma; fout raden geeft &eacute;&eacute;n kolom met alles erin, en dat is waar
+    mensen op vastlopen.</p>
+    <p>Een BOM aan het begin gaat eraf. De eerste regel is de kopregel; een lege kop wordt
+    <code>kolom&nbsp;<i>n</i></code>. Rijen die helemaal leeg zijn tellen niet mee. Minder
+    dan twee regels is geen bestand maar een kop.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-02</span>
+    <span class="rtitel">Kolommen herkennen</span></div>
+<pre>voor elke kopnaam, plat geslagen (kleine letters, alleen a-z en 0-9):
+    exact gelijk aan een synoniem       &rarr; 100 punten
+    begint ermee, synoniem &ge; 3 tekens  &rarr;  70 punten
+    bevat het,   synoniem &ge; 4 tekens  &rarr;  55 punten
+hoogste punten eerst; elk veld en elke kolom mag maar &eacute;&eacute;n keer</pre>
+    <p>Dat laatste is de hele truc: zonder die twee-keer-niet komt bij een bestand met
+    "Lengte" en "Lengte verpakking" allebei op hetzelfde veld terecht en verliest er
+    &eacute;&eacute;n stilletjes.</p>
+    <p>Verplicht zijn: <code>code</code> bij locaties, <code>sku</code> bij artikelen, en
+    <code>sku</code> + <code>locatie</code> + <code>qty</code> bij voorraad. De rest mag
+    ontbreken. De uitkomst wordt altijd getoond en is altijd met de hand te corrigeren.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-03</span>
+    <span class="rtitel">Eenheid raden &mdash; per soort anders</span></div>
+<pre>locaties, op de mediaan:      artikelen, op de hoogste waarden:
+    &lt; 3      &rarr; meter            p90 &lt; 3    &rarr; meter
+    &lt; 200    &rarr; centimeter       max &gt; 400 &rarr; millimeter
+    anders   &rarr; millimeter       max &le; 100 &rarr; centimeter
+                                  anders    &rarr; millimeter</pre>
+    <p>Dezelfde regel voor allebei gaat gegarandeerd een keer mis. Een stellingvak van 40
+    is altijd centimeters &mdash; 40 mm diep bestaat niet &mdash; maar een artikel van 40
+    is bijna altijd millimeters. En dan staan er pallets in een bakkenstelling.</p>
+    <p>Gewicht net zo: bij locaties is het kilo tenzij de hoogste waarde boven 20.000 ligt,
+    bij artikelen gram tenzij alles klein is (hoogste onder 2.000 en mediaan onder 300).</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-04</span>
+    <span class="rtitel">Getallen uit een cel</span></div>
+    <p>Alles wat geen cijfer, komma, punt of minteken is gaat eraf &mdash; "12,5 kg" is
+    12,5. Staan er een komma &eacute;n een punt in, dan is de laatste van de twee het
+    decimaalteken en is de andere een duizendtalscheiding. Staat er alleen een komma, dan
+    is dat het decimaalteken. Wat er daarna niet als getal uitkomt, is leeg.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-05</span>
+    <span class="rtitel">Het rapport is belangrijker dan de import</span></div>
+    <p>Per soort bestand: hoeveel rijen gelezen, hoeveel bruikbaar, en welke problemen
+    &mdash; met een teller en hoogstens drie voorbeelden per probleem. Twee ernstgraden:
+    <b>fout</b> (de rij gaat niet mee) en <b>let op</b> (de rij gaat wel mee, maar met een
+    gat).</p>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Wat</th><th>Ernst</th><th>Gevolg</th></tr></thead>
+      <tbody>
+      <tr><td>rij zonder locatiecode of artikelnummer</td><td>fout</td>
+          <td>overgeslagen</td></tr>
+      <tr><td>code of artikelnummer komt twee keer voor</td><td>fout</td>
+          <td>alleen de eerste telt</td></tr>
+      <tr><td>locatie zonder afmeting of zonder draagvermogen</td><td>let op</td>
+          <td>krijgt de standaardmaat, en wordt gemarkeerd als geschat</td></tr>
+      <tr><td>artikel zonder complete maat &eacute;n gewicht</td><td>let op</td>
+          <td>komt op de meetlijst (R-MEET-04)</td></tr>
+      <tr><td>voorraad op een onbekend artikel of onbekende locatie</td><td>fout</td>
+          <td>overgeslagen</td></tr>
+      <tr><td>voorraadregel met nul of geen aantal</td><td>let op</td>
+          <td>overgeslagen</td></tr>
+      </tbody>
+    </table></div>
+    <p>Een klant die ziet dat er 167 artikelen zonder maat zijn, snapt meteen waarom de
+    eerste week meten is. Een import die stilletjes doorgaat, wreekt zich later.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-06</span>
+    <span class="rtitel">Looproute uit de locatiecode</span></div>
+<pre>splits op - _ . / of spatie
+&ge; 3 delen en de laatste twee bevatten een getal:
+    niveau = laatste getal,  vak = een-na-laatste
+    gang   = het getal ervoor, of de letter (A=1, B=2, ...)
+anders: gang 1, vak = volgnummer + 1, niveau 1</pre>
+    <p>Daarna gewoon R-UIT-03. Werkt op <code>01-02-3</code>, <code>A.12.4</code> en
+    <code>1/14/2</code>. Lukt het niet, dan is de volgorde in het bestand de looproute
+    &mdash; dat is nog altijd beter dan willekeurig.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-07</span>
+    <span class="rtitel">Overnemen</span></div>
+    <p>Zones en artikelgroepen ontstaan uit wat er in het bestand staat; een lege zone
+    heet "Magazijn", een lege groep "Overig". Hoofdletters maken geen tweede zone:
+    EXPEDITIE en Expeditie zijn dezelfde.</p>
+    <p>De soort locatie volgt uit de tekst in het bestand &eacute;n uit de code:
+    ontvangst, keuring, schade en expeditie worden herkend aan hun woorden, bulk aan
+    "bulk", "pallet", "reserve" of "stelling", en de rest wordt picklocatie. Ontbreekt
+    &eacute;&eacute;n van de vier doorloopplekken helemaal, dan wordt hij aangemaakt
+    &mdash; zonder ontvangstlocatie kun je niets ontvangen.</p>
+    <p>Een aangeleverde maat is een <b>meting met bron <code>SUPPLIER</code></b> en geen
+    veld op het artikel (R-AFG-01, R-MEET-04). Zo staat er vanaf dag &eacute;&eacute;n dat
+    het een opgave is en geen weging, en komt het artikel vanzelf op de meetlijst.</p>
+    <p>Beginvoorraad is een mutatie als elke andere: elke regel krijgt een
+    <code>IMPORT</code>-journaalregel (R-BASIS-01). Twee regels voor dezelfde combinatie
+    van artikel en locatie worden opgeteld.</p>
+    <p><b>Een import is een nulmeting en geen bijwerking.</b> Staat er al een journaal,
+    dan weigert hij. Anders overschrijf je een draaiend magazijn met een bestand van
+    vorige week, en dat merk je pas als de picker voor een leeg vak staat. Wil je toch
+    opnieuw beginnen, dan gooi je de database eerst leeg &mdash; dat is een besluit dat
+    iemand met zijn handen moet nemen.</p></div>
+</section>
+
+<!-- ============================================================ -->
 <section id="inst">
-  <h2><span class="nr">11</span> Instellingen</h2>
+  <h2><span class="nr">12</span> Instellingen</h2>
   <p class="inleiding">Alles wat per klant verschilt. Deze tabel is het antwoord op "ja
   maar bij ons gaat dat anders" &mdash; en de reden dat dat antwoord geen programmeerwerk is.</p>
 
@@ -874,7 +988,7 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
 
 <!-- ============================================================ -->
 <section id="test">
-  <h2><span class="nr">12</span> Testgevallen</h2>
+  <h2><span class="nr">13</span> Testgevallen</h2>
   <p class="inleiding">Dit is het belangrijkste hoofdstuk. Alle waarden hieronder komen uit
   de draaiende browserversie. Geeft je Python-versie dezelfde antwoorden, dan is de kern
   correct overgezet &mdash; en dat weet je dan zeker in plaats van dat je het hoopt.</p>
@@ -1049,11 +1163,52 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
         journaalregel. Slagen ze allebei, dan ontbreekt de rijvergrendeling</td></tr>
     </tbody>
   </table></div>
+
+  <h3>Import (R-IMP)</h3>
+  <p>De drie oefenbestanden uit <code>verkoop/voorbeeldbestanden/</code>. Daar zit met
+  opzet van alles fout in, precies zoals je het bij een klant aantreft: locaties in
+  centimeters, artikelen in een Engelstalig Excel-bestand, gaten in de maten, voorraad op
+  artikelen die niet bestaan, en een puntkomma in het ene bestand tegen een komma in het
+  andere. <b>Dezelfde bestanden horen hetzelfde rapport te geven</b> &mdash; dat is waar
+  stap 7 op afgerekend wordt.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Bestand</th><th>Wat het test</th><th>Verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-34</td>
+        <td>locaties (CSV, puntkomma, centimeters)</td>
+        <td>scheidingsteken, eenheid raden, kolommen herkennen</td>
+        <td>398 rijen, 398 bruikbaar; 7 van 7 kolommen; eenheid <code>cm</code> /
+            <code>kg</code>; 53&times; geen maat, 53&times; geen draagvermogen</td></tr>
+      <tr><td class="mono">T-35</td>
+        <td>artikelen (xlsx, Engelse kopnamen)</td>
+        <td>xlsx uitpakken, Engelse synoniemen, eenheid raden</td>
+        <td>900 rijen, 900 bruikbaar; 9 van 10 kolommen; eenheid <code>mm</code> /
+            <code>g</code>; 167&times; niet gemeten</td></tr>
+      <tr><td class="mono">T-36</td>
+        <td>voorraad (CSV, komma)</td>
+        <td>verwijzingen controleren</td>
+        <td>762 rijen, 759 bruikbaar; 1&times; onbekend artikel, 1&times; onbekende
+            locatie, 1&times; nul</td></tr>
+      <tr><td class="mono">T-37</td>
+        <td>alle drie, overnemen</td>
+        <td>zones, groepen, doorloopplekken, journaal</td>
+        <td>400 locaties (398 + de twee doorloopplekken die ontbraken), 900 artikelen,
+            4 zones, 5 artikelgroepen, 759 voorraadregels en 759
+            <code>IMPORT</code>-journaalregels</td></tr>
+      <tr><td class="mono">T-38</td>
+        <td>hetzelfde bestand twee keer</td>
+        <td>R-IMP-05, dubbele codes</td>
+        <td>De tweede regel telt niet mee en staat als <b>fout</b> in het rapport</td></tr>
+    </tbody>
+  </table></div>
+  <p class="let"><b>T-37 is het testgeval dat de verkoop draagt.</b> Een klant die zijn
+  eigen artikelnummers op zijn eigen locaties terugziet, met de eerste week meetwerk er al
+  bij opgeschreven, hoeft niets meer voorgesteld te krijgen.</p>
 </section>
 
 <!-- ============================================================ -->
 <section id="volgorde">
-  <h2><span class="nr">13</span> Volgorde van overzetten</h2>
+  <h2><span class="nr">14</span> Volgorde van overzetten</h2>
   <p class="inleiding">Deze volgorde is niet willekeurig: elke stap is testbaar voordat de
   volgende begint. Wie halverwege aan schermen begint, kan niets meer bewijzen.</p>
 
@@ -1074,7 +1229,8 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
       <tr><td class="num mono">6</td><td>Zelfcontrole en optimalisatie (9 en 10)</td>
         <td>T-16 en T-17 groen <span class="pil g">gedaan</span></td><td class="num">4 avonden</td></tr>
       <tr><td class="num mono">7</td><td>Import van klantbestanden</td>
-        <td>Dezelfde oefenbestanden geven hetzelfde rapport</td><td class="num">3 avonden</td></tr>
+        <td>Dezelfde oefenbestanden geven hetzelfde rapport
+        <span class="pil g">gedaan</span></td><td class="num">3 avonden</td></tr>
       <tr><td class="num mono">8</td><td>Schermen en scanmodus</td>
         <td>Een werkdag is van begin tot eind na te spelen: T-18</td><td class="num">6 avonden</td></tr>
       <tr><td class="num mono">9</td><td>Inloggen, rollen, back-up, server</td>
@@ -1093,6 +1249,15 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.6</strong> &mdash; stap 7 gebouwd en getest, en er is een hoofdstuk
+  bij gekomen. De import stond nergens beschreven terwijl er wel degelijk rekenregels in
+  zitten &mdash; eenheden raden, kolommen herkennen, een looproute uit een locatiecode
+  halen. Dat is nu hoofdstuk 11 (R-IMP-01 t/m R-IMP-07); Instellingen, Testgevallen en
+  Volgorde zijn daardoor 12, 13 en 14 geworden. Nieuw is de regel dat een import een
+  <b>nulmeting</b> is: staat er al een journaal, dan weigert hij. En T-34 t/m T-38 leggen
+  vast wat de drie oefenbestanden horen op te leveren, tot op de laatste teller. De
+  serverversie haalde die getallen in &eacute;&eacute;n keer, wat betekent dat de twee
+  versies hetzelfde zeggen over hetzelfde klantbestand.<br><br>
   <strong>Versie 1.5</strong> &mdash; stap 6 gebouwd en getest. Hoofdstuk 9 en 10 zijn
   bijna helemaal rekenwerk en staan dus in Python; de database schrijft alleen weg en
   voert taken uit &mdash; dat laatste is een voorraadmutatie en gaat door
@@ -1129,8 +1294,8 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
   eigen voorraad niet af van de stapelcapaciteit (R-INS-02, T-19), en aanvultaken keken
   helemaal niet of het paste (R-ZC-04). Allebei gerepareerd in beide versies.<br><br>
   Geschreven op basis van de werkende browserversie van augustus 2026. Alle getallen in
-  hoofdstuk 12 zijn uit die versie afgelezen, niet uit het hoofd opgeschreven. Schattingen in
-  hoofdstuk 13 gaan uit van avonden van twee à drie uur naast een volledige baan, met de
+  hoofdstuk 13 zijn uit die versie afgelezen, niet uit het hoofd opgeschreven. Schattingen in
+  hoofdstuk 14 gaan uit van avonden van twee à drie uur naast een volledige baan, met de
   leercurve erin verwerkt.
 </footer>
 

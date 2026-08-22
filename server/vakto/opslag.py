@@ -19,6 +19,7 @@ Python, dan geldt hij alleen zolang iedereen die route gebruikt.
 """
 
 from __future__ import annotations
+import json
 from typing import Any, Protocol
 
 from datetime import datetime
@@ -29,6 +30,7 @@ from .meten import Melding
 from .optimalisatie import Pick
 from .uitgaand import Inpak, Order, Orderregel, Pickregel
 from .zelfcontrole import Uitkomst
+from . import inlezen as _inlezen
 from . import meten as _meten
 from . import uitgaand as _uitgaand
 from . import zelfcontrole as _zelfcontrole
@@ -235,6 +237,11 @@ QUERIES: dict[str, str] = {
 
     "log": """
         SELECT vakto_log(%s, %s, %s, %s)
+    """,
+
+    # R-IMP-07. Het hele rapport in één aanroep: alles of niets.
+    "import": """
+        SELECT vakto_import(%s::jsonb, %s::jsonb, %s::jsonb, %s)
     """,
 
     # R-BASIS-07. Nooit een lijst zonder limiet.
@@ -681,3 +688,60 @@ def tel_locatie(verbinding: Verbinding, location_id: int, product_id: int,
 def werklijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
     """Openstaand werk, op prioriteit en daarna op looproute."""
     return _rijen(verbinding, "werklijst", (limiet,))
+
+
+# ---------------------------------------------------------------------
+#  Import (R-IMP)
+#
+#  Het lezen, raden en controleren gebeurt in inlezen.py en raakt geen
+#  database aan. Hier wordt een gecontroleerd rapport omgezet in rijen —
+#  in één aanroep, dus in één transactie. Een import die halverwege
+#  stukloopt laat je achter met locaties zonder artikelen.
+# ---------------------------------------------------------------------
+def neem_over(verbinding: Verbinding, rapport, gebruiker: str | None = None,
+              inst=None) -> dict:
+    """R-IMP-06 en R-IMP-07. Geeft de tellingen terug die de database maakte.
+
+    De looproute wordt hier uitgerekend en niet in SQL: `ontleed_code`
+    en `looproute_seq` zijn rekenregels (R-IMP-06, R-UIT-03) en horen
+    zonder database te kunnen draaien.
+    """
+    if not rapport.klaar:
+        raise Boekfout(
+            "Zonder bruikbare locaties valt er niets over te nemen. "
+            "Kijk eerst het locatiebestand na.")
+
+    locaties = []
+    for volgnr, regel in enumerate(rapport.loc_regels.values()):
+        plek = _inlezen.ontleed_code(regel.code, volgnr)
+        locaties.append({
+            "code": regel.code, "zone": regel.zone,
+            "type_id": _inlezen.soort_naar_type(regel.soort, regel.code),
+            "gang": plek.gang, "vak": plek.vak, "niveau": plek.niveau,
+            "seq": _uitgaand.looproute_seq(plek.gang, plek.vak, plek.niveau),
+            "l_mm": regel.l_mm, "w_mm": regel.w_mm, "h_mm": regel.h_mm,
+            "max_g": regel.max_g})
+
+    artikelen = [{
+        "sku": a.sku, "oms": a.oms, "groep": a.groep,
+        "l_mm": a.l_mm, "w_mm": a.w_mm, "h_mm": a.h_mm, "g": a.g,
+        "barcode": a.barcode, "min_qty": a.min_qty, "max_qty": a.max_qty}
+        for a in rapport.art_regels.values()]
+
+    voorraad = [{"sku": v.sku, "locatie": v.locatie, "qty": v.qty}
+                for v in rapport.vrd_regels]
+
+    try:
+        with verbinding.cursor() as cur:
+            cur.execute(QUERIES["import"],
+                        (json.dumps(locaties), json.dumps(artikelen),
+                         json.dumps(voorraad), gebruiker))
+            rij = cur.fetchone()
+    except Boekfout:
+        raise
+    except Exception as e:
+        tekst = str(e).strip().splitlines()[0] if str(e).strip() else str(e)
+        raise Boekfout(tekst) from e
+
+    uit = rij[0] if rij else {}
+    return json.loads(uit) if isinstance(uit, str) else uit

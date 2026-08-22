@@ -1,14 +1,15 @@
-# Vakto — serverversie, stap 1 tot en met 6
+# Vakto — serverversie, stap 1 tot en met 7
 
 Dit is het begin van de echte versie. Er zitten nog geen schermen in.
 Wat er wel in zit: het **databaseschema**, de **rekenkern**, het
 **boeken** met een echte transactie en rijvergrendeling, de **metingen**
 als tijdlijn, en de hele **uitgaande stroom** — reserveren, picken,
 manco, inpakken, verzenden — en de **zelfcontrole** die zijn eigen werk
-aanmaakt en zijn eigen meldingen sluit. Met de testgevallen uit de
+aanmaakt en zijn eigen meldingen sluit, en de **import** die de
+rommelige bestanden van een klant inleest. Met de testgevallen uit de
 specificatie erbij.
 
-De rest van de stappen staat in hoofdstuk 13 van *De rekenkern,
+De rest van de stappen staat in hoofdstuk 14 van *De rekenkern,
 uitgeschreven*.
 
 ---
@@ -73,7 +74,7 @@ En dan:
 |---|---|
 | `\dt` | alle tabellen |
 | `\d stock` | hoe de voorraadtabel eruitziet |
-| `SELECT * FROM setting;` | alle instellingen uit hoofdstuk 11 |
+| `SELECT * FROM setting;` | alle instellingen uit hoofdstuk 12 |
 | `SELECT * FROM v_location_size;` | de maatklasse per locatie, berekend |
 | `\q` | stoppen |
 
@@ -128,6 +129,8 @@ uitgaand.sql        Reserveren, vrijgeven, picken, manco, inpakken, verzenden
                     (R-UIT). Plus de picklijst v_picklijst, op looproute.
 zelfcontrole.sql    Taken klaarzetten, laten vervallen en uitvoeren, en
                     tellen (R-ZC, R-OPT). Plus v_werklijst en v_ordervraag.
+import.sql          Een gecontroleerd rapport overnemen (R-IMP), in één
+                    transactie. Plus vakto_zone en vakto_artikelgroep.
 
 vakto/
   getallen.py       Afronden zoals JavaScript het doet. Lees de uitleg.
@@ -138,12 +141,13 @@ vakto/
   voorstel.py       Waar moet dit heen? (R-INS)
   meten.py          Afwijkende maten en wat ze betekenen (R-MEET).
   uitgaand.py       Looproute, statusreeks en inpakken (R-UIT-03, 06, 07).
+  inlezen.py        Klantbestanden lezen, raden en controleren (R-IMP).
   zelfcontrole.py   Meldingen beoordelen, taken laten vervallen (R-ZC).
   optimalisatie.py  Samenvoegen, aanvullen, telplan, adviezen (R-OPT).
   opslag.py         De vertaallaag: database -> objecten -> rekenkern.
 
 tests/              T-01 t/m T-31 plus de vertaallaag. Draaien zonder database.
-tests-sql/          T-13 t/m T-17, T-32, T-33, de checks, de triggers, de
+tests-sql/          T-13 t/m T-17, T-32 t/m T-38, de checks, de triggers, de
                     views, en twee sessies die tegelijk de laatste stuks pakken
                     — één keer bij het picken, één keer bij het reserveren.
 ```
@@ -201,9 +205,10 @@ psql -d vakto -f boeken.sql
 psql -d vakto -f meten.sql
 psql -d vakto -f uitgaand.sql
 psql -d vakto -f zelfcontrole.sql
+psql -d vakto -f import.sql
 ```
 
-Op Windows draai je die zes regels in de SQL Shell (staat in je
+Op Windows draai je die zeven regels in de SQL Shell (staat in je
 startmenu onder PostgreSQL), of in PowerShell als je PostgreSQL aan je
 PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 
@@ -217,10 +222,11 @@ psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_import.sql
 python -m unittest tests.test_opslag -v
 ```
 
-Je hoort in totaal honderdzevenenzestig keer `OK` te zien. Daarnaast zijn er twee
+Je hoort in totaal honderdachtennegentig keer `OK` te zien. Daarnaast zijn er twee
 tests met twee sessies tegelijk (`tests-sql/test_gelijktijdig.sh` en
 `tests-sql/test_gelijktijdig_reserveren.sh`); die draaien alleen op Mac
 en Linux, en `opzetten.sh` doet ze allebei vanzelf. Precies één van de
@@ -393,12 +399,54 @@ Draait er geen PostgreSQL, dan worden ze overgeslagen.
 
 ---
 
+## Stap 7: import van klantbestanden
+
+Het verschil tussen "kijk eens wat een mooie demo" en "kijk, dit is jouw
+magazijn". Niemand levert een bestand aan met de kolomnamen die jij wilt,
+in de eenheid die jij wilt, zonder gaten. Dus raadt het systeem — en laat
+het zien wát het geraden heeft, want raden zonder tonen is precies hoe
+imports stilletjes fout gaan.
+
+De verdeling is dezelfde als bij stap 6. `vakto/inlezen.py` leest, raadt
+en controleert zonder ook maar iets weg te schrijven; `import.sql` neemt
+een gecontroleerd rapport over in één transactie. Dat is met opzet zo:
+je wilt bij een klant aan tafel het rapport kunnen laten zien vóórdat je
+op de knop drukt.
+
+Drie dingen waar het in de praktijk op stukloopt, en wat eraan gedaan is:
+
+1. **Eenheden.** Een stellingvak van 40 is altijd centimeters — 40 mm
+   diep bestaat niet — maar een artikel van 40 is bijna altijd
+   millimeters. Daarom raadt R-IMP-03 per soort bestand anders. Eén regel
+   voor allebei gaat gegarandeerd een keer mis, en dan staan er pallets
+   in een bakkenstelling.
+2. **Kolommen.** Elk veld en elke kolom mag maar één keer gebruikt
+   worden. Zonder die regel komen "Lengte" en "Lengte verpakking" allebei
+   op hetzelfde veld terecht en verliest er één stilletjes.
+3. **Een aangeleverde maat is geen weging.** Hij wordt een meting met
+   bron `SUPPLIER` (R-AFG-01), zodat er vanaf dag één staat dat het een
+   opgave is — en zodat elk artikel meteen op de meetlijst komt. Bij de
+   oefenbestanden zijn dat er negenhonderd. Dat is geen probleem maar het
+   gesprek: de eerste week is meten.
+
+Nieuw is ook dat een import een **nulmeting** is. Staat er al een
+journaal, dan weigert hij. Anders overschrijf je een draaiend magazijn
+met een bestand van vorige week, en dat merk je pas als de picker voor
+een leeg vak staat.
+
+T-34 t/m T-38 draaien op de echte oefenbestanden uit
+`verkoop/voorbeeldbestanden/`. Daar zit met opzet van alles fout in, en
+het rapport dat eruit komt is tot op de laatste teller gelijk aan dat van
+de browserversie.
+
+---
+
 ## De volgende stap
 
-Stap 7 uit hoofdstuk 13: import van klantbestanden. Reken op drie
-avonden. Dit is ook het moment om stap 3 van de herindeling mee te
-nemen: `import.js` in de browserversie opsplitsen, en de serverkant
-ernaast bouwen.
+Stap 8 uit hoofdstuk 14: schermen en scanmodus. Reken op zes avonden, en
+op het eerste moment dat je beide versies naast elkaar nodig hebt. Neem
+stap 4 van de herindeling erbij: de zeven `ui`-bestanden hernoemen naar
+wat er in zit.
 
 Begin nergens aan voordat de tests van deze stap groen zijn. Als de kern
 niet klopt, bouw je er alleen maar bovenop.
