@@ -23,11 +23,15 @@ from typing import Any, Protocol
 
 from datetime import datetime
 
-from .modellen import Artikel, Locatie, LocatieSoort, Magazijn, Voorraadregel
+from .modellen import (Artikel, Artikelgroep, Locatie, LocatieSoort, Magazijn,
+                       Taak, Voorraadregel)
 from .meten import Melding
+from .optimalisatie import Pick
 from .uitgaand import Inpak, Order, Orderregel, Pickregel
+from .zelfcontrole import Uitkomst
 from . import meten as _meten
 from . import uitgaand as _uitgaand
+from . import zelfcontrole as _zelfcontrole
 
 
 class Boekfout(Exception):
@@ -62,10 +66,16 @@ QUERIES: dict[str, str] = {
     "artikelen": """
         SELECT p.id, p.sku, p.oms, p.group_id,
                c.l_mm, c.w_mm, c.h_mm, c.g, c.gemeten_op, c.bron,
-               p.min_qty, p.max_qty, p.stapelbaar, p.barcode
+               p.min_qty, p.max_qty, p.stapelbaar, p.barcode,
+               p.drempel_akkoord
           FROM product p
           LEFT JOIN v_product_current c ON c.product_id = p.id
          ORDER BY p.id
+    """,
+
+    # Alleen het telplan heeft ze nodig (R-OPT-04).
+    "artikelgroepen": """
+        SELECT id, naam, telinterval FROM product_group ORDER BY id
     """,
 
     "voorraad": """
@@ -95,6 +105,11 @@ QUERIES: dict[str, str] = {
 
     "melding_sluiten": """
         SELECT vakto_melding_sluiten(%s, %s)
+    """,
+
+    # R-ZC-01. Alleen de gevolg-tekst; de percentages horen bij de meting.
+    "melding_bijwerken": """
+        SELECT vakto_melding_bijwerken(%s, %s)
     """,
 
     "open_meldingen": """
@@ -172,6 +187,64 @@ QUERIES: dict[str, str] = {
          LIMIT %s
     """,
 
+    # ---------------------------------------------------------------
+    #  Zelfcontrole en optimalisatie (R-ZC, R-OPT). Het rekenwerk staat
+    #  in zelfcontrole.py en optimalisatie.py; dit haalt de toestand op
+    #  en schrijft de uitkomst weg.
+    # ---------------------------------------------------------------
+    "open_taken": """
+        SELECT id, soort, naam, prio, status, product_id, van, naar, qty,
+               aanleiding, reden, automatisch, at
+          FROM task
+         WHERE status = 'TODO'
+         ORDER BY prio, id
+    """,
+
+    "ordervraag": """
+        SELECT product_id, open_vraag FROM v_ordervraag
+    """,
+
+    # R-OPT-02. Alleen PICK-regels binnen het venster; de rekenkern telt
+    # ze op tot stuks per dag.
+    "picks": """
+        SELECT product_id, qty, at
+          FROM journal
+         WHERE soort = 'PICK'
+           AND at >= now() - (%s || ' days')::interval
+    """,
+
+    "taak": """
+        SELECT vakto_taak(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """,
+
+    "taak_bijwerken": """
+        SELECT vakto_taak_bijwerken(%s, %s, %s, %s, %s)
+    """,
+
+    "taak_vervallen": """
+        SELECT vakto_taak_vervallen(%s, %s)
+    """,
+
+    "taak_uitvoeren": """
+        SELECT vakto_taak_uitvoeren(%s, %s, %s)
+    """,
+
+    "tellen": """
+        SELECT vakto_tellen(%s, %s, %s, %s)
+    """,
+
+    "log": """
+        SELECT vakto_log(%s, %s, %s, %s)
+    """,
+
+    # R-BASIS-07. Nooit een lijst zonder limiet.
+    "werklijst": """
+        SELECT id, soort, naam, prio, product_id, sku, oms,
+               van, van_code, naar, naar_code, qty, aanleiding, reden, at
+          FROM v_werklijst
+         LIMIT %s
+    """,
+
     # De regel waar de picker nu voor staat, met wat hij moet weten om
     # een manco te kunnen samenstellen.
     "pickregel": """
@@ -218,15 +291,20 @@ def laad_magazijn(verbinding: Verbinding) -> Magazijn:
         Artikel(id=r[0], sku=r[1], oms=r[2], group_id=r[3],
                 l_mm=r[4], w_mm=r[5], h_mm=r[6], g=r[7],
                 gemeten_op=r[8], bron=r[9],
-                min_qty=r[10], max_qty=r[11], stapelbaar=r[12], barcode=r[13])
+                min_qty=r[10], max_qty=r[11], stapelbaar=r[12], barcode=r[13],
+                drempel_akkoord=r[14])
         for r in _rijen(verbinding, "artikelen")
     ]
+    groepen = {
+        r[0]: Artikelgroep(id=r[0], naam=r[1], telinterval=r[2])
+        for r in _rijen(verbinding, "artikelgroepen")
+    }
     voorraad = [
         Voorraadregel(product_id=r[0], location_id=r[1], qty=r[2], res=r[3])
         for r in _rijen(verbinding, "voorraad")
     ]
     return Magazijn(locaties=locaties, artikelen=artikelen,
-                    voorraad=voorraad, soorten=soorten)
+                    voorraad=voorraad, soorten=soorten, groepen=groepen)
 
 
 def laad_instellingen(verbinding: Verbinding):
@@ -451,3 +529,155 @@ def picklijst(verbinding: Verbinding, order_id: int | None = None,
                       oms=r[7], location_id=r[8], locatie=r[9], zone_id=r[10],
                       seq=r[11], qty=r[12], gepickt=r[13])
             for r in _rijen(verbinding, naam, params)]
+
+
+# ---------------------------------------------------------------------
+#  Zelfcontrole en optimalisatie (R-ZC, R-OPT)
+#
+#  Dezelfde taakverdeling als bij meten: Python bepaalt wat er zou moeten
+#  gebeuren tegen een momentopname, de database schrijft het weg in één
+#  transactie. Half schrijven mag niet — een melding die gesloten wordt
+#  zonder de log-regel erbij is een besluit dat niemand meer kan navragen.
+# ---------------------------------------------------------------------
+def laad_taken(verbinding: Verbinding) -> list[Taak]:
+    """Alle openstaande taken, op prioriteit."""
+    uit = []
+    for r in _rijen(verbinding, "open_taken"):
+        t = Taak(soort=r[1], naam=r[2], prio=r[3], status=r[4],
+                 product_id=r[5], van=r[6], naar=r[7], qty=r[8],
+                 aanleiding=r[9], reden=r[10], automatisch=r[11], at=r[12])
+        t.id = int(r[0])
+        uit.append(t)
+    return uit
+
+
+def laad_ordervraag(verbinding: Verbinding) -> dict[int, int]:
+    """R-OPT-03. Nog te picken stuks uit orders die nog op de vloer liggen."""
+    return {int(r[0]): int(r[1]) for r in _rijen(verbinding, "ordervraag")}
+
+
+def laad_picks(verbinding: Verbinding, inst=None) -> list[Pick]:
+    """R-OPT-02. De PICK-regels binnen het venster.
+
+    Het venster komt uit de instellingen en gaat als parameter mee naar
+    de query: zo staat het getal op één plek en niet ook nog een keer in
+    SQL (R-BASIS-04).
+    """
+    from .instellingen import Instellingen
+    inst = inst or Instellingen()
+    dagen = max(1, inst.geheel("opt.venster_dagen"))
+    return [Pick(product_id=int(r[0]), qty=int(r[1]), at=r[2])
+            for r in _rijen(verbinding, "picks", (str(dagen),))]
+
+
+def schrijf_uitkomst(verbinding: Verbinding, uit: Uitkomst) -> Uitkomst:
+    """Zet één ronde zelfcontrole om in rijen. Committen doet de aanroeper.
+
+    De volgorde is bewust: eerst vervallen, dan bijwerken, dan nieuw. Zou
+    je eerst nieuwe taken schrijven, dan botst een verse aanvultaak met
+    een oude die in dezelfde ronde vervalt — en dan houdt de unieke index
+    op `task` er terecht een tegen.
+    """
+    with verbinding.cursor() as cur:
+        for v in uit.vervallen:
+            if v.taak.id is None:
+                continue
+            cur.execute(QUERIES["taak_vervallen"], (v.taak.id, v.reden))
+            cur.fetchone()
+
+        for b in uit.bijwerken:
+            if b.taak.id is None:
+                continue
+            cur.execute(QUERIES["taak_bijwerken"],
+                        (b.taak.id, b.qty, b.prio, b.aanleiding, b.reden))
+            cur.fetchone()
+
+        for t in uit.nieuwe_taken:
+            cur.execute(QUERIES["taak"],
+                        (t.soort, t.naam, t.prio, t.product_id, t.van, t.naar,
+                         t.qty, t.aanleiding, t.reden, t.automatisch))
+            rij = cur.fetchone()
+            if rij and rij[0] is not None:
+                t.id = int(rij[0])
+
+        for m in uit.gesloten:
+            if m.id is None:
+                continue
+            cur.execute(QUERIES["melding_sluiten"], (m.id, "OPGELOST"))
+            cur.fetchone()
+
+        for m in uit.bijgewerkte_meldingen:
+            if m.id is None:
+                continue
+            cur.execute(QUERIES["melding_bijwerken"], (m.id, m.gevolg))
+            cur.fetchone()
+
+        # De log-regels als laatste: dan staat er niets in het log wat
+        # niet ook echt gebeurd is.
+        for regel in uit.regels:
+            cur.execute(QUERIES["log"], ("zelfcontrole", regel, "INFO", None))
+            cur.fetchone()
+    return uit
+
+
+def draai_zelfcontrole(verbinding: Verbinding, mag: Magazijn | None = None,
+                       inst=None, nu: datetime | None = None,
+                       zwaar: bool = True) -> Uitkomst:
+    """Eén ronde: toestand laden, laten rekenen, uitkomst wegschrijven.
+
+    Dit is de functie die een achtergrondtaak elke paar minuten aanroept,
+    en die na elke boeking gedraaid mag worden — er gebeurt niets dubbel,
+    want alles is een gevolgtrekking uit de huidige toestand.
+
+    Geef `mag` mee als je hem toch al geladen had; anders wordt hij hier
+    opgehaald. Committen doet de aanroeper.
+    """
+    from .instellingen import Instellingen
+    inst = inst or laad_instellingen(verbinding)
+    mag = laad_magazijn(verbinding) if mag is None else mag
+
+    uitkomst = _zelfcontrole.hertoets(
+        mag,
+        taken=laad_taken(verbinding),
+        meldingen=open_meldingen(verbinding),
+        vraag=laad_ordervraag(verbinding),
+        picks=laad_picks(verbinding, inst),
+        inst=inst, nu=nu, zwaar=zwaar)
+    return schrijf_uitkomst(verbinding, uitkomst)
+
+
+def voer_taak_uit(verbinding: Verbinding, taak_id: int,
+                  aantal: int | None = None,
+                  gebruiker: str | None = None) -> int | None:
+    """Meldt een taak af. Geeft het journaalnummer, of None bij tellen."""
+    try:
+        with verbinding.cursor() as cur:
+            cur.execute(QUERIES["taak_uitvoeren"], (taak_id, aantal, gebruiker))
+            rij = cur.fetchone()
+            return None if rij is None or rij[0] is None else int(rij[0])
+    except Boekfout:
+        raise
+    except Exception as e:
+        tekst = str(e).strip().splitlines()[0] if str(e).strip() else str(e)
+        raise Boekfout(tekst) from e
+
+
+def tel_locatie(verbinding: Verbinding, location_id: int, product_id: int,
+                geteld: int, gebruiker: str | None = None) -> int | None:
+    """R-OPT-04. Boekt het verschil en zet het telstempel."""
+    try:
+        with verbinding.cursor() as cur:
+            cur.execute(QUERIES["tellen"],
+                        (location_id, product_id, geteld, gebruiker))
+            rij = cur.fetchone()
+            return None if rij is None or rij[0] is None else int(rij[0])
+    except Boekfout:
+        raise
+    except Exception as e:
+        tekst = str(e).strip().splitlines()[0] if str(e).strip() else str(e)
+        raise Boekfout(tekst) from e
+
+
+def werklijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
+    """Openstaand werk, op prioriteit en daarna op looproute."""
+    return _rijen(verbinding, "werklijst", (limiet,))

@@ -155,7 +155,7 @@ function bevestigPick(db, job, regelNr, aantal){
 
     db.taken.push({id:db.taken.length, soort:"CYCLE_COUNT", naam:"Tellen na manco",
       prio:45, status:"TODO", productId:r.productId, van:r.locationId,
-      naar:r.locationId, qty:tekort,
+      naar:r.locationId, qty:tekort, aanleiding:"manco",
       reden:`Manco bij ${order.nummer}: ${tekort} van ${r.qty} niet gevonden op ${db.locaties[r.locationId].code}`,
       at:Date.now()});
     db.log.unshift({at:Date.now(),niveau:"WARN",bron:"picken",

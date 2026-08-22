@@ -21,9 +21,14 @@
 /* --- pickvraag per dag, uit het journaal ----------------------------
    Cache op het aantal boekingen: zolang er niets geboekt is, verandert
    de snelheid niet en hoeven we niet opnieuw te rekenen.              */
-let _snelCache = {n:-1, kaart:null};
+let _snelCache = {db:null, n:-1, kaart:null};
 function pickSnelheden(db){
-  if(_snelCache.n === db.boekingen.length && _snelCache.kaart) return _snelCache.kaart;
+  /* Ook op de database zelf sleutelen en niet alleen op het aantal
+     boekingen. In de demo is er maar één database, maar een test die er
+     twee naast elkaar zet met toevallig evenveel boekingen kreeg anders
+     het antwoord van de vorige. */
+  if(_snelCache.db === db && _snelCache.n === db.boekingen.length
+     && _snelCache.kaart) return _snelCache.kaart;
   const dagen = Math.max(1, getN("opt.venster_dagen"));
   const vanaf = Date.now() - dagen*86400000;
   const kaart = new Map();
@@ -32,7 +37,7 @@ function pickSnelheden(db){
     kaart.set(b.productId, (kaart.get(b.productId)||0) + b.qty);
   }
   for(const [k,v] of kaart) kaart.set(k, v/dagen);
-  _snelCache = {n:db.boekingen.length, kaart};
+  _snelCache = {db, n:db.boekingen.length, kaart};
   return kaart;
 }
 
@@ -78,9 +83,15 @@ function vraagAanvulling(db, r, {pid, naar, qty, prio, aanleiding, reden, bezet}
     if(qty > bestaand.qty || prio < bestaand.prio){
       bestaand.qty = Math.min(Math.max(bestaand.qty, qty),
                               Math.max(1, ruimteVoor(db, pid, naar, bezet)));
+      /* Reden en aanleiding van de ZWAARSTE aanleiding, niet van de
+         laatste die toevallig langskomt (R-OPT-03). Een taak die
+         "ordervraag" heet en als reden "onder drempel" geeft, laat de
+         picker het verkeerde denken over waarom hij loopt. */
+      if(prio < bestaand.prio){
+        bestaand.aanleiding = aanleiding;
+        bestaand.reden = reden;
+      }
       bestaand.prio = Math.min(bestaand.prio, prio);
-      bestaand.aanleiding = aanleiding;
-      bestaand.reden = reden;
     }
     return false;
   }
@@ -219,7 +230,10 @@ function optHardlopers(db, r, bezet){
    ===================================================================== */
 function optTellen(db, r){
   const max = getN("opt.max_open_teltaken");
-  let open = db.taken.filter(t=>t.soort==="CYCLE_COUNT" && t.status==="TODO").length;
+  /* Alleen teltaken uit het telplan tellen mee. Die uit een manco
+     (R-UIT-05) zijn urgent en mogen het plafond niet opvullen. */
+  let open = db.taken.filter(t=>t.soort==="CYCLE_COUNT" && t.status==="TODO"
+                              && t.aanleiding==="telinterval").length;
   if(open >= max) return;
   const nu = Date.now();
   const kandidaten = [];

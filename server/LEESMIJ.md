@@ -1,11 +1,12 @@
-# Vakto — serverversie, stap 1 tot en met 5
+# Vakto — serverversie, stap 1 tot en met 6
 
 Dit is het begin van de echte versie. Er zitten nog geen schermen in.
 Wat er wel in zit: het **databaseschema**, de **rekenkern**, het
 **boeken** met een echte transactie en rijvergrendeling, de **metingen**
 als tijdlijn, en de hele **uitgaande stroom** — reserveren, picken,
-manco, inpakken, verzenden. Met de testgevallen uit de specificatie
-erbij.
+manco, inpakken, verzenden — en de **zelfcontrole** die zijn eigen werk
+aanmaakt en zijn eigen meldingen sluit. Met de testgevallen uit de
+specificatie erbij.
 
 De rest van de stappen staat in hoofdstuk 13 van *De rekenkern,
 uitgeschreven*.
@@ -125,6 +126,8 @@ meten.sql           vakto_meting(): meting en melding in één transactie.
                     Plus de meetlijst v_te_meten (R-MEET-04).
 uitgaand.sql        Reserveren, vrijgeven, picken, manco, inpakken, verzenden
                     (R-UIT). Plus de picklijst v_picklijst, op looproute.
+zelfcontrole.sql    Taken klaarzetten, laten vervallen en uitvoeren, en
+                    tellen (R-ZC, R-OPT). Plus v_werklijst en v_ordervraag.
 
 vakto/
   getallen.py       Afronden zoals JavaScript het doet. Lees de uitleg.
@@ -135,10 +138,12 @@ vakto/
   voorstel.py       Waar moet dit heen? (R-INS)
   meten.py          Afwijkende maten en wat ze betekenen (R-MEET).
   uitgaand.py       Looproute, statusreeks en inpakken (R-UIT-03, 06, 07).
+  zelfcontrole.py   Meldingen beoordelen, taken laten vervallen (R-ZC).
+  optimalisatie.py  Samenvoegen, aanvullen, telplan, adviezen (R-OPT).
   opslag.py         De vertaallaag: database -> objecten -> rekenkern.
 
 tests/              T-01 t/m T-31 plus de vertaallaag. Draaien zonder database.
-tests-sql/          T-13, T-14, T-15, T-32, T-33, de checks, de triggers, de
+tests-sql/          T-13 t/m T-17, T-32, T-33, de checks, de triggers, de
                     views, en twee sessies die tegelijk de laatste stuks pakken
                     — één keer bij het picken, één keer bij het reserveren.
 ```
@@ -195,9 +200,10 @@ psql -d vakto -f seed_config.sql
 psql -d vakto -f boeken.sql
 psql -d vakto -f meten.sql
 psql -d vakto -f uitgaand.sql
+psql -d vakto -f zelfcontrole.sql
 ```
 
-Op Windows draai je die vijf regels in de SQL Shell (staat in je
+Op Windows draai je die zes regels in de SQL Shell (staat in je
 startmenu onder PostgreSQL), of in PowerShell als je PostgreSQL aan je
 PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 
@@ -210,10 +216,11 @@ PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
 python -m unittest tests.test_opslag -v
 ```
 
-Je hoort in totaal honderdacht keer `OK` te zien. Daarnaast zijn er twee
+Je hoort in totaal honderdzevenenzestig keer `OK` te zien. Daarnaast zijn er twee
 tests met twee sessies tegelijk (`tests-sql/test_gelijktijdig.sh` en
 `tests-sql/test_gelijktijdig_reserveren.sh`); die draaien alleen op Mac
 en Linux, en `opzetten.sh` doet ze allebei vanzelf. Precies één van de
@@ -345,10 +352,53 @@ inventarisatie.
 
 ---
 
+## Stap 6: zelfcontrole en optimalisatie
+
+Het spiegelbeeld van stap 5. Daar ging bijna alles naar de database
+omdat er vergrendeld en geboekt moest worden; hier gaat bijna alles naar
+Python, want hoofdstuk 9 en 10 zijn van begin tot eind rekenwerk: uit de
+huidige toestand afleiden welk werk er zou moeten liggen, welke
+meldingen niet meer kloppen en welke taken overbodig zijn geworden.
+
+`vakto/zelfcontrole.py` en `vakto/optimalisatie.py` raken geen database
+aan. Ze krijgen de toestand mee en geven terug wát er zou moeten
+gebeuren; `opslag.py` schrijft dat weg via `zelfcontrole.sql`. Dat maakt
+elk geval in drie regels na te testen — en het maakt zichtbaar wat er
+zou gebeuren vóórdat het gebeurt, wat handig wordt zodra er schermen op
+komen.
+
+Eén ding hoort wél in de database: een taak uitvoeren. Dat is een
+voorraadmutatie, dus gaat het door `vakto_boek()` heen en nergens anders
+langs.
+
+Wat deze stap aan het licht bracht — drie keer hetzelfde soort fout, en
+alle drie in beide versies rechtgezet:
+
+1. **R-ZC-04 en de onderste rij van R-OPT-03 zijn dezelfde regel.** Ze
+   staan in twee hoofdstukken omdat ze bij twee onderwerpen horen, maar
+   het is één stuk code. Bouw je het twee keer, dan geeft de
+   zelfcontrole een taak van 25 stuks waar de optimalisatie er 40 wil.
+2. **Bij het samenvoegen van twee aanleidingen blijft de reden van de
+   zwaarste staan**, niet die van de laatste die langskomt. Een taak die
+   "ordervraag" heet en als reden "onder drempel" geeft, laat de picker
+   het verkeerde denken over waarom hij loopt.
+3. **Teltaken uit een manco vallen buiten het plafond van het telplan.**
+   Die zijn urgent en horen de twaalf geplande tellingen niet te
+   verdringen.
+
+T-16 en T-17 staan in `tests/test_hertoets_db.py` en draaien tegen een
+echte database: taak aanmaken, met de hand bijvullen, taak zien
+vervallen; en melding, overlooptaak, uitvoeren, melding zien sluiten.
+Draait er geen PostgreSQL, dan worden ze overgeslagen.
+
+---
+
 ## De volgende stap
 
-Stap 6 uit hoofdstuk 13: zelfcontrole en optimalisatie. Reken op vier
-avonden. Lees hoofdstuk 9 en 10 van de specificatie voordat je begint.
+Stap 7 uit hoofdstuk 13: import van klantbestanden. Reken op drie
+avonden. Dit is ook het moment om stap 3 van de herindeling mee te
+nemen: `import.js` in de browserversie opsplitsen, en de serverkant
+ernaast bouwen.
 
 Begin nergens aan voordat de tests van deze stap groen zijn. Als de kern
 niet klopt, bouw je er alleen maar bovenop.

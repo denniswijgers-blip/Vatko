@@ -58,10 +58,12 @@ LOCATIE_RIJEN = [
 ]
 ARTIKEL_RIJEN = [
     (1, "TEST-1", "Testartikel", 1, 120, 90, 45, 180, None, "RECEIPT",
-     None, None, True, "8710000000017"),
+     None, None, True, "8710000000017", False),
     (2, "GEEN-MAAT", "Nooit gemeten", 1, None, None, None, None, None, None,
-     None, None, True, None),
+     None, None, True, None, False),
 ]
+# R-OPT-04. Alleen het telplan heeft de groepen nodig.
+GROEP_RIJEN = [(1, "Testgroep", 180)]
 
 
 class TestVertaling(unittest.TestCase):
@@ -71,6 +73,7 @@ class TestVertaling(unittest.TestCase):
             "locatiesoorten": SOORTEN_RIJEN,
             "locaties": LOCATIE_RIJEN,
             "artikelen": ARTIKEL_RIJEN,
+            "artikelgroepen": GROEP_RIJEN,
             "voorraad": [(1, 1, 12, 4)],
         })
         return laad_magazijn(v)

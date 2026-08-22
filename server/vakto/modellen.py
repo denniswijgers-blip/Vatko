@@ -82,6 +82,10 @@ class Artikel:
     max_qty: int | None = None
     stapelbaar: bool = True
     barcode: str | None = None
+    # R-OPT-05. Een van de twee dingen die een mens blijft beslissen:
+    # "deze aanvuldrempel is akkoord". Staat hij aan, dan houdt het
+    # systeem zijn mond over dit artikel.
+    drempel_akkoord: bool = False
 
     @property
     def gemeten(self) -> bool:
@@ -95,6 +99,45 @@ class Artikel:
         if not self.gemeten:
             raise ValueError(f"{self.sku} is niet opgemeten")
         return self.l_mm * self.w_mm * self.h_mm
+
+
+@dataclass(frozen=True)
+class Artikelgroep:
+    """Alleen nodig voor het telplan (R-OPT-04).
+
+    Het telinterval hoort bij de groep en niet bij het artikel: je telt
+    boutjes nu eenmaal anders vaak dan pompen, en dat wil je één keer
+    instellen en niet vierduizend keer.
+    """
+    id: int
+    naam: str
+    telinterval: int = 180          # in dagen
+
+
+@dataclass
+class Taak:
+    """Een rij uit `task`. Eén tabel voor alle soorten werk.
+
+    Taken worden nooit met de hand aangemaakt en nooit met de hand
+    afgevinkt: ze volgen uit de toestand van het magazijn en vervallen
+    zodra de aanleiding weg is (R-BASIS-03).
+    """
+    soort: str
+    naam: str
+    product_id: int
+    qty: int
+    prio: int = 50
+    status: str = "TODO"
+    van: int | None = None
+    naar: int | None = None
+    aanleiding: str | None = None
+    reden: str = ""
+    automatisch: bool = True
+    at: datetime | None = None
+    vervallen_reden: str | None = None
+    # Pas gevuld nadat de database hem heeft weggeschreven; de rekenkern
+    # deelt geen nummers uit.
+    id: int | None = None
 
 
 @dataclass
@@ -114,8 +157,10 @@ class Voorraadregel:
 class Magazijn:
     """Een momentopname waar de rekenkern mee werkt.
 
-    Alleen wat nodig is om een inslagvoorstel te maken. Geen orders,
-    geen journaal: die horen bij latere stappen.
+    Alles wat de rekenkern nodig heeft om uit de huidige toestand af te
+    leiden wat er zou moeten gebeuren. Geen orders en geen journaal: die
+    komen als losse gegevens mee waar ze nodig zijn (R-ZC, R-OPT), zodat
+    een inslagvoorstel niet ineens het hele orderboek moet inladen.
     """
     locaties: list[Locatie] = field(default_factory=list)
     artikelen: list[Artikel] = field(default_factory=list)
@@ -125,6 +170,9 @@ class Magazijn:
     # aan; er hoeft geen regel code voor aangepast te worden.
     soorten: dict[int, LocatieSoort] = field(
         default_factory=lambda: dict(SOORTEN))
+    # Alleen het telplan heeft ze nodig (R-OPT-04). Ontbreekt een groep,
+    # dan valt het telinterval terug op de standaard.
+    groepen: dict[int, Artikelgroep] = field(default_factory=dict)
 
     def soort(self, loc: Locatie) -> LocatieSoort:
         try:
@@ -146,6 +194,11 @@ class Magazijn:
             if l.id == location_id:
                 return l
         return None
+
+    def telinterval(self, artikel: Artikel) -> int:
+        """R-OPT-04, in dagen. Onbekende groep = de standaard."""
+        g = self.groepen.get(artikel.group_id)
+        return g.telinterval if g else 180
 
     def bezetting(self) -> dict[int, "Bezetting"]:
         """R-AFG-04 en R-BASIS-05: bezetting telt in volume en gewicht,

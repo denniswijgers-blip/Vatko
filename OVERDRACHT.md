@@ -42,7 +42,7 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 
 ## Waar we staan
 
-Stap **5 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
+Stap **6 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
 
 | | Stap | Status |
 |---|---|---|
@@ -51,21 +51,31 @@ Stap **5 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
 | 3 | `boek()` met transactie en rijvergrendeling | ✅ |
 | 4 | Metingen en afwijkingen | ✅ |
 | 5 | Uitgaand: reserveren, picken, manco | ✅ |
-| 6 | Zelfcontrole en optimalisatie | ← nu |
-| 7 | Import van klantbestanden | |
+| 6 | Zelfcontrole en optimalisatie | ✅ |
+| 7 | Import van klantbestanden | ← nu |
 | 8 | Schermen en scanmodus | |
 | 9 | Inloggen, rollen, back-up, server | |
 
-Alles groen: **100 Python-tests** en **108 SQL-controles**, plus twee tests met
+Alles groen: **175 Python-tests** en **167 SQL-controles**, plus twee tests met
 twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren).
+
+**Wat stap 6 opleverde.** Hoofdstuk 9 en 10 zijn bijna helemaal rekenwerk, dus die staan
+in Python: `server/vakto/zelfcontrole.py` (meldingen beoordelen, taken laten vervallen) en
+`server/vakto/optimalisatie.py` (samenvoegen, aanvullen, telplan, adviezen). De database
+schrijft alleen weg en voert taken uit — dat laatste is een voorraadmutatie en gaat dus
+door `vakto_boek()` heen. T-16 en T-17 worden van begin tot eind getest tegen een echte
+PostgreSQL (`server/tests/test_hertoets_db.py`).
+
+Het schrijven van deze stap bracht drie afwijkingen aan het licht die in beide versies
+zijn rechtgezet (spec v1.5): R-ZC-04 en de onderste rij van R-OPT-03 zijn dezelfde regel
+en horen dus één stuk code te zijn; bij het samenvoegen van twee aanleidingen hoort de
+reden van de zwaarste te blijven staan, niet die van de laatste die langskomt; en
+teltaken uit een manco vallen buiten het plafond van het telplan.
 
 **Wat stap 5 opleverde.** Reserveren, picken en manco staan in `server/uitgaand.sql` en
 niet in Python: ze vergrendelen rijen en boeken voorraad, dus geldt R-BOEK-03 net zo hard
 als bij `boek()`. Python heeft wat er zonder database moet gelden — de looproute, de
-statusreeks en het inpakken — in `server/vakto/uitgaand.py`. Drie dingen zijn onderweg aan
-de specificatie toegevoegd (v1.4): de pickregel is de `allocation`-rij zelf met een status
-ernaast, inpakken en verzenden staan nu beschreven als R-UIT-07, en er is een `event_log`
-waar het systeem opschrijft wat het zelf besloten heeft.
+statusreeks en het inpakken — in `server/vakto/uitgaand.py`.
 
 **Herindeling:** stap 0 t/m 2 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
 één projectmap, `router.js` opgesplitst). Stap 3 (`import.js`) en stap 4 (de schermen
@@ -76,6 +86,10 @@ Bij stap 4 moet er nog één keuze gemaakt worden: je krijgt dan
 `2-logica/uitgaand.js` én `4-schermen/uitgaand.js`. Verschillende mappen, dus het
 werkt — maar verwarrend in een foutmelding. Noem het scherm `uitgaand-scherm.js`, of
 de logica `orders.js`.
+
+Stap 3 van de herindeling gaat over `import.js`, en dat is precies waar stap 7 van de
+serverversie over gaat. Het is dus het moment om ze samen te doen: eerst `import.js`
+opsplitsen, dan de serverkant ernaast bouwen.
 
 ---
 
@@ -106,7 +120,7 @@ Deze gelden zonder dat ze elke keer opnieuw gezegd hoeven te worden.
 Vakto/
 ├── OVERDRACHT.md          dit bestand
 ├── server/                het product — Python + PostgreSQL
-│   ├── vakto/             de rekenkern, tien modules
+│   ├── vakto/             de rekenkern, twaalf modules
 │   ├── tests/  tests-sql/
 │   └── *.sql  opzetten.sh
 ├── demo/                  de browserversie
@@ -139,6 +153,7 @@ python3 -m unittest discover -s tests -t .
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
 bash tests-sql/test_gelijktijdig.sh
 bash tests-sql/test_gelijktijdig_reserveren.sh
 
@@ -148,6 +163,7 @@ cd test && node test3.mjs && node test-import.mjs && node test-paden.mjs && node
 
 # de verwachte waarden van de Python-tests uit de demo aflezen:
 node uitgaand-vectoren.mjs
+node zelfcontrole-vectoren.mjs
 ```
 
 De browsertests hebben `playwright` nodig: `npm install playwright` in `demo/test/`.
@@ -171,7 +187,7 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Links
 
-- Specificatie (v1.4): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.5): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133
@@ -180,12 +196,11 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Een nieuw gesprek beginnen
 
-Stuur dit bestand mee plus de map waar je aan werkt (`server/` voor stap 6, `demo/`
+Stuur dit bestand mee plus de map waar je aan werkt (`server/` voor stap 7, `demo/`
 als het over de browserversie gaat). Niet allebei tegelijk: dat is de helft duurder
 en meestal niet nodig.
 
 Openingszin die werkt:
 
 > Dit is mijn WMS-project Vakto. In OVERDRACHT.md staat waar we zijn en welke
-> afspraken gelden. Ik wil verder met stap 6 (zelfcontrole en optimalisatie). Lees
-> eerst hoofdstuk 9 en 10 van de specificatie.
+> afspraken gelden. Ik wil verder met stap 7 (import van klantbestanden).

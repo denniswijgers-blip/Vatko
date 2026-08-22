@@ -19,12 +19,14 @@ if ! psql -d "$DB" -c "SELECT 1" >/dev/null 2>&1; then
   echo "                psql -d $DB -f boeken.sql"
   echo "                psql -d $DB -f meten.sql"
   echo "                psql -d $DB -f uitgaand.sql"
+  echo "                psql -d $DB -f zelfcontrole.sql"
   echo ""; read -r -p "  Druk op enter om te sluiten." _; exit 1
 fi
-echo "  1. Boeken, meten, uitgaand, checks, triggers en views"
+echo "  1. Boeken, meten, uitgaand, zelfcontrole, checks en views"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql   2>&1 | grep -E "OK|GEZAKT|geslaagd|ERROR"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql    2>&1 | grep -E "OK|GEZAKT|geslaagd|ERROR"
 psql -d "$DB" -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql 2>&1 | grep -E "OK|GEZAKT|geslaagd|ERROR"
+psql -d "$DB" -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql 2>&1 | grep -E "OK|GEZAKT|geslaagd|ERROR"
 echo ""
 echo "  2. Twee mensen tegelijk"
 ./tests-sql/test_gelijktijdig.sh

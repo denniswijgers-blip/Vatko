@@ -68,7 +68,9 @@ function maakAanvultaken(db){
     /* Ook hier: nooit meer dan er past. Een aanvultaak van 115 stuks
        naar een vak waar er zestig in gaan is geen taak maar een probleem
        dat je op de vloer aflevert. */
-    const nodig = Math.min((p.maxQty||p.minQty)-s.qty, bron.qty,
+    /* bron.vrij en niet bron.qty: wat op naam van een order staat mag
+       je niet wegrijden, ook al ligt het er nog (R-ZC-04). */
+    const nodig = Math.min((p.maxQty||p.minQty)-s.qty, bron.qty-(bron.res||0),
                            ruimteVoor(db, p.id, loc.id, bezet));
     if(nodig<=0) continue;
     db.taken.push({id:db.taken.length, soort:"REPLENISH", naam:"Picklocatie aanvullen",
@@ -195,6 +197,7 @@ function hertoets(db){
       db.taken.push({id:db.taken.length, soort:"OVERLOOP", naam:"Overloop verplaatsen",
         prio:15, status:"TODO", productId:d.productId, van:x.loc.id, naar:doel.loc.id,
         qty:Math.min(x.teveel, doel.alles?x.teveel:doel.vrij), automatisch:true,
+        aanleiding:"afwijking",
         reden:`${x.loc.code} zit ${x.teveel} st over de nieuwe maat`, at:Date.now()});
       r.aangemaakt++;
       noteerControle(db, r,

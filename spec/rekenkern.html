@@ -172,7 +172,7 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.4</span>
+    <span><b>Versie</b> 1.5</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
     <span><b>Regels</b> 42</span>
@@ -262,8 +262,9 @@ html{scroll-behavior:smooth}
         <td>code, pick, bulk, mix, blok, doel &mdash; vlaggen, geen enum in code</td>
         <td><code>doel=0</code> betekent: nooit een inslagvoorstel. <code>blok=1</code>: telt niet mee als beschikbaar.</td></tr>
       <tr><td class="mono"><strong>product</strong></td>
-        <td>sku, oms, group_id, min_qty, max_qty, stapelbaar, barcode</td>
-        <td>Géén afmetingen. Die staan in <code>measurement</code>.</td></tr>
+        <td>sku, oms, group_id, min_qty, max_qty, stapelbaar, barcode, drempel_akkoord</td>
+        <td>Géén afmetingen. Die staan in <code>measurement</code>.
+            <code>drempel_akkoord</code> is de menselijke keuze uit R-OPT-05.</td></tr>
       <tr><td class="mono"><strong>measurement</strong></td>
         <td>product_id, at, bron, L, W, H, G, notitie</td>
         <td>Append-only. De actuele maat is de nieuwste rij, zie R-AFG-01.</td></tr>
@@ -740,6 +741,9 @@ colli   = max(1, ceil(gewicht / uit.max_colli_gewicht_g))</pre>
         taak REPLENISH, prio 25, aanleiding "drempel"</pre>
     <p>Bestaat er al een open <code>REPLENISH</code> voor dezelfde combinatie van artikel en
     doellocatie, dan geen tweede.</p>
+    <p>Dit is dezelfde regel als de onderste rij van R-OPT-03, en dus ook hetzelfde stuk
+    code. Bouw je het twee keer, dan geeft de zelfcontrole een taak van 25 stuks waar de
+    optimalisatie er 40 wil, en staat de picker twee keer voor hetzelfde vak.</p>
     <p><strong>Die derde term is verplicht.</strong> Minimum- en maximumvoorraad zeggen niets
     over wat er past. Een aanvultaak van 115 stuks naar een vak waar er zestig in gaan is
     geen taak &mdash; dat is een probleem dat je op de vloer aflevert. Geldt net zo voor de
@@ -1068,7 +1072,7 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
       <tr><td class="num mono">5</td><td>Uitgaand (hoofdstuk 8)</td>
         <td>T-14 en T-15 groen <span class="pil g">gedaan</span></td><td class="num">5 avonden</td></tr>
       <tr><td class="num mono">6</td><td>Zelfcontrole en optimalisatie (9 en 10)</td>
-        <td>T-16 en T-17 groen</td><td class="num">4 avonden</td></tr>
+        <td>T-16 en T-17 groen <span class="pil g">gedaan</span></td><td class="num">4 avonden</td></tr>
       <tr><td class="num mono">7</td><td>Import van klantbestanden</td>
         <td>Dezelfde oefenbestanden geven hetzelfde rapport</td><td class="num">3 avonden</td></tr>
       <tr><td class="num mono">8</td><td>Schermen en scanmodus</td>
@@ -1089,6 +1093,15 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.5</strong> &mdash; stap 6 gebouwd en getest. Hoofdstuk 9 en 10 zijn
+  bijna helemaal rekenwerk en staan dus in Python; de database schrijft alleen weg en
+  voert taken uit &mdash; dat laatste is een voorraadmutatie en gaat door
+  <code>vakto_boek()</code> heen. Drie dingen die het schrijven van deze stap aan het
+  licht bracht, allemaal in beide versies rechtgezet: R-ZC-04 en de onderste rij van
+  R-OPT-03 zijn dezelfde regel en horen dus &eacute;&eacute;n stuk code te zijn; bij het
+  samenvoegen van twee aanleidingen hoort de reden van de zwaarste te blijven staan en
+  niet die van de laatste die langskomt; en teltaken uit een manco (R-UIT-05) horen
+  buiten het plafond van R-OPT-04 te vallen, wat de browserversie niet deed.<br><br>
   <strong>Versie 1.4</strong> &mdash; stap 5 gebouwd en getest. Drie dingen die
   hiervoor nergens vastlagen: de pickregel is de <code>allocation</code>-rij zelf met een
   status ernaast (R-UIT-06) in plaats van een tweede tabel die dezelfde gegevens nog eens
