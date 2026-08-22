@@ -42,7 +42,7 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 
 ## Waar we staan
 
-Stap **4 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
+Stap **5 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
 
 | | Stap | Status |
 |---|---|---|
@@ -50,13 +50,22 @@ Stap **4 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 13:
 | 2 | Rekenkern: passen en inslagvoorstel | ✅ |
 | 3 | `boek()` met transactie en rijvergrendeling | ✅ |
 | 4 | Metingen en afwijkingen | ✅ |
-| 5 | Uitgaand: reserveren, picken, manco | ← nu | 
-| 6 | Zelfcontrole en optimalisatie | |
+| 5 | Uitgaand: reserveren, picken, manco | ✅ |
+| 6 | Zelfcontrole en optimalisatie | ← nu |
 | 7 | Import van klantbestanden | |
 | 8 | Schermen en scanmodus | |
 | 9 | Inloggen, rollen, back-up, server | |
 
-Alles groen: **67 Python-tests** en **47 SQL-controles**.
+Alles groen: **100 Python-tests** en **108 SQL-controles**, plus twee tests met
+twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren).
+
+**Wat stap 5 opleverde.** Reserveren, picken en manco staan in `server/uitgaand.sql` en
+niet in Python: ze vergrendelen rijen en boeken voorraad, dus geldt R-BOEK-03 net zo hard
+als bij `boek()`. Python heeft wat er zonder database moet gelden — de looproute, de
+statusreeks en het inpakken — in `server/vakto/uitgaand.py`. Drie dingen zijn onderweg aan
+de specificatie toegevoegd (v1.4): de pickregel is de `allocation`-rij zelf met een status
+ernaast, inpakken en verzenden staan nu beschreven als R-UIT-07, en er is een `event_log`
+waar het systeem opschrijft wat het zelf besloten heeft.
 
 **Herindeling:** stap 0 t/m 2 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
 één projectmap, `router.js` opgesplitst). Stap 3 (`import.js`) en stap 4 (de schermen
@@ -97,7 +106,7 @@ Deze gelden zonder dat ze elke keer opnieuw gezegd hoeven te worden.
 Vakto/
 ├── OVERDRACHT.md          dit bestand
 ├── server/                het product — Python + PostgreSQL
-│   ├── vakto/             de rekenkern, negen modules
+│   ├── vakto/             de rekenkern, tien modules
 │   ├── tests/  tests-sql/
 │   └── *.sql  opzetten.sh
 ├── demo/                  de browserversie
@@ -129,10 +138,16 @@ cd server && bash opzetten.sh
 python3 -m unittest discover -s tests -t .
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
+bash tests-sql/test_gelijktijdig.sh
+bash tests-sql/test_gelijktijdig_reserveren.sh
 
 # browserversie:
 cd demo && python3 bouw.py
 cd test && node test3.mjs && node test-import.mjs && node test-paden.mjs && node rooktest.mjs
+
+# de verwachte waarden van de Python-tests uit de demo aflezen:
+node uitgaand-vectoren.mjs
 ```
 
 De browsertests hebben `playwright` nodig: `npm install playwright` in `demo/test/`.
@@ -156,7 +171,7 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Links
 
-- Specificatie (v1.3): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.4): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133
@@ -165,12 +180,12 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Een nieuw gesprek beginnen
 
-Stuur dit bestand mee plus de map waar je aan werkt (`server/` voor stap 5, `demo/`
+Stuur dit bestand mee plus de map waar je aan werkt (`server/` voor stap 6, `demo/`
 als het over de browserversie gaat). Niet allebei tegelijk: dat is de helft duurder
 en meestal niet nodig.
 
 Openingszin die werkt:
 
 > Dit is mijn WMS-project Vakto. In OVERDRACHT.md staat waar we zijn en welke
-> afspraken gelden. Ik wil verder met stap 5 (uitgaand). Lees eerst hoofdstuk 8 van
-> de specificatie.
+> afspraken gelden. Ik wil verder met stap 6 (zelfcontrole en optimalisatie). Lees
+> eerst hoofdstuk 9 en 10 van de specificatie.

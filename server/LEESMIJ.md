@@ -1,9 +1,11 @@
-# Vakto — serverversie, stap 1 tot en met 3
+# Vakto — serverversie, stap 1 tot en met 5
 
 Dit is het begin van de echte versie. Er zitten nog geen schermen in.
-Wat er wel in zit: het **databaseschema**, de **rekenkern**, en het
-**boeken** met een echte transactie en rijvergrendeling — met de
-testgevallen uit de specificatie erbij.
+Wat er wel in zit: het **databaseschema**, de **rekenkern**, het
+**boeken** met een echte transactie en rijvergrendeling, de **metingen**
+als tijdlijn, en de hele **uitgaande stroom** — reserveren, picken,
+manco, inpakken, verzenden. Met de testgevallen uit de specificatie
+erbij.
 
 De rest van de stappen staat in hoofdstuk 13 van *De rekenkern,
 uitgeschreven*.
@@ -121,6 +123,8 @@ seed_config.sql     De configuratietabellen: locatiesoorten, maatklassen,
 boeken.sql          vakto_boek(): de enige route waarlangs voorraad verandert.
 meten.sql           vakto_meting(): meting en melding in één transactie.
                     Plus de meetlijst v_te_meten (R-MEET-04).
+uitgaand.sql        Reserveren, vrijgeven, picken, manco, inpakken, verzenden
+                    (R-UIT). Plus de picklijst v_picklijst, op looproute.
 
 vakto/
   getallen.py       Afronden zoals JavaScript het doet. Lees de uitleg.
@@ -130,11 +134,13 @@ vakto/
   passen.py         Hoeveel gaat er in deze locatie? (R-PAS)
   voorstel.py       Waar moet dit heen? (R-INS)
   meten.py          Afwijkende maten en wat ze betekenen (R-MEET).
+  uitgaand.py       Looproute, statusreeks en inpakken (R-UIT-03, 06, 07).
   opslag.py         De vertaallaag: database -> objecten -> rekenkern.
 
 tests/              T-01 t/m T-31 plus de vertaallaag. Draaien zonder database.
-tests-sql/          T-13, T-32, T-33, de checks, de triggers, de views, en twee
-                    pickers die tegelijk de laatste vijf stuks pakken.
+tests-sql/          T-13, T-14, T-15, T-32, T-33, de checks, de triggers, de
+                    views, en twee sessies die tegelijk de laatste stuks pakken
+                    — één keer bij het picken, één keer bij het reserveren.
 ```
 
 **Op `opslag.py` na staat er in `vakto/` geen regel database-code, en dat
@@ -188,9 +194,10 @@ psql -d vakto -f schema.sql
 psql -d vakto -f seed_config.sql
 psql -d vakto -f boeken.sql
 psql -d vakto -f meten.sql
+psql -d vakto -f uitgaand.sql
 ```
 
-Op Windows draai je die vier regels in de SQL Shell (staat in je
+Op Windows draai je die vijf regels in de SQL Shell (staat in je
 startmenu onder PostgreSQL), of in PowerShell als je PostgreSQL aan je
 PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 
@@ -202,11 +209,16 @@ PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 ```powershell
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_boeken.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
 python -m unittest tests.test_opslag -v
 ```
 
-Je hoort in totaal zevenenveertig keer `OK` te zien, en bij de laatste
-test dat er precies één van twee pickers de laatste vijf stuks krijgt.
+Je hoort in totaal honderdacht keer `OK` te zien. Daarnaast zijn er twee
+tests met twee sessies tegelijk (`tests-sql/test_gelijktijdig.sh` en
+`tests-sql/test_gelijktijdig_reserveren.sh`); die draaien alleen op Mac
+en Linux, en `opzetten.sh` doet ze allebei vanzelf. Precies één van de
+twee sessies hoort te slagen — dat is de hele reden dat er PostgreSQL
+onder zit en geen SQLite.
 
 Wat er in het schema is afgedwongen, zodat de database het onthoudt in
 plaats van de programmeur:
@@ -290,14 +302,53 @@ in één zin in de melding. `"Past niet meer op: 01-01-1 (ligt 30, past nog
 
 ---
 
+## Stap 5: uitgaand
+
+Van order tot verzending. De grootste brok tot nu toe, en de plek waar
+zelfbouwsystemen het vaakst omvallen.
+
+De keuze die alles bepaalt in deze stap: **reserveren, picken en manco
+staan in de database en niet in Python.** Dat is dezelfde afweging als
+bij `boek()` (R-BOEK-03). Reserveren verhoogt `stock.res`, en dat mag
+nooit boven `qty` uitkomen — ook niet als twee verkopers op hetzelfde
+moment op de knop drukken. Een lus in Python die eerst leest en daarna
+schrijft kan dat niet garanderen; tussen lezen en schrijven zit een gat
+waar een tweede sessie doorheen loopt. Met `SELECT … FOR UPDATE` zit dat
+gat er niet, en geldt de regel ook voor wie hem met `psql` aanroept.
+
+Wat er dan nog wél in Python hoort staat in `vakto/uitgaand.py`: de
+looproute (R-UIT-03, nodig bij het aanmaken van locaties, ver vóór er een
+order bestaat), de statusreeks (R-UIT-06, zodat een schermknop weet of
+een overgang mag) en het inpakken (R-UIT-07, een som).
+
+Drie dingen zijn onderweg aan de specificatie toegevoegd — eerst het
+document, dan de code:
+
+1. **De pickregel is de `allocation`-rij zelf**, met een status ernaast
+   (TODO, DONE, MANCO). Een aparte tabel met pickregels zou dezelfde
+   gegevens nog een keer opschrijven, en dan lopen ze uit elkaar zodra
+   iemand er één van bijwerkt.
+2. **Inpakken en verzenden** zaten wel in de browserversie maar stonden
+   nergens beschreven. Nu R-UIT-07, met het collogewicht als instelling
+   in plaats van een 25000 midden in een regel code.
+3. **`event_log`**, waar het systeem opschrijft wat het zelf besloten
+   heeft. R-UIT-02 wil één waarschuwing bij een tekort — niet bij elke
+   poging opnieuw. Dat de order al op `WACHT_OP_VOORRAAD` stond is het
+   bewijs dat het al gemeld is; daar is geen apart vlaggetje voor nodig.
+
+R-UIT-05 is het hart van deze stap: bij een manco gebeuren er vier
+dingen tegelijk, en niets minder. Reservering vrijgeven, systeemaantal
+corrigeren (nooit meer dan er volgens het systeem ligt), teltaak
+aanmaken, orderregel markeren. Sla je er één over, dan houdt het systeem
+voorraad vast die er niet is en merkt niemand het tot de volgende
+inventarisatie.
+
+---
+
 ## De volgende stap
 
-Stap 5 uit hoofdstuk 13: uitgaand. Dat is de grootste brok: reserveren,
-picken, manco. Reken op vijf avonden.
-
-Reserveren is ook de plek waar zelfbouwsystemen het vaakst omvallen, dus
-lees hoofdstuk 8 van de specificatie voordat je begint — vooral R-UIT-05,
-waar vier dingen tegelijk moeten gebeuren.
+Stap 6 uit hoofdstuk 13: zelfcontrole en optimalisatie. Reken op vier
+avonden. Lees hoofdstuk 9 en 10 van de specificatie voordat je begint.
 
 Begin nergens aan voordat de tests van deze stap groen zijn. Als de kern
 niet klopt, bouw je er alleen maar bovenop.

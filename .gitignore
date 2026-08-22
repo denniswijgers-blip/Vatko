@@ -29,3 +29,5 @@ __pycache__/
 demo/artifact.html
 demo/vakto-demo.html
 node_modules/
+demo/test/package.json
+demo/test/package-lock.json

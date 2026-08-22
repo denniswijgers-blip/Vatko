@@ -23,6 +23,7 @@ STANDAARD: dict[str, str] = {
     "opt.max_open_teltaken":        "12",
     "opt.drempel_afwijking_pct":    "60",
     "opstart.onbekend_aanmaken":    "false",
+    "uit.max_colli_gewicht_g":      "25000",
     "ui.rows_per_page":             "60",
 }
 

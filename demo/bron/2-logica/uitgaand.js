@@ -177,7 +177,9 @@ function pakIn(db, order){
     const p=db.artikelNu(r.productId);
     return a + (p.G||0)*r.gepickt;
   },0);
-  order.colli = Math.max(1, Math.ceil(gewicht/25000));   /* max 25 kg per doos */
+  /* R-UIT-07. De grens staat in een instelling en niet in deze regel:
+     een klant die zelf rijdt, doet er meer in een doos. */
+  order.colli = Math.max(1, Math.ceil(gewicht/getN("uit.max_colli_gewicht_g")));
   order.gewicht = gewicht;
   order.status = "INGEPAKT";
   return true;

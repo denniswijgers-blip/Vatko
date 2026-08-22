@@ -25,7 +25,9 @@ from datetime import datetime
 
 from .modellen import Artikel, Locatie, LocatieSoort, Magazijn, Voorraadregel
 from .meten import Melding
+from .uitgaand import Inpak, Order, Orderregel, Pickregel
 from . import meten as _meten
+from . import uitgaand as _uitgaand
 
 
 class Boekfout(Exception):
@@ -114,6 +116,72 @@ QUERIES: dict[str, str] = {
           FROM measurement
          WHERE product_id = %s
          ORDER BY at DESC, id DESC
+    """,
+
+    # ---------------------------------------------------------------
+    #  Uitgaand (R-UIT). De vier functies staan in uitgaand.sql; hier
+    #  worden ze alleen aangeroepen. Rekenen gebeurt niet in een query.
+    # ---------------------------------------------------------------
+    "reserveer": """
+        SELECT vakto_reserveer(%s, %s)
+    """,
+
+    "geef_vrij": """
+        SELECT vakto_geef_vrij(%s)
+    """,
+
+    "pick": """
+        SELECT vakto_pick(%s, %s, %s, %s)
+    """,
+
+    "pak_in": """
+        SELECT vakto_pak_in(%s, %s, %s)
+    """,
+
+    "verzend": """
+        SELECT vakto_verzend(%s, %s)
+    """,
+
+    "order": """
+        SELECT id, nummer, klant, plaats, land, vervoerder, soort, prio,
+               status, at, colli, gewicht_g, track
+          FROM customer_order
+         WHERE id = %s
+    """,
+
+    "orderregels": """
+        SELECT idx, product_id, besteld, gereserveerd, gepickt, manco
+          FROM order_line
+         WHERE order_id = %s
+         ORDER BY idx
+    """,
+
+    # R-UIT-03. De view sorteert op looproute; R-BASIS-07 wil een limiet.
+    "picklijst": """
+        SELECT allocation_id, order_id, ordernummer, prio, regel, product_id,
+               sku, oms, location_id, locatie, zone_id, seq, qty, gepickt
+          FROM v_picklijst
+         LIMIT %s
+    """,
+
+    "picklijst_order": """
+        SELECT allocation_id, order_id, ordernummer, prio, regel, product_id,
+               sku, oms, location_id, locatie, zone_id, seq, qty, gepickt
+          FROM v_picklijst
+         WHERE order_id = %s
+         LIMIT %s
+    """,
+
+    # De regel waar de picker nu voor staat, met wat hij moet weten om
+    # een manco te kunnen samenstellen.
+    "pickregel": """
+        SELECT a.id, a.order_id, o.nummer, a.regel, a.product_id, p.sku,
+               a.location_id, l.code, a.qty, a.gepickt, a.status
+          FROM allocation a
+          JOIN customer_order o ON o.id = a.order_id
+          JOIN location       l ON l.id = a.location_id
+          JOIN product        p ON p.id = a.product_id
+         WHERE a.id = %s
     """,
 }
 
@@ -270,3 +338,116 @@ def meetlijst(verbinding: Verbinding) -> list[tuple]:
 def metingen_van(verbinding: Verbinding, product_id: int) -> list[tuple]:
     """De hele tijdlijn van één artikel, nieuwste eerst."""
     return _rijen(verbinding, "metingen_van", (product_id,))
+
+
+# ---------------------------------------------------------------------
+#  Uitgaand (R-UIT)
+#
+#  Dun met opzet. Het werk gebeurt in uitgaand.sql, waar het onder een
+#  rijvergrendeling staat; deze functies vertalen alleen heen en terug.
+#  Elke controle die je hier bovenop zou zetten, is een controle die een
+#  ander stuk code kan overslaan (R-BOEK-03).
+#
+#  Committen doen ze geen van alle. Dat hoort bij de aanroeper, samen met
+#  de rest van wat er in dezelfde handeling gebeurt.
+# ---------------------------------------------------------------------
+def reserveer(verbinding: Verbinding, order_id: int,
+              gebruiker: str | None = None) -> str:
+    """R-UIT-01 en R-UIT-02. Geeft de nieuwe orderstatus terug.
+
+    `GERESERVEERD` als alles vastgelegd kon worden, anders
+    `WACHT_OP_VOORRAAD`. Stond de order al op WACHT_OP_VOORRAAD, dan komt
+    er geen tweede waarschuwing in het log — één keer melden is genoeg.
+    """
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["reserveer"], (order_id, gebruiker))
+        return str(cur.fetchone()[0])
+
+
+def geef_vrij(verbinding: Verbinding, order_id: int) -> int:
+    """R-UIT-03. Geeft het aantal pickregels terug, 0 als er niets ging."""
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["geef_vrij"], (order_id,))
+        return int(cur.fetchone()[0])
+
+
+def bevestig_pick(verbinding: Verbinding, allocation_id: int, aantal: int,
+                  gebruiker: str | None = None) -> str:
+    """R-UIT-04 en R-UIT-05. Geeft `DONE` of `MANCO` terug.
+
+    De teltaak-tekst stellen we hier samen en niet in SQL, om dezelfde
+    reden als bij `gevolg_tekst` in meten.py: een zin die een mens leest,
+    schrijf je waar je hem zonder database kunt natesten.
+    """
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["pickregel"], (allocation_id,))
+        rij = cur.fetchone()
+        if rij is None:
+            raise Boekfout(f"Pickregel {allocation_id} bestaat niet")
+
+        _, _, nummer, _, _, _, _, code, qty, gepickt, _ = rij
+        gevraagd = qty - gepickt
+        tekort = max(0, gevraagd - max(0, aantal))
+        reden = (_uitgaand.teltaak_reden(nummer, tekort, qty, code)
+                 if tekort else None)
+
+        try:
+            cur.execute(QUERIES["pick"], (allocation_id, aantal, gebruiker, reden))
+            return str(cur.fetchone()[0])
+        except Boekfout:
+            raise
+        except Exception as e:
+            tekst = str(e).strip().splitlines()[0] if str(e).strip() else str(e)
+            raise Boekfout(tekst) from e
+
+
+def pak_in(verbinding: Verbinding, order_id: int, artikelen: dict,
+           inst=None) -> Inpak | None:
+    """R-UIT-07. Rekent colli en gewicht uit en legt ze vast.
+
+    Geeft None als de order niet op GEPICKT stond. `artikelen` is
+    {product_id: Artikel} — meestal `{a.id: a for a in magazijn.artikelen}`.
+    """
+    regels = {r.product_id: r.gepickt for r in orderregels(verbinding, order_id)}
+    inpak = _uitgaand.inpakgegevens(regels, artikelen, inst)
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["pak_in"], (order_id, inpak.colli, inpak.gewicht_g))
+        return inpak if bool(cur.fetchone()[0]) else None
+
+
+def verzend(verbinding: Verbinding, order_id: int,
+            track: str | None = None) -> bool:
+    """R-UIT-06. False als de order niet op INGEPAKT stond."""
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["verzend"], (order_id, track))
+        return bool(cur.fetchone()[0])
+
+
+def laad_order(verbinding: Verbinding, order_id: int) -> Order | None:
+    """De order met zijn regels, of None als hij niet bestaat."""
+    rijen = _rijen(verbinding, "order", (order_id,))
+    if not rijen:
+        return None
+    r = rijen[0]
+    return Order(id=r[0], nummer=r[1], klant=r[2], plaats=r[3], land=r[4],
+                 vervoerder=r[5], soort=r[6], prio=r[7], status=r[8], at=r[9],
+                 colli=r[10], gewicht_g=r[11], track=r[12],
+                 regels=orderregels(verbinding, order_id))
+
+
+def orderregels(verbinding: Verbinding, order_id: int) -> list[Orderregel]:
+    return [Orderregel(idx=r[0], product_id=r[1], besteld=r[2],
+                       gereserveerd=r[3], gepickt=r[4], manco=r[5])
+            for r in _rijen(verbinding, "orderregels", (order_id,))]
+
+
+def picklijst(verbinding: Verbinding, order_id: int | None = None,
+              limiet: int = 200) -> list[Pickregel]:
+    """R-UIT-03. Op looproute gesorteerd, altijd met een limiet (R-BASIS-07)."""
+    naam = "picklijst" if order_id is None else "picklijst_order"
+    params = (limiet,) if order_id is None else (order_id, limiet)
+    return [Pickregel(allocation_id=r[0], order_id=r[1], ordernummer=r[2],
+                      prio=r[3], regel=r[4], product_id=r[5], sku=r[6],
+                      oms=r[7], location_id=r[8], locatie=r[9], zone_id=r[10],
+                      seq=r[11], qty=r[12], gepickt=r[13])
+            for r in _rijen(verbinding, naam, params)]

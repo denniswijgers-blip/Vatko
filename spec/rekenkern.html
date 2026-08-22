@@ -172,10 +172,10 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.2</span>
+    <span><b>Versie</b> 1.4</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
-    <span><b>Regels</b> 40</span>
+    <span><b>Regels</b> 42</span>
     <span><b>Testgevallen</b> 21</span>
   </div>
 </header>
@@ -283,8 +283,13 @@ html{scroll-behavior:smooth}
         <td>nummer, klant, prio, status / product_id, besteld, gereserveerd, gepickt, manco</td>
         <td>Statusreeks in R-UIT-06.</td></tr>
       <tr><td class="mono"><strong>allocation</strong></td>
-        <td>order_id, regel, product_id, location_id, qty, gepickt</td>
-        <td>Welke voorraad op welke locatie voor welke order bestemd is.</td></tr>
+        <td>order_id, regel, product_id, location_id, qty, gepickt, status</td>
+        <td>Welke voorraad op welke locatie voor welke order bestemd is. Dit is ook de
+            pickregel: status TODO, DONE of MANCO, zie R-UIT-06.</td></tr>
+      <tr><td class="mono"><strong>event_log</strong></td>
+        <td>at, niveau, bron, bericht, ref</td>
+        <td>Append-only. Waar het systeem opschrijft wat het zelf besloten heeft &mdash;
+            een tekort bij reserveren (R-UIT-02), een melding die vanzelf sluit (R-ZC-01).</td></tr>
       <tr><td class="mono"><strong>setting</strong></td>
         <td>sleutel, waarde, groep, uitleg</td>
         <td>Alles uit hoofdstuk 11 staat hier. Waarde altijd als tekst opslaan, bij lezen omzetten.</td></tr>
@@ -662,7 +667,26 @@ neem   = max(0, min(opgegeven_aantal, te_max))
      ↘ WACHT_OP_VOORRAAD ↗                              → INGEPAKT → VERZONDEN</pre>
     <p>Een order gaat naar <span class="pil g">GEPICKT</span> zodra elke regel van de
     pickopdracht niet meer <code>TODO</code> is &mdash; ook als er manco's tussen zitten.
-    Een manco is een afgehandelde regel, geen open regel.</p></div>
+    Een manco is een afgehandelde regel, geen open regel.</p>
+    <p>De pickregel is de <code>allocation</code>-rij zelf, met een status ernaast:
+    <code>TODO</code> zolang er nog gepickt moet worden, <code>DONE</code> als het
+    aantal er ligt, <code>MANCO</code> als het er niet lag. Een aparte tabel met
+    pickregels zou dezelfde gegevens nog een keer opschrijven, en dan lopen ze uit
+    elkaar zodra iemand er &eacute;&eacute;n van bijwerkt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-07</span>
+    <span class="rtitel">Inpakken en verzenden</span></div>
+<pre>gewicht = som over de regels van (artikelgewicht &times; gepickt)
+colli   = max(1, ceil(gewicht / uit.max_colli_gewicht_g))</pre>
+    <p>Artikelen zonder maat tellen niet mee in het gewicht &mdash; liever onderschatten dan
+    een verzonnen getal op de vrachtbrief (R-AFG-04 doet hetzelfde). Verzenden legt het
+    tijdstip vast en zet per regel het verzonden aantal gelijk aan het gepickte aantal;
+    het manco gaat niet mee.</p>
+    <p>Dit is het enige stuk van hoofdstuk 8 dat in Python staat en niet in de database:
+    er wordt niets vergrendeld en niets geboekt, alleen gerekend. Reserveren, picken en
+    manco horen w&eacute;l in de database, om dezelfde reden als boeken (R-BOEK-03) &mdash;
+    ze raken voorraad aan en moeten ook gelden voor wie ze buiten de applicatie om
+    aanroept.</p></div>
 </section>
 
 <!-- ============================================================ -->
@@ -835,6 +859,9 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
         <td>Vanaf welk verschil er advies over de aanvuldrempel komt.</td></tr>
       <tr><td class="mono">opstart.onbekend_aanmaken</td><td class="num mono">false</td>
         <td>Alleen tijdens een nulmeting: onbekende gescande code wordt een nieuw artikel.</td></tr>
+      <tr><td class="mono">uit.max_colli_gewicht_g</td><td class="num mono">25000</td>
+        <td>Maximaal gewicht per collo in gram, waaruit R-UIT-07 het aantal dozen afleidt.
+            25 kg is wat een pakketvervoerder aanneemt; bij eigen vervoer mag het hoger.</td></tr>
       <tr><td class="mono">ui.rows_per_page</td><td class="num mono">60</td>
         <td>Maximaal aantal rijen per scherm. Nooit onbeperkt.</td></tr>
     </tbody>
@@ -1039,7 +1066,7 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
         <td>T-22 t/m T-33 groen; een afwijkende meting produceert de juiste
         <code>gevolg</code>-tekst <span class="pil g">gedaan</span></td><td class="num">2 avonden</td></tr>
       <tr><td class="num mono">5</td><td>Uitgaand (hoofdstuk 8)</td>
-        <td>T-14 en T-15 groen</td><td class="num">5 avonden</td></tr>
+        <td>T-14 en T-15 groen <span class="pil g">gedaan</span></td><td class="num">5 avonden</td></tr>
       <tr><td class="num mono">6</td><td>Zelfcontrole en optimalisatie (9 en 10)</td>
         <td>T-16 en T-17 groen</td><td class="num">4 avonden</td></tr>
       <tr><td class="num mono">7</td><td>Import van klantbestanden</td>
@@ -1062,6 +1089,19 @@ afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.4</strong> &mdash; stap 5 gebouwd en getest. Drie dingen die
+  hiervoor nergens vastlagen: de pickregel is de <code>allocation</code>-rij zelf met een
+  status ernaast (R-UIT-06) in plaats van een tweede tabel die dezelfde gegevens nog eens
+  opschrijft; inpakken en verzenden zaten wel in de browserversie maar in geen enkel
+  document, en staan nu als R-UIT-07 met het collogewicht als instelling; en er is een
+  <code>event_log</code> waar het systeem opschrijft wat het zelf besloten heeft, want
+  R-UIT-02 en R-ZC-01 vragen daar allebei om. Reserveren, picken en manco staan in
+  PostgreSQL en niet in Python &mdash; ze vergrendelen rijen en boeken voorraad, dus geldt
+  R-BOEK-03. Wat dat oplevert staat in
+  <code>tests-sql/test_gelijktijdig_reserveren.sh</code>: twee verkopers die tegelijk de
+  laatste tien stuks pakken, waarvan er &eacute;&eacute;n netjes
+  <span class="pil r">wacht op voorraad</span> krijgt in plaats van een foutmelding of,
+  erger, dezelfde doos.<br><br>
   <strong>Versie 1.3</strong> &mdash; stap 4 gebouwd en getest. Drie dingen die in de
   browserversie niet vastlagen en nu wel: afronden op één decimaal gebeurt overal met
   <code>rond(x × 10) / 10</code> en de drempel wordt op het onafgeronde getal getoetst

@@ -18,9 +18,15 @@ from .voorstel import voorstel_inslag, Voorstel
 from .meten import (Maat, Meting, Afwijking, Knelpunt, Melding,
                     bepaal_afwijking, gevolgen, gevolg_tekst,
                     leg_meting_vast, te_meten, GEEN_GEVOLGEN)
+from .uitgaand import (Order, Orderregel, Pickregel, Inpak,
+                       ORDERSTATUS, STATUSNAAM, OVERGANGEN, mag_naar,
+                       open_status, looproute_seq, vak_positie,
+                       inpakgegevens, teltaak_reden)
 from .opslag import (boek, Boekfout, laad_magazijn, laad_instellingen,
                      schrijf_meting, sluit_melding, open_meldingen, meetlijst,
-                     metingen_van, QUERIES)
+                     metingen_van, reserveer, geef_vrij, bevestig_pick,
+                     pak_in, verzend, laad_order, orderregels, picklijst,
+                     QUERIES)
 
 __all__ = [
     "Instellingen", "STANDAARD",
@@ -31,8 +37,13 @@ __all__ = [
     "Maat", "Meting", "Afwijking", "Knelpunt", "Melding",
     "bepaal_afwijking", "gevolgen", "gevolg_tekst", "leg_meting_vast",
     "te_meten", "GEEN_GEVOLGEN",
+    "Order", "Orderregel", "Pickregel", "Inpak",
+    "ORDERSTATUS", "STATUSNAAM", "OVERGANGEN", "mag_naar", "open_status",
+    "looproute_seq", "vak_positie", "inpakgegevens", "teltaak_reden",
     "boek", "Boekfout", "laad_magazijn", "laad_instellingen",
     "schrijf_meting", "sluit_melding", "open_meldingen", "meetlijst",
     "metingen_van",
+    "reserveer", "geef_vrij", "bevestig_pick", "pak_in", "verzend",
+    "laad_order", "orderregels", "picklijst",
     "QUERIES",
 ]

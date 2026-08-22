@@ -81,7 +81,7 @@ fi
 
 # ---------------------------------------------------------------- schema
 kop "4. Schema en configuratie"
-for bestand in schema.sql seed_config.sql boeken.sql meten.sql; do
+for bestand in schema.sql seed_config.sql boeken.sql meten.sql uitgaand.sql; do
   [ -f "$bestand" ] || stop "Bestand $bestand ontbreekt. Zit je wel in de juiste map?"
   if P -d "$DB" -v ON_ERROR_STOP=1 -q -f "$bestand" >/tmp/vakto_sql.log 2>&1; then
     ok "$bestand geladen"
@@ -110,7 +110,7 @@ fi
 
 kop "6. Tests tegen de database"
 : > /tmp/vakto_db.log
-for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql; do
+for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql tests-sql/test_uitgaand.sql; do
   if P -d "$DB" -v ON_ERROR_STOP=1 -f "$t" >>/tmp/vakto_db.log 2>&1; then
     :
   else
@@ -118,14 +118,20 @@ for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql; do
   fi
 done
 GOED=$(grep -c 'OK ' /tmp/vakto_db.log)
-ok "$GOED controles geslaagd (boeken, meten, checks, triggers, views)"
+ok "$GOED controles geslaagd (boeken, meten, uitgaand, checks, triggers, views)"
 
-kop "7. Twee pickers tegelijk"
+kop "7. Twee mensen tegelijk"
 if PSQL="$PSQL -U $GEBRUIKER" PGDATABASE="$DB" bash tests-sql/test_gelijktijdig.sh >/tmp/vakto_glt.log 2>&1; then
   grep -E 'geslaagd|voorraad|journaal' /tmp/vakto_glt.log | sed 's/^/  /'
   ok "precies één picker kreeg de laatste vijf stuks"
 else
   printf '\n'; cat /tmp/vakto_glt.log; stop "De gelijktijdigheidstest is gezakt."
+fi
+if PSQL="$PSQL -U $GEBRUIKER" PGDATABASE="$DB" bash tests-sql/test_gelijktijdig_reserveren.sh >/tmp/vakto_glr.log 2>&1; then
+  grep -E '^  (A |B |wacht|res na|samen)' /tmp/vakto_glr.log | sed 's/^/  /'
+  ok "precies één verkoper kreeg de laatste tien stuks"
+else
+  printf '\n'; cat /tmp/vakto_glr.log; stop "De reserveringstest onder gelijktijdigheid is gezakt."
 fi
 
 # ------------------------------------------------------------------ klaar
@@ -137,6 +143,8 @@ cat <<KLAAR
     - boeken met transactie en rijvergrendeling
     - metingen als tijdlijn, met meldingen die zelf uitzoeken
       welke locaties door een nieuwe maat in de knel komen
+    - de uitgaande stroom: reserveren, picken, manco, inpakken,
+      verzenden — met de vergrendeling die dubbel verkopen tegenhoudt
 
   Rondkijken in de database:
       $PSQL -U $GEBRUIKER -d $DB

@@ -35,6 +35,7 @@ const S = {
   "opt.venster_dagen":{v:"30",g:"Optimalisatie",d:"Over hoeveel dagen wordt de pickvraag gemeten. Korter reageert sneller op seizoen, langer is rustiger."},
   "opt.max_open_teltaken":{v:"12",g:"Optimalisatie",d:"Maximaal aantal openstaande teltaken. Zonder plafond zet het systeem er duizend klaar en telt niemand er één."},
   "opt.drempel_afwijking_pct":{v:"60",g:"Optimalisatie",d:"Vanaf hoeveel procent verschil tussen de ingestelde aanvuldrempel en het werkelijke verbruik geeft Vakto een advies."},
+  "uit.max_colli_gewicht_g":{v:"25000",g:"Uitgaand",d:"Maximaal gewicht per collo in gram. Hieruit volgt het aantal dozen bij het inpakken. 25 kg is wat een pakketvervoerder aanneemt; rijd je zelf, dan mag het hoger."},
   "ui.rows_per_page":{v:"60",g:"Weergave",d:"Maximaal aantal rijen per scherm. Nooit onbeperkt."}
 };
 const get=(k)=>S[k].v, getN=(k)=>parseFloat(S[k].v), getB=(k)=>S[k].v==="true";

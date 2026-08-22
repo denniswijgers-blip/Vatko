@@ -61,6 +61,8 @@ INSERT INTO setting (sleutel, waarde, groep, uitleg) VALUES
    'Vanaf welk verschil er advies over de aanvuldrempel komt.'),
   ('opstart.onbekend_aanmaken','false','Opstarten',
    'Alleen tijdens een nulmeting: onbekende gescande code wordt een nieuw artikel.'),
+  ('uit.max_colli_gewicht_g','25000','Uitgaand',
+   'Maximaal gewicht per collo in gram. Hieruit volgt het aantal dozen (R-UIT-07).'),
   ('ui.rows_per_page','60','Weergave',
    'Maximaal aantal rijen per scherm. Nooit onbeperkt.');
 

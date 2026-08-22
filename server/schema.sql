@@ -18,9 +18,9 @@ BEGIN;
 
 DROP VIEW  IF EXISTS v_available, v_location_load, v_location_size, v_product_current CASCADE;
 DROP TABLE IF EXISTS allocation, order_line, customer_order, alert, task,
-                     journal, stock, measurement, product, product_group,
-                     location, zone, location_type, size_class_rule,
-                     weging, setting CASCADE;
+                     event_log, journal, stock, measurement, product,
+                     product_group, location, zone, location_type,
+                     size_class_rule, weging, setting CASCADE;
 
 -- ---------------------------------------------------------------- config
 CREATE TABLE setting (
@@ -251,11 +251,37 @@ CREATE TABLE allocation (
   location_id integer NOT NULL REFERENCES location(id),
   qty         integer NOT NULL CHECK (qty > 0),
   gepickt     integer NOT NULL DEFAULT 0 CHECK (gepickt >= 0),
+  -- R-UIT-06. De allocation-rij is ook de pickregel. Een aparte tabel met
+  -- pickregels zou dezelfde gegevens nog een keer opschrijven, en dan lopen
+  -- ze uit elkaar zodra iemand er een van bijwerkt.
+  status      text    NOT NULL DEFAULT 'TODO'
+                CHECK (status IN ('TODO','DONE','MANCO')),
   CHECK (gepickt <= qty)
 );
 COMMENT ON TABLE allocation IS
   'R-UIT-01. Welke voorraad op welke locatie voor welke order bestemd is.';
 CREATE INDEX allocation_order_idx ON allocation(order_id);
+CREATE INDEX allocation_open_idx  ON allocation(product_id) WHERE status = 'TODO';
+
+-- ------------------------------------------------------------ systeemlog
+-- Waar het systeem opschrijft wat het zelf besloten heeft. Niet de plek
+-- voor foutmeldingen van de webserver: alleen beslissingen waarvan een
+-- mens later moet kunnen navragen waarom ze genomen zijn.
+CREATE TABLE event_log (
+  id      bigserial   PRIMARY KEY,
+  at      timestamptz NOT NULL DEFAULT now(),
+  niveau  text        NOT NULL DEFAULT 'INFO'
+            CHECK (niveau IN ('INFO','WARN','FOUT')),
+  bron    text        NOT NULL,
+  bericht text        NOT NULL,
+  ref     text
+);
+COMMENT ON TABLE event_log IS
+  'Append-only. R-UIT-02 (tekort bij reserveren), R-ZC-01 (melding sluit vanzelf).';
+CREATE INDEX event_log_at_idx ON event_log(at DESC);
+
+CREATE TRIGGER event_log_append_only BEFORE UPDATE OR DELETE ON event_log
+  FOR EACH ROW EXECUTE FUNCTION alleen_toevoegen();
 
 -- =====================================================================
 --  VIEWS — hoofdstuk 3. Afgeleide waarden worden nooit opgeslagen.
