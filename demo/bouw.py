@@ -9,7 +9,7 @@ HIER = os.path.dirname(os.path.abspath(__file__))
 #   1-kern      rekenen, zonder kennis van schermen of gegevens
 #   2-logica    boeken, meten, uitgaand, optimaliseren
 #   3-import    klantbestanden inlezen
-#   4-schermen  wat de gebruiker ziet
+#   4-schermen  wat de gebruiker ziet, in de volgorde van het menu
 #   5-schil     menu, klikken, toetsen - en als allerlaatste de start
 #
 # Alleen de laatste twee regels van 5-schil/toetsen.js voeren bij het
@@ -21,8 +21,12 @@ BRON = [
                     "optimalisatie.js", "simulatie.js", "scan.js"]),
     ("3-import",   ["toestand.js", "celgetal.js", "csv.js", "excel.js",
                     "kolommen.js", "controleren.js", "overnemen.js"]),
-    ("4-schermen", ["ui.js", "ui2.js", "ui3.js", "ui4.js", "ui5.js",
-                    "ui6.js", "ui7.js"]),
+    # De volgorde van het menu, met de hulpmiddelen vooraan omdat elk
+    # scherm ze gebruikt.
+    ("4-schermen", ["hulp.js", "overzicht.js", "inkomend.js",
+                    "uitgaand-scherm.js", "vloer.js", "magazijn.js",
+                    "optimaliseren.js", "eigen-gegevens.js", "etiketten.js",
+                    "beheer.js"]),
     ("5-schil",    ["menu.js", "schil.js", "tekenen.js", "klikken.js",
                     "toetsen.js"]),
 ]

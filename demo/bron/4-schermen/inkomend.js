@@ -1,4 +1,11 @@
 /* =====================================================================
+   SCHERMEN: INSLAG EN OPMETEN
+
+   Alles wat er binnenkomt. De pastekening hoort hierbij: dat is het
+   scherm waar iemand "oh, zo" zegt bij een inslagvoorstel.
+   ===================================================================== */
+
+/* =====================================================================
    PASTEKENING
    Twee aanzichten zoals op een werktekening: van boven en van voren.
    Dit is het scherm waar iemand "oh, zó" zegt. Een tabel vertelt dat er
@@ -204,71 +211,4 @@ function schermMeten(){
         <td><button class="klein" data-meet="${p.id}">Vastleggen</button></td></tr>`).join("")}
     </tbody></table></div>
   </div>`;
-}
-
-/* ===================== TAKEN ======================================== */
-function schermTaken(){
-  const rang = t => t.status==="TODO" ? 0 : t.status==="DONE" ? 1 : 2;
-  const rijen = [...DB.taken].sort((a,b)=> rang(a)-rang(b) || a.prio-b.prio || a.id-b.id);
-  const pg = pagineer(rijen);
-  return `
-  <h1>Taken</h1>
-  <p class="lead">Aanvullen, verplaatsen, tellen en inslaan zitten in <b>één</b> tabel
-  met een type en een prioriteit. Daardoor krijg je die processen er bijna gratis bij
-  en heeft een medewerker één lijst waarop hij zijn volgende opdracht ziet.</p>
-
-  <div class="uitleg"><b>Niemand maakt deze taken aan.</b> Ze volgen uit de toestand van
-  het magazijn: een picklocatie zakt onder de drempel, een artikel blijkt groter dan het
-  was, een telling wijkt af. En ze verdwijnen ook weer vanzelf &mdash; vult iemand een
-  locatie handmatig bij, dan vervalt de aanvultaak met de reden erbij. Een lijst die
-  alleen groeit, gaat niemand bijhouden.</div>
-
-  <div class="kaart">
-    <div class="tabelwrap"><table>
-      <thead><tr><th>Prio</th><th>Taak</th><th>Artikel</th><th>Van</th><th>Naar</th>
-        <th class="num">Aantal</th><th>Reden</th><th>Status</th><th></th></tr></thead>
-      <tbody>${pg.rijen.map(t=>`<tr class="${t.status==="VERVALLEN"?"vervallen":""}">
-        <td>${pil("n",t.prio)}</td>
-        <td class="${t.status==="VERVALLEN"?"doorheen":""}">${esc(t.naam)}</td>
-        <td><a href="#artikel/${t.productId}" class="mono">${esc(DB.artikelen[t.productId].sku)}</a></td>
-        <td class="mono">${esc(DB.locaties[t.van].code)}</td>
-        <td class="mono">${esc(DB.locaties[t.naar].code)}</td>
-        <td class="num sterk">${fmt(t.qty)}</td>
-        <td class="hint">${esc(t.reden)}${t.automatisch?` ${pil("a","door het systeem")}`:""}</td>
-        <td>${t.status==="DONE"?pil("g","afgemeld")
-             :t.status==="VERVALLEN"?pil("n","vervallen"):pil("o","open")}
-          ${t.vervallenReden?`<div class="hint">${esc(t.vervallenReden)}</div>`:""}</td>
-        <td>${t.status==="TODO"?`<button class="klein" data-taak="${t.id}">Afmelden</button>`:""}</td>
-      </tr>`).join("")}</tbody></table></div>
-    ${pagBalk(pg)}
-    ${pg.totaal?"":`<p class="leeg">Geen taken.</p>`}
-  </div>`;
-}
-
-/* ===================== INSTELLINGEN ================================= */
-function schermInstellingen(){
-  const groepen = {};
-  for(const [k,v] of Object.entries(S)){ (groepen[v.g] = groepen[v.g]||[]).push([k,v]); }
-  return `
-  <h1>Instellingen</h1>
-  <p class="lead">Alles wat per klant kan verschillen staat hier, en niet in de code.
-  Dát is wat "een algemeen systeem dat je per klant inricht" in de praktijk betekent.</p>
-
-  <div class="uitleg"><b>Probeer dit eens.</b> Zet <span class="mono">putaway.fill_factor</span>
-  op 0.60 en doe daarna dezelfde inslag opnieuw. Alle voorstellen veranderen, zonder
-  dat er ook maar één regel code is aangepast. Dat is het antwoord op "ja, maar bij
-  ons stapelen we anders".</div>
-
-  ${Object.entries(groepen).map(([g,rijen])=>`
-  <div class="kaart">
-    <h2>${esc(g)}</h2>
-    <div class="tabelwrap"><table>
-      <thead><tr><th>Sleutel</th><th>Waarde</th><th>Wat het doet</th></tr></thead>
-      <tbody>${rijen.map(([k,v])=>`<tr>
-        <td class="mono">${esc(k)}</td>
-        <td><input data-inst="${esc(k)}" value="${esc(v.v)}"></td>
-        <td class="hint">${esc(v.d)}</td></tr>`).join("")}</tbody></table></div>
-  </div>`).join("")}
-
-  <div class="knoprij"><button data-actie="instellingen-opslaan">Opslaan</button></div>`;
 }

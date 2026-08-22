@@ -1,3 +1,10 @@
+/* =====================================================================
+   SCHERM: OPTIMALISATIE
+
+   Wat het systeem zelf gevonden heeft en waar het een oordeel van een
+   mens voor nodig heeft.
+   ===================================================================== */
+
 /* ===================== OPTIMALISATIE ================================ */
 function schermOptimalisatie(){
   const open = DB.taken.filter(t=>t.status==="TODO");

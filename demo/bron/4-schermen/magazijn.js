@@ -1,3 +1,10 @@
+/* =====================================================================
+   SCHERMEN: LOCATIES EN ARTIKELEN
+
+   De twee lijsten waar je in opzoekt hoe het magazijn in elkaar zit,
+   allebei met een detailscherm eronder.
+   ===================================================================== */
+
 /* ===================== LOCATIES ===================================== */
 function schermLocaties(){
   let rijen = DB.locaties.filter(l=>{

@@ -91,17 +91,15 @@ niet in Python: ze vergrendelen rijen en boeken voorraad, dus geldt R-BOEK-03 ne
 als bij `boek()`. Python heeft wat er zonder database moet gelden — de looproute, de
 statusreeks en het inpakken — in `server/vakto/uitgaand.py`.
 
-**Herindeling:** stap 0 t/m 3 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
-één projectmap, `router.js` en `import.js` opgesplitst). Stap 4 — de zeven `ui`-bestanden
-hernoemen — is nu aan de beurt: die betaalt zich terug vlak vóór stap 8, als je de
-serverschermen bouwt met de browserversie ernaast.
+**Herindeling:** stap 0 t/m 4 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
+één projectmap, `router.js` en `import.js` opgesplitst, en de zeven `ui`-bestanden
+herverdeeld over tien schermbestanden). Open staan nog stap 5 (de SQL-bestanden naar
+`server/db/`) en stap 6 (één LEESMIJ bovenaan de projectmap) — samen een half uur.
 
-Bij stap 4 moet er nog één keuze gemaakt worden: je krijgt dan
-`2-logica/uitgaand.js` én `4-schermen/uitgaand.js`. Verschillende mappen, dus het
-werkt — maar verwarrend in een foutmelding. Noem het scherm `uitgaand-scherm.js`, of
-de logica `orders.js`.
-
-Dat is nu het laatste stuk herindeling dat nog openstaat, en het hoort bij stap 8.
+Bij stap 4 stond nog één keuze open: je kreeg `2-logica/uitgaand.js` én
+`4-schermen/uitgaand.js`. Het scherm heet nu `uitgaand-scherm.js` en de logica houdt
+zijn naam. Reden: de serverversie heeft `vakto/uitgaand.py` voor precies die logica, en
+die twee naast elkaar willen kunnen leggen is het hele punt van stap 8.
 
 ---
 
@@ -139,7 +137,7 @@ Vakto/
 │   ├── bron/1-kern/       passen, voorstellen, grafieken
 │   │      2-logica/       boeken, meten, uitgaand, optimaliseren, scannen
 │   │      3-import/       klantbestanden inlezen — zeven bestanden
-│   │      4-schermen/     ui.js t/m ui7.js — nog te hernoemen (stap 4)
+│   │      4-schermen/     tien schermen, in de volgorde van het menu
 │   │      5-schil/        menu, tekenen, klikken, toetsen, bovenbalk
 │   ├── test/              browsertests + testbestanden
 │   ├── stijl.css  bouw.py
