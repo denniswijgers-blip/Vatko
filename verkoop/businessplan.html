@@ -1,0 +1,424 @@
+<title>Vakto Startplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#EDF1F2; --surface:#FFFFFF; --surface-2:#F4F8F9; --line:#DBE3E5;
+  --ink:#131A1D; --ink-2:#54626A; --ink-3:#83939B;
+  --accent:#0E4F5C; --accent-ink:#FFFFFF; --accent-soft:#E2EEF1;
+  --ok:#2E7D52; --ok-soft:#E6F2EC;
+  --warn:#B26D0C; --warn-soft:#FCF1E1;
+  --bad:#B33128; --bad-soft:#FAEBEA;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0D1315; --surface:#151E22; --surface-2:#1A252A; --line:#27353A;
+    --ink:#E3EBED; --ink-2:#92A3AA; --ink-3:#6C7E85;
+    --accent:#59AEBE; --accent-ink:#06232A; --accent-soft:#16323A;
+    --ok:#5EBF8B; --ok-soft:#13291D;
+    --warn:#D9973C; --warn-soft:#2E2312;
+    --bad:#E0776C; --bad-soft:#301917;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0D1315; --surface:#151E22; --surface-2:#1A252A; --line:#27353A;
+  --ink:#E3EBED; --ink-2:#92A3AA; --ink-3:#6C7E85;
+  --accent:#59AEBE; --accent-ink:#06232A; --accent-soft:#16323A;
+  --ok:#5EBF8B; --ok-soft:#13291D;
+  --warn:#D9973C; --warn-soft:#2E2312;
+  --bad:#E0776C; --bad-soft:#301917;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:400 16px/1.65 "IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+.blad{max-width:820px;margin:0 auto;padding:56px 28px 90px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+
+.kop{border-bottom:2px solid var(--accent);padding-bottom:20px;margin-bottom:36px}
+.merk{font-size:26px;font-weight:600;letter-spacing:-.4px}
+.merk span{color:var(--accent)}
+.ondertitel{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;margin-top:2px}
+h1{font-size:31px;font-weight:600;letter-spacing:-.7px;margin:22px 0 8px;
+   text-wrap:balance;line-height:1.2}
+.inleiding{color:var(--ink-2);font-size:17px;margin:0;max-width:62ch}
+
+h2{font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--accent);
+   font-weight:600;margin:44px 0 4px;display:flex;align-items:center;gap:11px}
+h2::after{content:"";flex:1;height:1px;background:var(--line)}
+h3{font-size:19px;font-weight:600;margin:22px 0 7px;letter-spacing:-.2px;text-wrap:balance}
+p{margin:0 0 14px;max-width:66ch}
+strong{font-weight:600}
+ul{margin:0 0 14px;padding-left:20px;max-width:64ch}
+li{margin-bottom:6px}
+li::marker{color:var(--accent)}
+
+.kader{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:20px 24px;margin:20px 0}
+.kader.accent{border-left:3px solid var(--accent)}
+.zeg{background:var(--accent-soft);border-radius:12px;padding:20px 24px;margin:18px 0;
+  font-size:17px;line-height:1.6;color:var(--ink);border:0}
+.zeg .wie{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--accent);font-weight:600;margin-bottom:8px}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:15px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;
+  color:var(--ink-3);font-weight:600;padding:0 12px 9px;border-bottom:1px solid var(--line)}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tabelwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:6px 10px}
+tbody tr.uit td{background:var(--accent-soft)}
+
+.pil{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.pil.g{background:var(--ok-soft);color:var(--ok)}
+.pil.o{background:var(--warn-soft);color:var(--warn)}
+.pil.r{background:var(--bad-soft);color:var(--bad)}
+
+.bezwaar{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:18px 22px;margin-bottom:14px}
+.vraag{font-weight:600;font-size:17px;margin-bottom:8px;color:var(--bad)}
+.antwoord{color:var(--ink-2)}
+.antwoord strong{color:var(--ink)}
+
+.niet{background:var(--bad-soft);border-radius:12px;padding:18px 24px;margin:18px 0}
+.niet h3{margin-top:0;color:var(--bad)}
+.niet ul{margin-bottom:0}
+.niet li::marker{color:var(--bad)}
+
+.stappen{counter-reset:s;list-style:none;padding:0;margin:18px 0;max-width:none}
+.stappen li{counter-increment:s;position:relative;padding-left:44px;margin-bottom:18px}
+.stappen li::before{content:counter(s);position:absolute;left:0;top:1px;
+  width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.stappen b{display:block;margin-bottom:2px}
+
+footer{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:13.5px;color:var(--ink-3);max-width:66ch}
+@media (max-width:640px){ .blad{padding:34px 18px 70px} h1{font-size:26px} }
+</style>
+
+<div class="blad">
+
+<div class="kop">
+  <div class="merk">Vak<span>to</span></div>
+  <div class="ondertitel">Warehouse Management</div>
+</div>
+
+<h1>Startplan</h1>
+<p class="inleiding">Positionering, prijzen, het proefvoorstel en de invoering.
+Geschreven om te bewaren en om aan een accountant of een eerste klant te laten zien.</p>
+
+<!-- ============================================================= -->
+<h2>1 · Wat je verkoopt</h2>
+<h3>Geen WMS. Een magazijnman die software maakt.</h3>
+<p>Zodra je jezelf "WMS-leverancier" noemt, lig je op een functielijstje naast
+Boltrics en Manhattan. Die vergelijking verlies je, en terecht: zij hebben tien jaar
+en dertig man voorsprong.</p>
+<p>Je echte voordeel is iets wat zij niet kunnen nazeggen. Zeg dus dít:</p>
+
+<div class="zeg">
+  <div class="wie">wat je zegt in het eerste gesprek</div>
+  "Ik ben tien jaar teamleider en warehouse manager geweest. Ik heb het systeem gebouwd
+  dat ik zelf altijd had willen hebben. Ik richt het bij jullie in, ik sta de eerste week
+  op de vloer, en als iets niet past pas ik het aan."
+</div>
+
+<p>Dit segment koopt geen software. Het koopt <strong>iemand die dit voor ons
+regelt</strong>. Dat is meteen de rechtvaardiging voor een hogere prijs dan je
+misschien durft te vragen.</p>
+
+<!-- ============================================================= -->
+<h2>2 · Weinig klanten, goed bediend</h2>
+<p>Elke klant kost ongeveer evenveel tijd, ongeacht wat hij betaalt: inrichten, vragen
+beantwoorden, erbij zijn als het hapert. Veertig klanten à €150 is veertig
+telefoonnummers die op maandagochtend tegelijk kunnen bellen. Dat houdt niemand vol.</p>
+
+<div class="kader accent">
+  <p style="margin:0"><strong>De rekensom.</strong> Als solist bedien je tien tot vijftien
+  klanten écht goed. Wil je daar een inkomen uit halen dat je huidige salaris vervangt,
+  dan kom je uit op ongeveer <strong>€700 per klant per maand</strong>. Twaalf klanten
+  maal €700 is €100.000 omzet.</p>
+</div>
+
+<p>Voor de klant is dat behapbaar. Een groothandel met vijf tot dertig man in het
+magazijn draait miljoenen. €8.400 per jaar is minder dan een derde van één
+magazijnmedewerker — en dat is precies het argument dat je gebruikt.</p>
+<p>Nog een reden voor hoog-en-weinig: je grootste verkoopobstakel is <em>"wat als die man
+ermee stopt"</em>. Dat neem je niet weg met een goedkoop zelfbedieningsproduct, maar
+door dicht op een handjevol klanten te zitten.</p>
+<p>En praktisch: een prijs verlagen kan altijd, verhogen bijna nooit.</p>
+
+<!-- ============================================================= -->
+<h2>3 · Prijzen</h2>
+<div class="tabelwrap"><table>
+  <thead><tr><th>Staffel</th><th>Omvang</th><th class="num">Per maand</th>
+    <th class="num">Inrichten</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Klein</strong></td><td>tot ±1.500 artikelen<br>1–5 gebruikers</td>
+        <td class="num">€ 395</td><td class="num">€ 2.500</td></tr>
+    <tr class="uit"><td><strong>Middel</strong></td><td>tot ±7.500 artikelen<br>6–15 gebruikers</td>
+        <td class="num">€ 695</td><td class="num">€ 4.500</td></tr>
+    <tr><td><strong>Groot</strong></td><td>daarboven</td>
+        <td class="num">€ 995</td><td class="num">€ 7.500</td></tr>
+    <tr><td><strong>Proef</strong></td><td>één zone, 6–8 weken</td>
+        <td class="num">gratis / € 500</td><td class="num">—</td></tr>
+  </tbody>
+</table></div>
+
+<p><strong>Waarom een vast bedrag per magazijn.</strong> Een prijs per gebruiker straft
+ze af zodra ze een uitzendkracht inhuren. Een prijs per order is onvoorspelbaar en
+straft groei af. Een vast bedrag kunnen ze begroten, en dat is wat een MKB-directeur
+wil horen.</p>
+
+<p><strong>In elke staffel zit:</strong> alle functies (er zijn geen uitgeklede
+versies), onbeperkt aantal locaties, updates, telefonische hulp op werkdagen, en één
+dag per jaar meelopen om te kijken wat beter kan.</p>
+
+<div class="niet">
+  <h3>Wat je niet doet</h3>
+  <ul>
+    <li><strong>Geen freemium of gratis proefaccount zonder jou erbij.</strong> Iemand
+      die alleen rondklikt begrijpt het niet en concludeert dat het niets is.</li>
+    <li><strong>Geen prijs per order.</strong> Onvoorspelbaar voor hen, en je verdient
+      het meest bij de klant die het hardst groeit — dat voelt als straf.</li>
+    <li><strong>Geen klant die veel groter is dan de rest.</strong> Die eet je op,
+      hoe verleidelijk het bedrag ook is.</li>
+    <li><strong>Geen eerste klant met een ERP dat je nog nooit gezien hebt.</strong></li>
+  </ul>
+</div>
+
+<!-- ============================================================= -->
+<h2>4 · Het proefvoorstel</h2>
+<p>Dit is je belangrijkste verkoopinstrument. Je verkoopt geen invoering, je stelt een
+proef voor. Daarmee zakt hun risico naar bijna nul, en dat is het enige echte bezwaar
+dat je moet wegnemen.</p>
+
+<div class="kader">
+  <h3 style="margin-top:0">Voorstel: proef op één zone</h3>
+  <p><strong>Duur</strong> — zes tot acht weken, naast jullie huidige manier van werken.</p>
+  <p><strong>Omvang</strong> — één zone of één artikelgroep. Geen migratie, geen
+  koppelingen, niets dat jullie huidige systeem raakt.</p>
+  <p><strong>Wat ik doe</strong> — locaties aanmaken en opmeten, artikelen importeren,
+  het team een halve dag opleiden, en de eerste dagen op de vloer staan.</p>
+  <p><strong>Wat jullie doen</strong> — de voorraad in die zone één keer tellen, en twee
+  mensen aanwijzen die het gaan gebruiken.</p>
+  <p><strong>Kosten</strong> — geen, of een symbolische €500 voor mijn tijd.</p>
+  <p style="margin-bottom:0"><strong>Wat we na afloop weten</strong> — of het aantal
+  telverschillen omlaag gaat, hoeveel tijd het inwerken van iemand scheelt, en of de
+  vulfactor klopt voor jullie soort goederen. Daarna beslissen jullie.</p>
+</div>
+
+<p>Dit is geen verkooptruc. Het is ook voor jou de goedkoopste manier om erachter te
+komen of je aannames kloppen — bijvoorbeeld of die vulfactor van 0,85 bij hen eigenlijk
+0,6 moet zijn.</p>
+
+<!-- ============================================================= -->
+<h2>5 · Hoe snel je invoert</h2>
+<p>Het bepalende is niet jouw software maar <strong>hun data en hun
+beschikbaarheid</strong>. Dat geldt voor elke WMS-leverancier, ook voor de grote.</p>
+
+<div class="tabelwrap"><table>
+  <thead><tr><th>Stap</th><th>Doorlooptijd</th><th>Waar het op vastloopt</th></tr></thead>
+  <tbody>
+    <tr><td>Locaties aanmaken en opmeten</td><td>1 dag</td>
+        <td>niets — je meet één van elk soort, niet elk vak</td></tr>
+    <tr><td>Artikelen importeren</td><td>1 dag</td>
+        <td>ontbrekende afmetingen; dat lost zich op bij ontvangst</td></tr>
+    <tr><td>Beginvoorraad tellen</td><td>1–2 dagen</td>
+        <td>hún werk, hún planning</td></tr>
+    <tr><td>Koppeling (eerst CSV)</td><td>2 dagen – 3 weken</td>
+        <td>volledig afhankelijk van hun ERP</td></tr>
+    <tr><td>Opleiden en meelopen</td><td>eerste week</td>
+        <td>onmisbaar — plan hem in, kort hem niet af</td></tr>
+  </tbody>
+</table></div>
+
+<p><strong>Bij elkaar:</strong> een proef op één zone kost 1–2 weken doorlooptijd en
+3–5 dagen werk. Een volledige invoering met CSV-koppeling: 4–8 weken en 10–15 dagen
+werk. Met een echte ERP-koppeling: 3–4 maanden.</p>
+
+<div class="kader accent">
+  <p style="margin:0"><strong>Plan de overgang rond hun jaarlijkse inventarisatie.</strong>
+  De beginvoorraad moet toch geteld worden. Doe je dat op hetzelfde moment, dan doe je
+  het werk één keer in plaats van twee keer — en dat scheelt hen een dag productie.</p>
+</div>
+
+<!-- ============================================================= -->
+<h2>6 · De drie bezwaren</h2>
+<p>Deze komen gegarandeerd. Bereid ze voor, want een aarzeling hier kost je de deal.</p>
+
+<div class="bezwaar">
+  <div class="vraag">"Wat als jij ermee stopt of onder een bus komt?"</div>
+  <div class="antwoord">Zet het op papier <strong>vóór ze het vragen</strong>. Twee
+  dingen: de broncode in bewaring bij een derde partij, zodat die vrijkomt als jij
+  stopt. En hun gegevens blijven van hen, exporteerbaar in een standaardformaat dat
+  elk ander systeem kan inlezen. Dat is een half A4 en het neemt hun grootste angst weg.</div>
+</div>
+
+<div class="bezwaar">
+  <div class="vraag">"Wie helpt me maandagochtend als het niet werkt?"</div>
+  <div class="antwoord">Wees eerlijk over je bereikbaarheid en beloof <strong>geen
+  24/7</strong>. Zeg wat je wel doet: bereikbaar op werkdagen, en bij een storing die de
+  productie stillegt kom je langs. Een belofte die je niet waarmaakt kost je meer dan
+  een eerlijke beperking.</div>
+</div>
+
+<div class="bezwaar">
+  <div class="vraag">"Werkt dit met ons ERP?"</div>
+  <div class="antwoord">Niet bluffen. <strong>"Nog niet — we beginnen met een
+  CSV-koppeling, en als dat werkt kijken we naar een directe koppeling."</strong>
+  Een CSV-import is voor negen van de tien MKB-groothandels ruim voldoende om te
+  beginnen.</div>
+</div>
+
+<!-- ============================================================= -->
+<h2>7 · Scanners en telefoons</h2>
+<p><strong>Geen eigen app bouwen.</strong> Vakto draait in de browser, en een
+professionele handscanner van Zebra of Honeywell draait Android met een browser. In
+"keyboard wedge"-stand typt de scanner de code en drukt op enter — precies waar het
+scanveld op wacht. Geen aanpassing nodig, geen app store, geen tweede codebase.</p>
+<p>Valt de wifi achterin het magazijn weg, dan is de tussenweg een <strong>PWA</strong>:
+dezelfde webpagina met een pictogram op het beginscherm, die offline blijft werken en
+scans bewaart tot de verbinding terug is. Ongeveer een week werk, en pas nodig als een
+klant erom vraagt.</p>
+
+<div class="tabelwrap"><table>
+  <thead><tr><th>Route</th><th>Wat</th><th class="num">Per apparaat</th></tr></thead>
+  <tbody>
+    <tr><td>Goedkoop</td><td>Android-telefoon + ringscanner via bluetooth</td>
+        <td class="num">€ 60 – 150</td></tr>
+    <tr><td>Professioneel</td><td>Zebra TC22 / Honeywell ScanPal — schokbestendig,
+        met handschoenen te bedienen, wisselbare accu</td>
+        <td class="num">€ 400 – 900</td></tr>
+  </tbody>
+</table></div>
+
+<p><strong>Verkoop die hardware niet zelf.</strong> Adviseer wat ze moeten kopen en laat
+ze het zelf bestellen. De marge is dun en je wilt niet degene zijn die een kapotte
+scanner moet vervangen.</p>
+
+<!-- ============================================================= -->
+<h2>8 · Server, hosting en wat het kost</h2>
+<p>De demo draait in het geheugen van één browser. Een echt magazijn heeft één plek
+nodig waar de waarheid staat: waar vijf scanners, de pc bij de expeditie en jouw laptop
+thuis allemaal naar kijken, en die blijft draaien als iedereen naar huis gaat. Dat zijn
+drie dingen, en ze worden vaak door elkaar gehaald.</p>
+
+<div class="tabelwrap"><table>
+  <thead><tr><th>Wat</th><th>Wat het is</th><th>Wat het je kost</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Server</strong></td>
+        <td>Een gehuurde Linux-machine in een datacentrum die altijd aanstaat. Voor
+            2.000 locaties en vijf scanners is 2 kernen en 4&nbsp;GB ruim genoeg.</td>
+        <td class="num">€ 4 – 20 p/m</td></tr>
+    <tr><td><strong>Database</strong></td>
+        <td>PostgreSQL, op diezelfde server. Vervangt SQLite, want dat kan geen rij
+            vergrendelen — en zonder vergrendeling reserveren twee pickers dezelfde
+            laatste vijf stuks.</td>
+        <td class="num">€ 0</td></tr>
+    <tr><td><strong>Hosting</strong></td>
+        <td>Dat <span class="mono">klant.vaktowms.nl</span> naar je server wijst, dat er
+            een slotje in de browser staat, dat de app vanzelf herstart, en dat er elke
+            nacht een back-up naar een ándere plek gaat.</td>
+        <td class="num">€ 5 – 10 p/m</td></tr>
+  </tbody>
+</table></div>
+
+<h3>Zelf doen of uitbesteden</h3>
+<p>Het verschil zit niet in de techniek maar in wie er om kwart over zeven 's ochtends
+de telefoon opneemt.</p>
+
+<div class="tabelwrap"><table>
+  <thead><tr><th>Route</th><th>Wat je zelf moet doen</th><th class="num">Per maand</th></tr></thead>
+  <tbody>
+    <tr class="uit"><td><strong>Kale VPS</strong><div style="color:var(--ink-3);font-size:13px">Hetzner, TransIP</div></td>
+        <td>Alles: installeren, beveiligingsupdates, back-ups, storingen</td>
+        <td class="num">€ 5 – 20</td></tr>
+    <tr><td><strong>Managed platform</strong></td>
+        <td>Weinig. Je betaalt voor het gemak</td>
+        <td class="num">€ 25 – 70</td></tr>
+    <tr><td><strong>Beheerpartij</strong></td>
+        <td>Bellen als er iets is</td>
+        <td class="num">€ 75 – 200</td></tr>
+  </tbody>
+</table></div>
+
+<div class="kader accent">
+  <p style="margin:0"><strong>Doe de eerste pilot zelf op een kale VPS.</strong> Niet
+  omdat het het goedkoopst is, maar omdat je moet weten wat je verkoopt. Als een klant
+  vraagt "en wat als jullie server eruit ligt", moet je uit ervaring antwoorden en niet
+  uit een brochure. Eén avond om het op te zetten, daarna een half uur per maand.
+  Vanaf klant twee of drie is de vraag niet meer <em>kan ik het zelf</em>, maar
+  <em>wil ik hier in mijn eentje verantwoordelijk voor zijn naast een baan</em>.</p>
+</div>
+
+<h3>De rekening</h3>
+<div class="tabelwrap"><table>
+  <thead><tr><th>Post</th><th class="num">Eén pilotklant</th><th class="num">Vijf klanten samen</th></tr></thead>
+  <tbody>
+    <tr><td>VPS</td><td class="num">± € 4</td><td class="num">± € 8</td></tr>
+    <tr><td>Automatische back-up</td><td class="num">± € 1</td><td class="num">± € 2</td></tr>
+    <tr><td>Back-upopslag elders</td><td class="num">± € 4</td><td class="num">± € 4</td></tr>
+    <tr><td>Domeinnaam (€ 12 per jaar)</td><td class="num">± € 1</td><td class="num">± € 1</td></tr>
+    <tr><td>TLS-certificaat, monitoring</td><td class="num">€ 0</td><td class="num">€ 0</td></tr>
+    <tr class="uit"><td><strong>Totaal</strong></td>
+        <td class="num"><strong>± € 10</strong></td>
+        <td class="num"><strong>± € 15</strong> &nbsp;(€ 3 p/klant)</td></tr>
+  </tbody>
+</table></div>
+
+<p>Zet dat naast € 395 per maand voor de kleinste klant: je hosting is geen procent van
+je omzet. <strong>Bouw het in je prijs en factureer het niet apart.</strong> Zodra
+hosting een aparte regel op de factuur is, gaat een klant erover onderhandelen — en dan
+zit je te praten over vier euro.</p>
+
+<div class="kader">
+  <h3 style="margin-top:0">Vier dingen die mensen vergeten</h3>
+  <ul>
+    <li><strong>Aparte database per klant.</strong> Eén server mag meerdere klanten
+      dragen, maar geef elke klant zijn eigen database. Veiliger, makkelijker terug te
+      zetten, en je kunt in een gesprek gewoon zeggen: uw gegevens staan apart.</li>
+    <li><strong>Verwerkersovereenkomst.</strong> Staan klantgegevens op jouw server, dan
+      ben je onder de AVG verwerker. Je hebt er één nodig met de klant, en er moet er één
+      zijn tussen jou en je hostingpartij. Een inkoper bij een groothandel van vijftig man
+      vraagt daarnaar.</li>
+    <li><strong>Beloof bereikbaarheid, geen uptime.</strong> Niet 24/7 en geen 99,9%.
+      Wel: werkdagen 08:00–17:00 reactie binnen een uur, en bij een storing die het werk
+      stillegt bel je me altijd. Dat kun je náást een baan waarmaken.</li>
+    <li><strong>Terugvalplan.</strong> Ligt de server een uur plat, dan pickt het magazijn
+      op papier en boek je achteraf in. Bouw een knop die de openstaande picklijsten als
+      PDF uitdraait. Eén dag werk, en het eerste waar een verstandige magazijnmanager
+      naar vraagt.</li>
+  </ul>
+</div>
+
+<p>Je hoeft nu nog niets te huren. Bouw de serverversie en test hem op je eigen laptop —
+dat kost niets. Pas als er een echte pilot start, zet je een VPS aan en begint die vijf
+euro te lopen.</p>
+
+<!-- ============================================================= -->
+<h2>9 · De volgorde</h2>
+<ol class="stappen">
+  <li><b>Blijf in dienst.</b> Zeg niets op voor je twee of drie betalende klanten hebt.
+    Een verkoper die het geld nodig heeft, ruiken ze.</li>
+  <li><b>Eén proef bij iemand uit je netwerk.</b> Niet verkopen — testen. Vraag of je
+    op één zone mag meekijken. Dat kost je een paar avonden en een vrije dag.</li>
+  <li><b>Verwerk wat je leert.</b> Dit is waar je vulfactor, je drempels en je
+    schermen echt goed worden. Reken op flink herwerk, dat hoort erbij.</li>
+  <li><b>Twee betalende klanten.</b> Vraag de volle prijs. De eerste referentie is
+    meer waard dan de korting die je zou willen geven.</li>
+  <li><b>Nu pas oprichten en opzeggen.</b> Met omzet, een referentie en een systeem
+    dat in een echt magazijn heeft gedraaid.</li>
+</ol>
+
+<footer>
+  Richtinggetallen op basis van de Nederlandse MKB-markt, bedoeld om mee te rekenen en
+  te toetsen — geen boekhoudkundig of juridisch advies. Voor rechtsvorm, buffer, btw en
+  verzekeringen hoor je bij een accountant te zijn, en voor de bewaarregeling van de
+  broncode bij een jurist.
+</footer>
+
+</div>

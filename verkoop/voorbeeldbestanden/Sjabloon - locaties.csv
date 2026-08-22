@@ -1,0 +1,5 @@
+﻿Locatiecode;Zone;Soort locatie;Diepte (mm);Breedte (mm);Hoogte (mm);Max belasting (kg)
+01-01-1;Kleingoed;Picklocatie;300;400;220;12
+01-01-2;Kleingoed;Picklocatie;300;400;220;12
+04-01-1;Palletstelling;Bulklocatie;1200;800;1500;900
+ONTVANGST;Expeditie;Ontvangst;8000;4000;2500;4000

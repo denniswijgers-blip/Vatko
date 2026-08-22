@@ -21,3 +21,11 @@ rad.json
 *.flf
 #Test results file
 TestResults.xml
+### Vakto ###
+*.png
+*.pyc
+.DS_Store
+__pycache__/
+demo/artifact.html
+demo/vakto-demo.html
+node_modules/

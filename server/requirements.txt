@@ -1,0 +1,4 @@
+# De rekenkern heeft niets nodig: alleen de standaardbibliotheek.
+# Deze regels zijn voor stap 3, als de database erbij komt.
+#
+# psycopg[binary]>=3.2

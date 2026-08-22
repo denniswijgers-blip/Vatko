@@ -1,0 +1,715 @@
+<title>Vakto Herindeling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5..125,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#E5EBED; --surface:#FAFCFD; --surface-2:#EFF4F6;
+  --line:#CFDADE; --hair:#E1E9EB; --grid:rgba(12,58,70,.055);
+  --ink:#0E1518; --ink-2:#4C5A61; --ink-3:#77868D;
+  --accent:#0A4552; --accent-2:#1B8FA6; --accent-ink:#FFFFFF; --accent-soft:#E1EFF2;
+  --accent-rand:rgba(10,69,82,.28);
+  --ok:#17724A; --ok-soft:#E4F1EA;
+  --warn:#9A5C0A; --warn-soft:#FBF0DF;
+  --bad:#A82A21; --bad-soft:#FAEAE8;
+  --schaduw:0 1px 2px rgba(10,40,50,.05), 0 2px 10px rgba(10,40,50,.045);
+  --ui:Archivo,"Segoe UI",system-ui,-apple-system,sans-serif;
+  --code:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#1C262B; --surface:#232F35; --surface-2:#2A373E;
+    --line:#38474F; --hair:#2F3D44; --grid:rgba(140,205,220,.04);
+    --ink:#E9EFF1; --ink-2:#A2B1B8; --ink-3:#7D8E95;
+    --accent:#58B8CB; --accent-2:#7ED4E3; --accent-ink:#04222A; --accent-soft:#16343D;
+    --accent-rand:rgba(88,184,203,.34);
+    --ok:#54BE8B; --ok-soft:#15291F;
+    --warn:#D2963F; --warn-soft:#2C2314;
+    --bad:#E0796F; --bad-soft:#2F1B19;
+    --schaduw:0 1px 2px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#1C262B; --surface:#232F35; --surface-2:#2A373E;
+  --line:#38474F; --hair:#2F3D44; --grid:rgba(140,205,220,.04);
+  --ink:#E9EFF1; --ink-2:#A2B1B8; --ink-3:#7D8E95;
+  --accent:#58B8CB; --accent-2:#7ED4E3; --accent-ink:#04222A; --accent-soft:#16343D;
+  --accent-rand:rgba(88,184,203,.34);
+  --ok:#54BE8B; --ok-soft:#15291F;
+  --warn:#D2963F; --warn-soft:#2C2314;
+  --bad:#E0796F; --bad-soft:#2F1B19;
+  --schaduw:0 1px 2px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.28);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:400 15.5px/1.62 var(--ui);-webkit-font-smoothing:antialiased}
+.mono,code{font-family:var(--code);font-size:.92em;letter-spacing:-.01em}
+
+.blad{max-width:1180px;margin:0 auto;padding:0 26px 90px;
+  display:grid;grid-template-columns:210px minmax(0,1fr);gap:44px;align-items:start}
+.blad > *{min-width:0}
+main{min-width:0}
+@media (max-width:900px){ .blad{grid-template-columns:1fr;gap:0;padding:0 16px 60px} }
+
+/* --- kop ---------------------------------------------------------- */
+.kop{grid-column:1/-1;padding:52px 0 30px;border-bottom:2px solid var(--accent);
+  margin-bottom:34px}
+.merk{display:flex;align-items:center;gap:10px;font-weight:600;font-size:19px;
+  letter-spacing:-.035em;font-stretch:108%}
+.merk svg{width:22px;height:22px;color:var(--accent)}
+h1{font-size:clamp(30px,5vw,44px);font-weight:600;letter-spacing:-.04em;font-stretch:106%;
+  line-height:1.05;margin:18px 0 10px;text-wrap:balance;max-width:16ch}
+.onderkop{color:var(--ink-2);max-width:66ch;margin:0;font-size:17px}
+.stempel{display:flex;gap:20px;flex-wrap:wrap;margin-top:22px;font-family:var(--code);
+  font-size:11.5px;color:var(--ink-3)}
+.stempel b{color:var(--ink-2);font-weight:500}
+
+/* --- index -------------------------------------------------------- */
+.index{position:sticky;top:22px;font-size:13px;display:flex;flex-direction:column;gap:1px}
+.index .ilabel{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;margin-bottom:8px}
+.index a{display:flex;gap:9px;color:var(--ink-2);text-decoration:none;padding:4px 8px;
+  border-radius:5px;border-left:2px solid transparent}
+.index a:hover{background:var(--surface);color:var(--ink)}
+.index a.aan{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);
+  font-weight:500}
+.index a i{font-family:var(--code);font-style:normal;color:var(--ink-3);min-width:14px}
+@media (max-width:900px){
+  .index{position:static;flex-direction:row;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+  .index .ilabel{flex:0 0 100%}
+  .index a{border-left:0;background:var(--surface);border:1px solid var(--line)}
+}
+
+/* --- tekst -------------------------------------------------------- */
+section{scroll-margin-top:20px;margin-bottom:44px}
+h2{font-size:23px;font-weight:600;letter-spacing:-.028em;font-stretch:104%;
+  margin:0 0 6px;display:flex;align-items:baseline;gap:12px;text-wrap:balance}
+h2 .nr{font-family:var(--code);font-size:13px;color:var(--accent);font-weight:500;
+  flex:0 0 auto}
+h3{font-size:16px;font-weight:600;letter-spacing:-.012em;margin:26px 0 8px}
+p{margin:0 0 13px;max-width:70ch;color:var(--ink-2)}
+p strong,li strong{color:var(--ink);font-weight:600}
+.inleiding{color:var(--ink-2);margin-bottom:20px;padding-bottom:16px;
+  border-bottom:1px solid var(--hair);max-width:70ch}
+ul,ol{margin:0 0 14px;padding-left:20px;max-width:70ch;color:var(--ink-2)}
+li{margin-bottom:6px}
+li::marker{color:var(--accent)}
+
+/* --- regelkaart --------------------------------------------------- */
+.regel{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:15px 17px;margin:0 0 12px;box-shadow:var(--schaduw)}
+.regelkop{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-bottom:7px}
+.rid{font-family:var(--code);font-size:11px;font-weight:600;letter-spacing:.02em;
+  background:var(--accent-soft);color:var(--accent);padding:3px 8px;border-radius:4px}
+.rtitel{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.regel p{margin-bottom:0;color:var(--ink-2)}
+.regel p + p{margin-top:9px}
+
+pre{background:var(--surface-2);border:1px solid var(--hair);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0;
+  font:400 12.5px/1.65 var(--code);color:var(--ink)}
+pre .c{color:var(--ink-3)}
+pre .k{color:var(--accent);font-weight:500}
+
+.tabelwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;margin:12px 0;box-shadow:var(--schaduw)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;padding:11px 12px 9px;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--hair);vertical-align:top;
+  color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--code)}
+td strong{color:var(--ink)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#test table td:first-child{white-space:nowrap}
+
+.valkuil{background:var(--bad-soft);border-left:3px solid var(--bad);
+  border-radius:0 8px 8px 0;padding:13px 16px;margin:14px 0;max-width:74ch}
+.valkuil b{color:var(--bad);display:block;font-size:11px;letter-spacing:.13em;
+  text-transform:uppercase;margin-bottom:5px}
+.valkuil p{color:var(--ink-2);margin:0}
+.valkuil p + p{margin-top:8px}
+
+.let{background:var(--surface-2);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:13px 16px;margin:14px 0;max-width:74ch}
+.let p{margin:0;color:var(--ink-2)}
+.let b{color:var(--ink)}
+
+.pil{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10.5px;
+  font-weight:600;font-family:var(--code)}
+.pil.g{background:var(--ok-soft);color:var(--ok)}
+.pil.o{background:var(--warn-soft);color:var(--warn)}
+.pil.r{background:var(--bad-soft);color:var(--bad)}
+.pil.a{background:var(--accent-soft);color:var(--accent)}
+
+.voet{grid-column:1/-1;margin-top:20px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--ink-3);max-width:74ch}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+
+/* ===================================================================
+   Alleen voor dit stuk: een groottebalk, een mappenboom en een
+   voor/na-paneel. De rest komt uit de specificatie.
+   =================================================================== */
+
+/* --- groottebalk in de tabel -------------------------------------- */
+.balkcel{width:150px;min-width:110px}
+.balk{display:block;position:relative;height:14px;background:var(--surface-2);
+  border:1px solid var(--hair);border-radius:3px;overflow:hidden;min-width:80px}
+.balk i{position:absolute;inset:0 auto 0 0;background:var(--accent-2);opacity:.5;
+  display:block;border-radius:2px 0 0 2px}
+.balk.groot i{background:var(--warn);opacity:.65}
+.balk.zeergroot i{background:var(--bad);opacity:.65}
+
+/* --- mappenboom --------------------------------------------------- */
+.boom{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:16px 18px;margin:14px 0;box-shadow:var(--schaduw);overflow-x:auto;
+  font:400 12.5px/1.85 var(--code)}
+.boom .r{white-space:pre;color:var(--ink-2)}
+.boom .m{color:var(--accent);font-weight:500}      /* map */
+.boom .b{color:var(--ink)}                          /* bestand */
+.boom .u{color:var(--ink-3)}                        /* uitleg */
+.boom .nw{color:var(--ok);font-weight:500}          /* nieuw */
+
+/* --- voor / na ----------------------------------------------------- */
+.voorna{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));
+  gap:14px;margin:14px 0}
+.voorna > *{min-width:0}
+.vak{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:14px 16px;box-shadow:var(--schaduw)}
+.vak h4{margin:0 0 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600}
+.vak.na{border-color:var(--accent-rand)}
+.vak.na h4{color:var(--accent)}
+.vak ul{margin:0;padding-left:16px;font-size:13px}
+.vak li{margin-bottom:5px}
+.vak .mono{font-size:12px}
+
+/* --- stappenkaart -------------------------------------------------- */
+.stap{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:14px 16px;margin:0 0 10px;box-shadow:var(--schaduw)}
+.stap .nummer{font-family:var(--code);font-size:15px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);border-radius:6px;display:flex;align-items:center;
+  justify-content:center;height:30px}
+.stap h4{margin:0 0 4px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.stap p{margin:0;font-size:13.5px}
+.stap p + p{margin-top:6px}
+.stap .duur{font-family:var(--code);font-size:10.5px;color:var(--ink-3);
+  float:right;margin-left:12px}
+
+/* --- cijferrij ----------------------------------------------------- */
+.cijfers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));
+  gap:12px;margin:16px 0 22px}
+.cijfers > *{min-width:0}
+.cijfer{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:13px 15px;box-shadow:var(--schaduw)}
+.cijfer .w{font-family:var(--code);font-size:25px;font-weight:600;letter-spacing:-.03em;
+  color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.cijfer .l{font-size:11px;color:var(--ink-3);margin-top:3px}
+.cijfer.let-op .w{color:var(--bad)}
+
+/* gedempte bijzin, ook buiten de mappenboom */
+.u{color:var(--ink-3)}
+
+</style>
+<div class="blad">
+
+<header class="kop">
+  <div class="merk">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1.6" y="1.6" width="20.8" height="20.8" rx="4" fill="none"
+            stroke="currentColor" stroke-width="1.5" opacity=".55"/>
+      <rect x="6.4" y="12.2" width="11.2" height="5.4" rx="1.4" fill="currentColor"/>
+      <path d="M6.4 8.4h11.2" stroke="currentColor" stroke-width="1.2"
+            stroke-linecap="round" opacity=".4"/></svg>
+    Vakto
+  </div>
+  <h1>Het project opnieuw indelen</h1>
+  <p class="onderkop">Wat er nu staat, wat er te groot is geworden, en een indeling die
+  meegroeit. Voorstel &mdash; er wordt niets verplaatst voordat je akkoord geeft.</p>
+  <div class="stempel">
+    <span><b>Voor</b> Dennis Wijgers</span>
+    <span><b>Datum</b> 22 augustus 2026</span>
+    <span><b>Status</b> voorstel, wacht op akkoord</span>
+  </div>
+</header>
+
+<nav class="index" aria-label="Inhoud">
+  <div class="ilabel">Inhoud</div>
+  <a href="#eerst"><i>00</i> Eerst dit</a>
+  <a href="#nu"><i>01</i> Wat er nu staat</a>
+  <a href="#groot"><i>02</i> Wat te groot is</a>
+  <a href="#mappen"><i>03</i> De nieuwe indeling</a>
+  <a href="#splitsen"><i>04</i> Per bestand</a>
+  <a href="#volgorde"><i>05</i> In welke volgorde</a>
+  <a href="#niet"><i>06</i> Wat ik niet zou doen</a>
+</nav>
+
+<main>
+
+<!-- ============================================================ -->
+<section id="eerst">
+  <h2><span class="nr">00</span> Eerst dit</h2>
+  <p class="inleiding">Eén ding moet er staan voordat we ook maar één bestand verplaatsen.
+  Het is niet spannend en het is het belangrijkste van dit hele stuk.</p>
+
+  <div class="valkuil"><b>Er zit geen versiebeheer op je project</b>
+    <p>Ik heb gekeken: er staat geen <code>git</code> in je mappen. Dat betekent dat er
+    nergens een "terug"-knop zit. Herindelen is precies het soort werk waarbij je halverwege
+    denkt "hier klopt iets niet meer" &mdash; en dan wil je terug kunnen naar hoe het
+    gisteravond werkte, niet naar wat je je ervan herinnert.</p>
+    <p>Voor een eerste project is dit ook de nuttigste gewoonte die je jezelf kunt aanleren.
+    Het kost tien minuten om op te zetten en je gebruikt het de rest van je leven.</p></div>
+
+  <p>Concreet, voordat stap 1 begint: <code>git init</code> in de projectmap, alles
+  vastleggen zoals het nu is, en die toestand een naam geven &mdash; bijvoorbeeld
+  <span class="mono">"stap 4 af, alles groen"</span>. Daarna leg je na elke module opnieuw
+  vast. Gaat er iets stuk, dan ben je één opdracht van de vorige werkende versie af.</p>
+
+  <p>De tweede zekerheid heb je al, en die is minstens zo veel waard:
+  <strong>67 Python-tests en 47 SQL-controles</strong>. Bij een herindeling verplaatsen we
+  code, we veranderen hem niet. De tests horen dus na elke stap nog steeds allemaal groen te
+  zijn. Zijn ze dat niet, dan is er tijdens het verplaatsen iets misgegaan &mdash; en dan
+  weet je het meteen in plaats van over drie weken.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="nu">
+  <h2><span class="nr">01</span> Wat er nu staat</h2>
+  <p class="inleiding">Je hebt geen één project, je hebt er twee. Dat is geen fout, dat is
+  precies zoals we het hebben afgesproken &mdash; maar het is wel de eerste knip in de
+  indeling.</p>
+
+  <div class="cijfers">
+    <div class="cijfer"><div class="w">2</div><div class="l">codebases</div></div>
+    <div class="cijfer"><div class="w">10.469</div><div class="l">regels code totaal</div></div>
+    <div class="cijfer"><div class="w">10</div><div class="l">losse mappen in je werkmap</div></div>
+    <div class="cijfer let-op"><div class="w">0</div><div class="l">versiebeheer</div></div>
+  </div>
+
+  <h3>De serverversie &mdash; het echte product</h3>
+  <p>Negen Python-bestanden, samen 1.073 regels, en het grootste is
+  <span class="mono">opslag.py</span> met 273. Elk bestand doet één ding en de naam zegt
+  welk. <strong>Hier hoeft niets aan te gebeuren.</strong> Dit is hoe het eruit hoort te zien,
+  en het is meteen het antwoord op je vraag "hoe worden dit soort projecten normaal
+  gesplitst": zo dus. Je hebt het al gedaan, alleen aan één kant.</p>
+
+  <h3>De browserversie &mdash; de demo</h3>
+  <p>Twintig bestanden, 6.128 regels. Die zijn ontstaan in de volgorde waarin we ze nodig
+  hadden, en dat zie je aan de namen. <span class="mono">ui.js</span> tot en met
+  <span class="mono">ui7.js</span> zijn genummerd naar wanneer ze gemaakt zijn, niet naar wat
+  erin zit. Dat is de echte prijs die je nu betaalt: niet dat de bestanden groot zijn, maar
+  dat je niet kunt zien waar iets staat zonder te zoeken.</p>
+
+  <div class="tabelwrap"><table>
+    <thead><tr><th>Bestand</th><th>Wat erin zit</th><th class="num">Regels</th>
+      <th class="num">Tokens</th><th>Grootte</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><strong>kern.js</strong></td>
+        <td>Passen, voorstellen, instellingen, afronden</td>
+        <td class="num mono">228</td><td class="num mono">~3,0k</td>
+        <td class="balkcel"><span class="balk "><i style="width:31%"></i></span></td></tr>
+      <tr><td class="mono"><strong>data.js</strong></td>
+        <td>De demogegevens: 2.236 locaties, 3.500 artikelen</td>
+        <td class="num mono">221</td><td class="num mono">~2,9k</td>
+        <td class="balkcel"><span class="balk "><i style="width:30%"></i></span></td></tr>
+      <tr><td class="mono"><strong>gebruikers.js</strong></td>
+        <td>Inloggen en rollen</td>
+        <td class="num mono">43</td><td class="num mono">~0,4k</td>
+        <td class="balkcel"><span class="balk "><i style="width:6%"></i></span></td></tr>
+      <tr><td class="mono"><strong>app.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Boeken, meten, aanvullen, zelfcontrole</td>
+        <td class="num mono">299</td><td class="num mono">~3,4k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:40%"></i></span></td></tr>
+      <tr><td class="mono"><strong>uitgaand.js</strong></td>
+        <td>Reserveren, picken, manco, inpakken</td>
+        <td class="num mono">222</td><td class="num mono">~2,3k</td>
+        <td class="balkcel"><span class="balk "><i style="width:30%"></i></span></td></tr>
+      <tr><td class="mono"><strong>optimalisatie.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Samenvoegen, aanvullen, tellen, hardlopers</td>
+        <td class="num mono">322</td><td class="num mono">~3,5k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:43%"></i></span></td></tr>
+      <tr><td class="mono"><strong>simulatie.js</strong></td>
+        <td>De werkdag naspelen</td>
+        <td class="num mono">207</td><td class="num mono">~2,2k</td>
+        <td class="balkcel"><span class="balk "><i style="width:28%"></i></span></td></tr>
+      <tr><td class="mono"><strong>scan.js</strong></td>
+        <td>De scanmodus</td>
+        <td class="num mono">276</td><td class="num mono">~2,9k</td>
+        <td class="balkcel"><span class="balk "><i style="width:37%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Hulpjes (esc, pil) + dashboard + demoscherm</td>
+        <td class="num mono">306</td><td class="num mono">~4,3k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:41%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui2.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Locaties en artikelen, lijst en detail</td>
+        <td class="num mono">278</td><td class="num mono">~3,4k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:37%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui3.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Inslag, meten, taken, instellingen</td>
+        <td class="num mono">275</td><td class="num mono">~3,5k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:37%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui4.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Werkdag, orders, picken</td>
+        <td class="num mono">295</td><td class="num mono">~3,7k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:39%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui5.js</strong></td>
+        <td>Scanscherm en inlogscherm</td>
+        <td class="num mono">210</td><td class="num mono">~2,4k</td>
+        <td class="balkcel"><span class="balk "><i style="width:28%"></i></span></td></tr>
+      <tr><td class="mono"><strong>import.js</strong> <span class="pil r">splitsen</span></td>
+        <td>Bestanden lezen, kolommen raden, controleren, overzetten</td>
+        <td class="num mono">668</td><td class="num mono">~7,2k</td>
+        <td class="balkcel"><span class="balk zeergroot"><i style="width:89%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui6.js</strong> <span class="pil o">splitsen</span></td>
+        <td>Eigen gegevens (import) en etiketten</td>
+        <td class="num mono">396</td><td class="num mono">~5,6k</td>
+        <td class="balkcel"><span class="balk groot"><i style="width:53%"></i></span></td></tr>
+      <tr><td class="mono"><strong>ui7.js</strong></td>
+        <td>Optimalisatiescherm</td>
+        <td class="num mono">189</td><td class="num mono">~2,8k</td>
+        <td class="balkcel"><span class="balk "><i style="width:25%"></i></span></td></tr>
+      <tr><td class="mono"><strong>grafiek.js</strong></td>
+        <td>Grafieken tekenen</td>
+        <td class="num mono">153</td><td class="num mono">~1,8k</td>
+        <td class="balkcel"><span class="balk "><i style="width:20%"></i></span></td></tr>
+      <tr><td class="mono"><strong>schil.js</strong></td>
+        <td>Bovenbalk, zoeken, opdrachtenpalet</td>
+        <td class="num mono">152</td><td class="num mono">~1,6k</td>
+        <td class="balkcel"><span class="balk "><i style="width:20%"></i></span></td></tr>
+      <tr><td class="mono"><strong>router.js</strong> <span class="pil r">splitsen</span></td>
+        <td>Menu + iconen + tekenen + alle klikken en toetsen</td>
+        <td class="num mono">641</td><td class="num mono">~7,5k</td>
+        <td class="balkcel"><span class="balk zeergroot"><i style="width:86%"></i></span></td></tr>      <tr><td class="mono"><strong>stijl.css</strong></td>
+        <td>Het hele ontwerpsysteem</td>
+        <td class="num mono">747</td><td class="num mono">~10,4k</td>
+        <td class="balkcel"><span class="balk"><i style="width:100%"></i></span></td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:13px;color:var(--ink-3)">De balk is de lengte ten opzichte van het
+  langste bestand. "Tokens" is ruwweg hoeveel er van een bestand in één keer te overzien
+  valt &mdash; voor jou en voor mij.</p>
+</section>
+
+<!-- ============================================================ -->
+<section id="groot">
+  <h2><span class="nr">02</span> Wat te groot is geworden</h2>
+  <p class="inleiding">Een groot bestand is niet vanzelf een probleem. Een bestand dat
+  <em>meerdere dingen tegelijk</em> doet, is dat wel &mdash; want dan moet je het openen om
+  redenen die niets met elkaar te maken hebben, en raak je bij elke wijziging code aan die je
+  niet nodig had.</p>
+
+  <p>Met dat criterium vallen er twee bestanden echt op, en die twee zou ik ook als enige
+  écht opknippen. De rest is vooral verkeerd <em>benoemd</em>.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">router.js</span>
+    <span class="rtitel">640 regels, vier verschillende banen</span></div>
+    <p>Dit bestand is de duidelijkste kandidaat. Er zit in: het menu en vijftien
+    pictogrammen (218 regels aan losse SVG-tekeningen), het tekenen van een scherm,
+    <strong>één klik-afhandelaar van 228 regels</strong> die alles op de hele site opvangt,
+    en dan nog toetsenbord, formulieren, zoeken en de tekstballon.</p>
+    <p>Waarom dat lastig is: wil je één pictogram bijwerken, dan open je hetzelfde bestand
+    als waarin de hele afhandeling van elke knop staat. Je scrolt langs 400 regels die je
+    niet zocht. Dat is de dagelijkse kosten van "alles-in-één".</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">import.js</span>
+    <span class="rtitel">667 regels, maar hij zegt zelf al waar te knippen</span></div>
+    <p>Dit is je grootste bestand en tegelijk de makkelijkste splitsing, want je hebt er
+    zelf al kopbalken in gezet. Bij regel 54, 97, 216, 335 en 441 staat een
+    <span class="mono">/* ===== */</span>-blok. Dat zijn precies de vijf onderwerpen:
+    CSV lezen, Excel lezen, kolommen herkennen, controleren, overzetten.</p>
+    <p>Toen je die kopbalken schreef, was je eigenlijk al aan het opdelen &mdash; alleen met
+    commentaar in plaats van met bestanden. De splitsing is dus letterlijk knippen op de
+    lijnen die er al staan.</p></div>
+
+  <h3>En de zeven ui-bestanden dan?</h3>
+  <p>Die zijn stuk voor stuk een prima maat (188 tot 396 regels). Hun probleem is de naam.
+  <span class="mono">ui3.js</span> bevat inslag, meten, taken én instellingen &mdash; vier
+  schermen uit vier verschillende delen van de werkdag, bij elkaar gezet omdat ze toevallig
+  op dezelfde avond gemaakt zijn.</p>
+
+  <div class="let"><p><b>De vuistregel die ik zou aanhouden.</b> Niet "hoeveel regels mag
+  een bestand zijn", maar: <em>kun je in één zin zeggen wat erin zit, zonder het woord "en"
+  te gebruiken?</em> Lukt dat niet, dan zitten er meerdere onderwerpen in.
+  <span class="mono">passen.py</span> haalt die toets ("hoeveel gaat er in deze locatie").
+  <span class="mono">ui3.js</span> niet.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="mappen">
+  <h2><span class="nr">03</span> De nieuwe indeling</h2>
+  <p class="inleiding">Eén projectmap in plaats van tien, met de twee versies naast elkaar
+  en de verkoopspullen apart. Dit is hoe dit soort projecten gewoonlijk ingedeeld worden:
+  <em>per laag</em>, en binnen een laag <em>per onderwerp</em>.</p>
+
+  <div class="boom"><div class="r"><span class="m">Vakto/</span>
+├── <span class="b">LEESMIJ.md</span>                 <span class="u">waar begin je, wat is wat</span>
+│
+├── <span class="m">server/</span>                    <span class="u">HET PRODUCT — hier komt alles terecht</span>
+│   ├── <span class="m">db/</span>                    <span class="u">schema.sql, seed_config.sql, boeken.sql, meten.sql</span>
+│   ├── <span class="m">vakto/</span>                 <span class="u">de rekenkern — blijft precies zoals hij is</span>
+│   ├── <span class="m">tests/</span>
+│   ├── <span class="m">tests-sql/</span>
+│   └── <span class="b">opzetten.sh</span>
+│
+├── <span class="m">demo/</span>                      <span class="u">de browserversie — verkoopt, bewijst, en stopt ooit</span>
+│   ├── <span class="m">bron/</span>
+│   │   ├── <span class="m nw">1-kern/</span>            <span class="u">rekenen: passen, voorstellen, afronden</span>
+│   │   ├── <span class="m nw">2-logica/</span>          <span class="u">boeken, meten, uitgaand, optimaliseren</span>
+│   │   ├── <span class="m nw">3-import/</span>          <span class="u">klantbestanden inlezen</span>
+│   │   ├── <span class="m nw">4-schermen/</span>        <span class="u">één bestand per stuk werkdag</span>
+│   │   └── <span class="m nw">5-schil/</span>           <span class="u">menu, iconen, klikken, grafieken</span>
+│   ├── <span class="m">test/</span>                  <span class="u">test3.mjs, test-import.mjs, test-paden.mjs</span>
+│   ├── <span class="b">stijl.css</span>
+│   └── <span class="b">bouw.py</span>
+│
+├── <span class="m">spec/</span>                      <span class="u">de rekenkern-specificatie</span>
+└── <span class="m">verkoop/</span>                   <span class="u">businessplan, huisstijl, voorbeeldbestanden</span></div></div>
+
+  <h3>Waarom de mappen genummerd zijn</h3>
+  <p>Normaal is nummeren in mapnamen een slecht idee &mdash; het is meestal versiering. Hier
+  niet, en dat heeft een concrete reden: <strong>jouw demo is één groot bestand dat door
+  <span class="mono">bouw.py</span> aan elkaar geplakt wordt, en de volgorde daarvan doet er
+  echt toe.</strong> De kern moet vóór de logica, de logica vóór de schermen, en de schil
+  helemaal achteraan. Het nummer in de mapnaam is dus geen decoratie maar de bouwvolgorde,
+  en die staat dan meteen goed als je later een bestand toevoegt.</p>
+
+  <div class="let"><p><b>Dit heb ik nagekeken, niet aangenomen.</b> Van de negentien
+  JS-bestanden is er precies één die bij het laden meteen iets uitvoert: de laatste twee
+  regels van <span class="mono">router.js</span>
+  (<span class="mono">startDemo(); teken();</span>). Alle andere bestanden bevatten alleen
+  definities. Dat is goed nieuws: verplaatsen is veilig zolang die twee regels als allerlaatste
+  blijven staan. Zou dat niet zo zijn, dan was dit een veel riskantere klus geweest.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="splitsen">
+  <h2><span class="nr">04</span> Per bestand: wat gaat waarheen</h2>
+  <p class="inleiding">Geen enkele regel code verandert van inhoud. Alles wat hieronder staat
+  is knippen en plakken, plus een nieuwe naam.</p>
+
+  <h3>De twee echte splitsingen</h3>
+  <div class="voorna">
+    <div class="vak"><h4>Nu</h4>
+      <ul><li><span class="mono">router.js</span> &mdash; 640 regels</li></ul>
+      <p style="font-size:13px;margin:8px 0 0">Menu, pictogrammen, tekenen, klikken, toetsen,
+      formulieren, zoeken en de tekstballon.</p></div>
+    <div class="vak na"><h4>Straks — 5-schil/</h4>
+      <ul>
+        <li><span class="mono">menu.js</span> <span class="u">≈218</span> &mdash; het menu en de vijftien pictogrammen</li>
+        <li><span class="mono">tekenen.js</span> <span class="u">≈40</span> &mdash; welk scherm komt in beeld</li>
+        <li><span class="mono">klikken.js</span> <span class="u">≈228</span> &mdash; alles wat op een klik reageert</li>
+        <li><span class="mono">toetsen.js</span> <span class="u">≈155</span> &mdash; toetsenbord, formulieren, tekstballon, start</li>
+      </ul></div>
+  </div>
+
+  <div class="voorna">
+    <div class="vak"><h4>Nu</h4>
+      <ul><li><span class="mono">import.js</span> &mdash; 667 regels</li></ul>
+      <p style="font-size:13px;margin:8px 0 0">Met vijf kopbalken erin die de knippunten al
+      aanwijzen.</p></div>
+    <div class="vak na"><h4>Straks — 3-import/</h4>
+      <ul>
+        <li><span class="mono">lezen-csv.js</span> <span class="u">≈95</span></li>
+        <li><span class="mono">lezen-excel.js</span> <span class="u">≈120</span> &mdash; zip uitpakken en xlsx ontleden</li>
+        <li><span class="mono">herkennen.js</span> <span class="u">≈120</span> &mdash; kolommen raden, mm of cm, gram of kilo</li>
+        <li><span class="mono">controleren.js</span> <span class="u">≈105</span> &mdash; het rapport met problemen</li>
+        <li><span class="mono">overzetten.js</span> <span class="u">≈227</span> &mdash; er een werkend magazijn van maken</li>
+      </ul></div>
+  </div>
+
+  <h3>De zeven ui-bestanden: opnieuw gegroepeerd</h3>
+  <p>Niet opgeknipt maar <em>herverdeeld</em>, en wel in dezelfde volgorde als je menu.
+  Zoek je het orderscherm, dan kijk je bij <span class="mono">uitgaand.js</span> &mdash;
+  net zoals in de app zelf.</p>
+
+  <div class="tabelwrap"><table>
+    <thead><tr><th>Nieuw bestand</th><th>Komt uit</th><th>Wat erin zit</th><th class="num">Regels</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><strong>hulp.js</strong></td><td class="mono">ui.js</td>
+        <td>esc, pil, maatPil, pagineren &mdash; wordt overal gebruikt, dus als eerste geladen</td>
+        <td class="num mono">≈27</td></tr>
+      <tr><td class="mono"><strong>overzicht.js</strong></td><td class="mono">ui.js</td>
+        <td>Dashboard en het demoscherm</td><td class="num mono">≈276</td></tr>
+      <tr><td class="mono"><strong>inkomend.js</strong></td><td class="mono">ui3.js</td>
+        <td>Inslagvoorstel, de pastekening, meten</td><td class="num mono">≈203</td></tr>
+      <tr><td class="mono"><strong>uitgaand.js</strong></td><td class="mono">ui4.js</td>
+        <td>Orders, orderdetail, picken</td><td class="num mono">≈171</td></tr>
+      <tr><td class="mono"><strong>vloer.js</strong></td><td class="mono">ui3, ui4, ui5</td>
+        <td>Taken, de werkdag, de scanmodus</td><td class="num mono">≈348</td></tr>
+      <tr><td class="mono"><strong>magazijn.js</strong></td><td class="mono">ui2.js</td>
+        <td>Locaties en artikelen, lijst en detail</td><td class="num mono">≈277</td></tr>
+      <tr><td class="mono"><strong>optimaliseren.js</strong></td><td class="mono">ui7.js</td>
+        <td>Het optimalisatiescherm</td><td class="num mono">≈188</td></tr>
+      <tr><td class="mono"><strong>eigen-gegevens.js</strong></td><td class="mono">ui6.js</td>
+        <td>Het importscherm met alle blokken</td><td class="num mono">≈345</td></tr>
+      <tr><td class="mono"><strong>etiketten.js</strong></td><td class="mono">ui6.js</td>
+        <td>Barcodes tekenen en afdrukken</td><td class="num mono">≈45</td></tr>
+      <tr><td class="mono"><strong>beheer.js</strong></td><td class="mono">ui3, ui5</td>
+        <td>Instellingen en inloggen</td><td class="num mono">≈50</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Wat gewoon verhuist, zonder wijziging</h3>
+  <p>De overige bestanden krijgen alleen een map en soms een duidelijkere naam:
+  <span class="mono">kern.js</span> en <span class="mono">grafiek.js</span> naar
+  <span class="mono">1-kern/</span>; <span class="mono">app.js</span>,
+  <span class="mono">uitgaand.js</span>, <span class="mono">optimalisatie.js</span>,
+  <span class="mono">scan.js</span>, <span class="mono">simulatie.js</span>,
+  <span class="mono">gebruikers.js</span> en <span class="mono">data.js</span> naar
+  <span class="mono">2-logica/</span>; <span class="mono">schil.js</span> naar
+  <span class="mono">5-schil/</span>.</p>
+
+  <div class="valkuil"><b>Eén naam die we moeten oplossen</b>
+    <p>Je hebt straks <span class="mono">2-logica/uitgaand.js</span> (reserveren en picken)
+    én <span class="mono">4-schermen/uitgaand.js</span> (het scherm). Verschillende mappen,
+    dus technisch geen probleem &mdash; maar wel verwarrend in een foutmelding. Ik zou het
+    scherm <span class="mono">uitgaand-scherm.js</span> noemen, of de logica
+    <span class="mono">orders.js</span>. Jouw keuze; zeg maar welke van de twee je logischer
+    vindt.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="volgorde">
+  <h2><span class="nr">05</span> In welke volgorde, en hoe we controleren</h2>
+  <p class="inleiding">Zeven stappen. Na elke stap draaien alle tests en zie je de demo
+  gewoon werken. Kan er iets niet af, dan stop je na een hele stap en niet middenin.</p>
+
+  <div class="stap"><div class="nummer">0</div><div>
+    <span class="duur">10 min</span>
+    <h4>Versiebeheer en één projectmap</h4>
+    <p><code>git init</code>, alles vastleggen, en de tien losse mappen samenvoegen tot
+    <span class="mono">Vakto/</span> met <span class="mono">server/</span>,
+    <span class="mono">demo/</span>, <span class="mono">spec/</span> en
+    <span class="mono">verkoop/</span>. Er wordt nog niets gesplitst.</p>
+    <p><b>Klaar als:</b> <span class="mono">opzetten.sh</span> draait nog steeds groen vanuit
+    de nieuwe plek.</p></div></div>
+
+  <div class="stap"><div class="nummer">1</div><div>
+    <span class="duur">20 min</span>
+    <h4>De mappen in de demo, zonder te splitsen</h4>
+    <p>Alle negentien bestanden naar hun map, <span class="mono">bouw.py</span> aanpassen op
+    de nieuwe paden. Nog geen enkel bestand opgeknipt &mdash; zo weet je zeker dat een fout
+    hier alleen aan de paden kan liggen.</p>
+    <p><b>Klaar als:</b> <span class="mono">test3.mjs</span>,
+    <span class="mono">test-import.mjs</span> en <span class="mono">test-paden.mjs</span>
+    alle drie schoon zijn.</p></div></div>
+
+  <div class="stap"><div class="nummer">2</div><div>
+    <span class="duur">1 avond</span>
+    <h4>router.js uit elkaar</h4>
+    <p>De grootste winst en tegelijk de best te controleren stap: de pictogrammen en het menu
+    los, dan de klikafhandeling, dan de toetsen. Na elk van de drie opnieuw testen.</p>
+    <p><b>Klaar als:</b> elk scherm nog bereikbaar is, het zoekpalet opent met ⌘K, en de
+    scanmodus nog reageert op toetsaanslagen.</p></div></div>
+
+  <div class="stap"><div class="nummer">3</div><div>
+    <span class="duur">1 avond</span>
+    <h4>import.js uit elkaar</h4>
+    <p>Knippen op de kopbalken die er al staan. Dit is het bestand met de meeste eigen tests
+    eromheen, dus je merkt het meteen als er iets scheef gaat.</p>
+    <p><b>Klaar als:</b> <span class="mono">test-import.mjs</span> schoon is en je de
+    voorbeeldbestanden nog kunt inlezen.</p></div></div>
+
+  <div class="stap"><div class="nummer">4</div><div>
+    <span class="duur">1 avond</span>
+    <h4>De schermen hernoemen en hergroeperen</h4>
+    <p>Tien nieuwe bestanden in <span class="mono">4-schermen/</span>. Puur knippen en
+    plakken; de functienamen (<span class="mono">schermInslag</span> en de rest) blijven
+    precies hetzelfde, want daar verwijst het menu naar.</p>
+    <p><b>Klaar als:</b> <span class="mono">test-paden.mjs</span> alle schermen nog langsloopt
+    zonder fout.</p></div></div>
+
+  <div class="stap"><div class="nummer">5</div><div>
+    <span class="duur">30 min</span>
+    <h4>De serverkant opruimen</h4>
+    <p>De vier SQL-bestanden naar <span class="mono">server/db/</span> en de paden in
+    <span class="mono">opzetten.sh</span> bijwerken. Aan de Python zelf verandert niets.</p>
+    <p><b>Klaar als:</b> een verse installatie weer "alles staat en alles is groen" zegt.</p></div></div>
+
+  <div class="stap"><div class="nummer">6</div><div>
+    <span class="duur">30 min</span>
+    <h4>Eén LEESMIJ die de weg wijst</h4>
+    <p>Bovenaan de projectmap: wat is server, wat is demo, waar staat de specificatie, en waar
+    begin je als je er drie weken niet naar gekeken hebt. Dat laatste is de belangrijkste
+    lezer die dit bestand ooit krijgt &mdash; jijzelf, in januari.</p></div></div>
+
+  <div class="let"><p><b>Na elke stap dezelfde drie controles.</b> De Python-tests
+  (<span class="mono">python3 -m unittest discover -s tests -t .</span>), de browsertests
+  (<span class="mono">node test3.mjs</span>), en de demo één keer met de hand doorklikken.
+  Duurt bij elkaar twee minuten en het scheelt je een avond zoeken.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="niet">
+  <h2><span class="nr">06</span> Wat ik niet zou doen</h2>
+  <p class="inleiding">Het eerlijke deel. Herindelen voelt productief en is het lang niet
+  altijd &mdash; dit zijn de drie dingen die ik erbuiten zou laten.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">1</span>
+    <span class="rtitel">De rekenkern van de server aanraken</span></div>
+    <p>Negen bestanden, geen boven de 275 regels, elk met een eigen naam die klopt. Dat is
+    af. De verleiding om "dan meteen alles netjes te maken" kost je een avond en levert
+    niets op.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">2</span>
+    <span class="rtitel">Overstappen op echte modules (import / export)</span></div>
+    <p>Dat is hoe je het normaal in JavaScript doet, en je zou het kunnen. Maar jouw demo
+    móét één los bestand blijven: dat is precies waarom een prospect hem kan openen zonder
+    installatie. Modules werken niet als je een bestand vanaf de harde schijf opent. De
+    plak-methode van <span class="mono">bouw.py</span> is hier dus geen achterstand maar een
+    bewuste keuze &mdash; en in de serverversie doe je het straks wél op de normale manier.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">3</span>
+    <span class="rtitel">Dit vóór stap 5 doen &mdash; als je moet kiezen</span></div>
+    <p>De browserversie gaat volgens hoofdstuk 13 van de specificatie ooit uit de lucht als
+    product en blijft alleen demo. Werk dat je erin steekt, steek je in iets tijdelijks.</p>
+    <p>Dat gezegd hebbende: bij stap 8 ga je de serverschermen bouwen mét de browserversie
+    ernaast als voorbeeld. Dan is "waar stond dat orderscherm ook alweer" een vraag die je
+    tientallen keren gaat stellen. <strong>Daarom zou ik stap 0 tot en met 2 nu wél doen</strong>
+    (versiebeheer, één projectmap, router.js) en stap 3 en 4 pas vlak voordat je aan de
+    schermen begint. Dan betaalt het zich meteen terug.</p></div>
+
+  <div class="let"><p><b>Wat je hier eigenlijk leert.</b> De echte les zit niet in de
+  mappen maar in waarom de serverkant vanzelf netjes werd: daar heb je eerst opgeschreven
+  wat elk stuk moest doen (de specificatie), en pas daarna code geschreven. De browserversie
+  is gegroeid terwijl je aan het uitzoeken was wat het moest worden. Dat is niet fout &mdash;
+  zo begint elk eerste project &mdash; maar het verklaart wel het verschil, en het is de
+  reden dat je bij stap 5 tot en met 9 niet opnieuw in deze situatie belandt.</p></div>
+</section>
+
+</main>
+
+<footer class="voet">
+  <strong>Voorstel, 22 augustus 2026.</strong> Er is nog niets verplaatst. Zeg welke stappen
+  je wilt en ik doe ze één voor één, met na elke stap de tests erlangs, zodat je nooit meer
+  dan één stap tegelijk hoeft na te kijken. Alle regelaantallen in dit stuk zijn gemeten,
+  niet geschat; de aantallen na het splitsen zijn benaderingen omdat er commentaarregels
+  bijkomen.
+</footer>
+
+</div>
+
+<script>
+(function(){
+  const links = [...document.querySelectorAll(".index a")];
+  const doelen = links.map(a => document.querySelector(a.getAttribute("href")))
+                      .filter(Boolean);
+  if(!doelen.length) return;
+  const zet = () => {
+    let aan = doelen[0];
+    for(const d of doelen) if(d.getBoundingClientRect().top <= 90) aan = d;
+    links.forEach(a => a.classList.toggle("aan",
+      a.getAttribute("href") === "#" + aan.id));
+  };
+  addEventListener("scroll", zet, {passive:true});
+  zet();
+})();
+</script>
