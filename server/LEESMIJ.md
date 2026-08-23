@@ -9,7 +9,7 @@ aanmaakt en zijn eigen meldingen sluit, en de **import** die de
 rommelige bestanden van een klant inleest. Met de testgevallen uit de
 specificatie erbij.
 
-De rest van de stappen staat in hoofdstuk 14 van *De rekenkern,
+De rest van de stappen staat in hoofdstuk 15 van *De rekenkern,
 uitgeschreven*.
 
 ---
@@ -74,7 +74,7 @@ En dan:
 |---|---|
 | `\dt` | alle tabellen |
 | `\d stock` | hoe de voorraadtabel eruitziet |
-| `SELECT * FROM setting;` | alle instellingen uit hoofdstuk 12 |
+| `SELECT * FROM setting;` | alle instellingen uit hoofdstuk 13 |
 | `SELECT * FROM v_location_size;` | de maatklasse per locatie, berekend |
 | `\q` | stoppen |
 
@@ -444,7 +444,7 @@ de browserversie.
 
 ## De volgende stap
 
-Stap 8 uit hoofdstuk 14: schermen en scanmodus. Reken op zes avonden, en
+Stap 8 uit hoofdstuk 15: schermen en scanmodus. Reken op zes avonden, en
 op het eerste moment dat je beide versies naast elkaar nodig hebt. Neem
 stap 4 van de herindeling erbij: de zeven `ui`-bestanden hernoemen naar
 wat er in zit.

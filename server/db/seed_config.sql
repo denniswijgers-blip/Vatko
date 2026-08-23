@@ -35,7 +35,7 @@ INSERT INTO weging (sleutel, punten, uitleg) VALUES
   ('deelvulling_max',     150, 'Vermenigvuldigd met vrij/gevraagd.'),
   ('te_ruim_straf',      -550, 'Vermenigvuldigd met (1 - benutting/0,20). Alleen onder 20%.');
 
--- Instellingen (hoofdstuk 12)
+-- Instellingen (hoofdstuk 13)
 INSERT INTO setting (sleutel, waarde, groep, uitleg) VALUES
   ('putaway.fill_factor','0.85','Inslag',
    'Je krijgt een schap nooit 100% vol. Verlagen bij onregelmatige verpakkingen.'),

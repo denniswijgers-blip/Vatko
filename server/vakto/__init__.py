@@ -29,6 +29,8 @@ from .inlezen import (Bestand, Leesfout, Eenheden, Standaard, Rapport,
                       ontbrekende_velden, raad_maat, raad_gewicht,
                       raad_eenheden, controleer, ontleed_code,
                       soort_naar_type, plat)
+from .scannen import (Scanner, Antwoord, Gebruiker, Pickopdracht,
+                      Telopdracht, Inslagopdracht, TAKEN, STAPPEN)
 from .optimalisatie import (Pick, Advies, Pickplek, Bijwerking, snelheden,
                             ruimte_voor, bulkbron, aanvultaken,
                             samenvoegtaken, telplan, drempeladvies,
@@ -58,6 +60,8 @@ __all__ = [
     "getal", "lees_bestand", "raad_scheiding", "herken_kolommen",
     "ontbrekende_velden", "raad_maat", "raad_gewicht", "raad_eenheden",
     "controleer", "ontleed_code", "soort_naar_type", "plat",
+    "Scanner", "Antwoord", "Gebruiker", "Pickopdracht", "Telopdracht",
+    "Inslagopdracht", "TAKEN", "STAPPEN",
     "Pick", "Advies", "Pickplek", "Bijwerking", "snelheden", "ruimte_voor",
     "bulkbron", "aanvultaken", "samenvoegtaken", "telplan", "drempeladvies",
     "pickplekvoorstellen",

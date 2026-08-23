@@ -1,5 +1,5 @@
 -- =====================================================================
---  VAKTO — uitgaand (R-UIT). Testgevallen T-14 en T-15 uit hoofdstuk 13,
+--  VAKTO — uitgaand (R-UIT). Testgevallen T-14 en T-15 uit hoofdstuk 14,
 --  plus de regels eromheen die alleen in de database te bewijzen zijn.
 --
 --  Waarom hier en niet in Python: reserveren en picken vergrendelen

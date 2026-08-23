@@ -27,11 +27,69 @@
 
 BEGIN;
 
+DROP FUNCTION IF EXISTS vakto_order(text, text, jsonb, integer, text);
 DROP FUNCTION IF EXISTS vakto_reserveer(bigint, text);
 DROP FUNCTION IF EXISTS vakto_geef_vrij(bigint);
 DROP FUNCTION IF EXISTS vakto_pick(bigint, integer, text, text);
 DROP FUNCTION IF EXISTS vakto_pak_in(bigint, integer, bigint);
 DROP FUNCTION IF EXISTS vakto_verzend(bigint, text);
+
+
+-- ---------------------------------------------------------------------
+--  Een order aanmaken
+--
+--  In het echt komt een order uit het ERP of uit de webshop; dit is de
+--  deur waardoor hij binnenkomt. Er zit met opzet geen rekenwerk in:
+--  een order is niets meer dan een klant met regels, en alles wat er
+--  daarna mee gebeurt staat in R-UIT-01 en verder.
+-- ---------------------------------------------------------------------
+CREATE FUNCTION vakto_order(
+  p_nummer text,
+  p_klant  text,
+  p_regels jsonb,                -- [{sku, besteld}]
+  p_prio   integer DEFAULT 3,
+  p_soort  text    DEFAULT NULL
+) RETURNS bigint AS $$
+DECLARE
+  v_order bigint;
+  v_r     record;
+  v_idx   integer := 0;
+  v_pid   integer;
+BEGIN
+  IF p_regels IS NULL OR jsonb_array_length(p_regels) = 0 THEN
+    RAISE EXCEPTION 'Een order zonder regels bestaat niet'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  INSERT INTO customer_order (nummer, klant, prio, soort)
+       VALUES (p_nummer, p_klant, p_prio, p_soort)
+    RETURNING id INTO v_order;
+
+  FOR v_r IN
+    SELECT * FROM jsonb_to_recordset(p_regels) AS x(sku text, besteld integer)
+  LOOP
+    SELECT id INTO v_pid FROM product WHERE upper(sku) = upper(v_r.sku);
+    IF v_pid IS NULL THEN
+      RAISE EXCEPTION 'Order % noemt artikel %, en dat bestaat niet',
+        p_nummer, v_r.sku USING ERRCODE = 'no_data_found';
+    END IF;
+    IF v_r.besteld IS NULL OR v_r.besteld <= 0 THEN CONTINUE; END IF;
+
+    INSERT INTO order_line (order_id, idx, product_id, besteld)
+         VALUES (v_order, v_idx, v_pid, v_r.besteld);
+    v_idx := v_idx + 1;
+  END LOOP;
+
+  IF v_idx = 0 THEN
+    RAISE EXCEPTION 'Order % had geen bruikbare regels', p_nummer
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN v_order;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION vakto_order IS
+  'De deur waardoor een order binnenkomt. Geen rekenwerk: dat begint bij R-UIT-01.';
 
 
 -- ---------------------------------------------------------------------

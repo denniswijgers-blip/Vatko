@@ -32,7 +32,7 @@ Vakto/
 ├── OVERDRACHT.md   waar we staan, en de afspraken die zonder herhaling gelden
 │
 ├── spec/           de specificatie: hoe het hoort te werken
-│   ├── rekenkern.html      elke rekenregel, veertien hoofdstukken
+│   ├── rekenkern.html      elke rekenregel, vijftien hoofdstukken
 │   └── herindeling.html    het opruimvoorstel voor de browserversie
 │
 ├── server/         het product — Python + PostgreSQL

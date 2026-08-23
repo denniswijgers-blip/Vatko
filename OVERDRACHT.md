@@ -42,7 +42,7 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 
 ## Waar we staan
 
-Stap **7 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 14:
+Stap **7 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 15:
 
 | | Stap | Status |
 |---|---|---|

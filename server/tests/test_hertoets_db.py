@@ -30,7 +30,14 @@ from .psqlschil import PsqlVerbinding, psql_beschikbaar
 PICK, BULK_A, BULK_B = 930, 931, 932
 ARTIKEL = 930
 
+# Eerst schoonvegen. Niet uit netheid: de gelijktijdigheidstests laten
+# locaties achter die ze niet kunnen opruimen — het journaal is
+# append-only en houdt ze vast (R-BASIS-01). Deze test kijkt naar het
+# hele magazijn, dus die zouden meetellen in een inslagvoorstel.
+# TRUNCATE mag hier omdat alles aan het eind wordt teruggedraaid.
 OPZET = """
+TRUNCATE journal, stock, measurement, allocation, order_line, customer_order,
+         task, alert, event_log, product, product_group, location, zone CASCADE;
 INSERT INTO zone (id, code, naam) VALUES (930,'TST','Testzone hertoets');
 INSERT INTO location (id, code, zone_id, type_id, aisle, bay, level, seq,
                       l_mm, w_mm, h_mm, max_g, geteld_op) VALUES

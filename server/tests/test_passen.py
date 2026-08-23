@@ -1,4 +1,4 @@
-"""Testgevallen T-01 t/m T-06c uit hoofdstuk 13 van de specificatie.
+"""Testgevallen T-01 t/m T-06c uit hoofdstuk 14 van de specificatie.
 
 Alle verwachte waarden komen uit de draaiende browserversie. Wijkt een
 uitkomst af, dan is het niet de test die fout is: dan wijkt deze versie
