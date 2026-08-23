@@ -100,7 +100,7 @@ class TestImportTegenDeDatabase(unittest.TestCase):
         de rest omdat een opgave van de leverancier geen weging is. Dat is
         precies het gesprek dat je bij een klant wilt voeren."""
         neem_over(self.v, self.rapport)
-        lijst = meetlijst(self.v)
+        lijst = meetlijst(self.v, limiet=2000)
         self.assertEqual(len(lijst), 900)
         redenen = {r[5] for r in lijst}
         self.assertEqual(redenen, {"NOOIT_GEMETEN", "OPGAVE_LEVERANCIER"})

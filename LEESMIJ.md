@@ -16,6 +16,7 @@ januari, als je er drie weken niet naar gekeken hebt.
 | aan de serverversie werken | [`server/LEESMIJ.md`](server/LEESMIJ.md) |
 | weten hoe een rekenregel hoort te werken | `spec/rekenkern.html` |
 | de demo laten zien aan een klant | `demo/vakto-demo.html` openen in een browser |
+| de serverschermen bekijken | `cd server && python3 -m vakto.web` |
 | een klantbestand oefenen | `verkoop/voorbeeldbestanden/` |
 
 Begin je aan een nieuw gesprek met een AI-assistent, stuur dan `OVERDRACHT.md` mee. Daar
@@ -36,9 +37,10 @@ Vakto/
 │   └── herindeling.html    het opruimvoorstel voor de browserversie
 │
 ├── server/         het product — Python + PostgreSQL
-│   ├── vakto/      de rekenkern: passen, meten, uitgaand, optimaliseren, inlezen
+│   ├── vakto/      de rekenkern (passen, meten, uitgaand, optimaliseren,
+│   │               inlezen, scannen) plus de schermen en de webserver
 │   ├── db/         het schema en alles wat de database zelf doet
-│   ├── tests/      Python-tests, draaien zonder database
+│   ├── tests/      Python-tests, de meeste draaien zonder database
 │   ├── tests-sql/  tests die een echte PostgreSQL nodig hebben
 │   └── opzetten.sh database opzetten en alles testen, in één opdracht
 │
@@ -74,6 +76,9 @@ langzaam uit elkaar lopen.
 ```bash
 # serverversie, alles in één keer (Mac/Linux):
 cd server && bash opzetten.sh
+
+# en daarna de schermen bekijken op http://127.0.0.1:8000/
+cd server && pip install -r requirements.txt && python3 -m vakto.web
 
 # browserversie:
 cd demo && python3 bouw.py

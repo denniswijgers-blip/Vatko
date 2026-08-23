@@ -479,13 +479,20 @@ def telplan(mag: Magazijn, taken: list[Taak], inst: Instellingen | None = None,
             break
         if loc.id in bezet_locaties:
             continue
-        dagen = int(over.total_seconds() // 86400)
+        # R-OPT-04. Nooit geteld heet ook zo. "20508 dag(en) over het
+        # telinterval" is rekenkundig waar (geteld_op is dan 1970) maar
+        # onzin om te lezen, en bij een nieuwe klant staat het op elke
+        # taak. Wie dat leest, gelooft de rest van het scherm ook niet.
+        if loc.geteld_op is None:
+            reden = "nog nooit geteld"
+        else:
+            dagen = int(over.total_seconds() // 86400)
+            reden = (f"{dagen} dag(en) over het telinterval van "
+                     f"{interval.days} dagen")
         uit.append(Taak(
             soort="CYCLE_COUNT", naam="Locatie tellen", prio=45,
             product_id=s.product_id, van=loc.id, naar=loc.id, qty=s.qty,
-            aanleiding="telinterval",
-            reden=f"{dagen} dag(en) over het telinterval van "
-                  f"{interval.days} dagen"))
+            aanleiding="telinterval", reden=reden))
     return uit
 
 

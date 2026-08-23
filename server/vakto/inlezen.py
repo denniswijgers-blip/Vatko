@@ -738,3 +738,66 @@ def soort_naar_type(tekst: str, code: str) -> int:
     if re.search(r"bulk|pallet|reserve|voorraadlocatie|stelling", t):
         return 1
     return 0
+
+
+# ---------------------------------------------------------------------
+#  Met de hand draaien
+#
+#  Handig om een database te vullen voordat je de schermen bekijkt. Wat
+#  hier gebeurt is precies wat het importscherm straks doet: lezen,
+#  raden, controleren, en pas dán overnemen (R-IMP-06, R-IMP-07).
+# ---------------------------------------------------------------------
+def _hoofd(argumenten=None) -> int:  # pragma: no cover - met de hand
+    import argparse
+    import os
+
+    p = argparse.ArgumentParser(
+        description="Klantbestanden inlezen en overnemen in de database.")
+    p.add_argument("locaties")
+    p.add_argument("artikelen")
+    p.add_argument("voorraad", nargs="?")
+    p.add_argument("--db", default="dbname=" + os.environ.get("PGDATABASE",
+                                                              "vakto"))
+    p.add_argument("--gebruiker", default=os.environ.get("USER", "import"))
+    p.add_argument("--overnemen", action="store_true",
+                   help="zonder dit vlaggetje wordt alleen het rapport "
+                        "getoond en verandert er niets")
+    a = p.parse_args(argumenten)
+
+    loc = lees_bestand(a.locaties)
+    art = lees_bestand(a.artikelen)
+    vrd = lees_bestand(a.voorraad) if a.voorraad else None
+    k_loc = herken_kolommen("locaties", loc.kop)
+    k_art = herken_kolommen("artikelen", art.kop)
+    k_vrd = herken_kolommen("voorraad", vrd.kop) if vrd else {}
+    rapport = controleer(loc, k_loc, art, k_art, vrd, k_vrd,
+                         raad_eenheden(loc, k_loc, art, k_art))
+
+    print(f"\n  Locaties   {len(rapport.loc_regels)} bruikbaar")
+    print(f"  Artikelen  {len(rapport.art_regels)} bruikbaar")
+    print(f"  Voorraad   {len(rapport.vrd_regels)} regels")
+    for pr in rapport.problemen[:20]:
+        teken = "✗" if pr.ernst == "fout" else "!"
+        bij = (", ".join(str(v) for v in pr.voorbeeld[:3]))
+        print(f"  {teken} {pr.tekst} — {pr.n}x, bijvoorbeeld {bij}")
+    if not rapport.klaar:
+        print("\n  Niet bruikbaar. Kijk eerst het locatiebestand na.\n")
+        return 1
+    if not a.overnemen:
+        print("\n  Niets gewijzigd. Zet er --overnemen achter als dit klopt.\n")
+        return 0
+
+    import psycopg
+
+    from .opslag import neem_over
+
+    with psycopg.connect(a.db) as verbinding:
+        uit = neem_over(verbinding, rapport, gebruiker=a.gebruiker)
+        verbinding.commit()
+    print("\n  Overgenomen: " + ", ".join(f"{k} {w}" for k, w in uit.items()))
+    print()
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(_hoofd())

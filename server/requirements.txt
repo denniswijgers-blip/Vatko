@@ -1,4 +1,10 @@
-# De rekenkern heeft niets nodig: alleen de standaardbibliotheek.
-# Deze regels zijn voor stap 3, als de database erbij komt.
+# De rekenkern heeft niets nodig: alleen de standaardbibliotheek. Ook de
+# tests draaien zonder installatie — tests/psqlschil.py praat met psql
+# als er een database bij te pas komt.
 #
-# psycopg[binary]>=3.2
+# De webserver van stap 8 heeft wél een driver nodig:
+#
+#     pip install -r requirements.txt
+#     python3 -m vakto.web
+#
+psycopg[binary]>=3.2

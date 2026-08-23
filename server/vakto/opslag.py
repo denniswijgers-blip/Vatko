@@ -125,6 +125,7 @@ QUERIES: dict[str, str] = {
     "te_meten": """
         SELECT product_id, sku, oms, gemeten_op, bron, reden
           FROM v_te_meten
+         LIMIT %s
     """,
 
     # De hele tijdlijn van één artikel, nieuwste eerst.
@@ -232,7 +233,7 @@ QUERIES: dict[str, str] = {
     """,
 
     "tellen": """
-        SELECT vakto_tellen(%s, %s, %s, %s)
+        SELECT vakto_tellen(%s, %s, %s, %s, %s, %s)
     """,
 
     "log": """
@@ -262,6 +263,101 @@ QUERIES: dict[str, str] = {
           JOIN location       l ON l.id = a.location_id
           JOIN product        p ON p.id = a.product_id
          WHERE a.id = %s
+    """,
+
+    # ---------------------------------------------------------------
+    #  De schermen (stap 8)
+    #
+    #  Ook deze queries staan hier en niet in web.py. Een webserver die
+    #  zelf SQL schrijft is een webserver die je bij elke schemawijziging
+    #  moet doorlezen; nu staat alles wat de database kent op één plek.
+    #  Ze halen alleen op — boeken gebeurt via de functies hierboven.
+    # ---------------------------------------------------------------
+    "cijfers": """
+        SELECT (SELECT count(*) FROM task WHERE status = 'TODO') AS taken,
+               (SELECT count(*) FROM alert WHERE status = 'OPEN') AS meldingen,
+               (SELECT count(*) FROM customer_order
+                 WHERE status <> 'VERZONDEN')                     AS orders,
+               (SELECT count(*) FROM allocation
+                 WHERE status = 'TODO')                           AS pickregels,
+               (SELECT count(*) FROM v_te_meten)                  AS te_meten,
+               (SELECT count(*) FROM location WHERE actief)       AS locaties,
+               (SELECT count(*) FROM product)                     AS artikelen,
+               (SELECT coalesce(sum(qty), 0) FROM stock)          AS stuks
+    """,
+
+    # R-BASIS-07 geldt ook voor een logboek: nieuwste eerst, met limiet.
+    "systeemlog": """
+        SELECT niveau, bericht, at
+          FROM event_log
+         ORDER BY id DESC
+         LIMIT %s
+    """,
+
+    # Open orders eerst; binnen dezelfde stand op prioriteit. Verzonden
+    # orders horen onderaan, niet weg: iemand wil kunnen nakijken wat er
+    # vanmorgen de deur uit is gegaan.
+    "orders_scherm": """
+        SELECT o.id, o.nummer, o.klant, o.status, o.prio,
+               (SELECT count(*) FROM order_line r
+                 WHERE r.order_id = o.id) AS regels
+          FROM customer_order o
+         ORDER BY (o.status = 'VERZONDEN'), o.prio, o.id DESC
+         LIMIT %s
+    """,
+
+    "orderregels_scherm": """
+        SELECT p.sku, p.oms, r.besteld, r.gereserveerd, r.gepickt, r.manco
+          FROM order_line r
+          JOIN product p ON p.id = r.product_id
+         WHERE r.order_id = %s
+         ORDER BY r.idx
+    """,
+
+    "toewijzingen": """
+        SELECT l.code, p.sku, a.qty, a.gepickt, a.status
+          FROM allocation a
+          JOIN location l ON l.id = a.location_id
+          JOIN product  p ON p.id = a.product_id
+         WHERE a.order_id = %s
+         ORDER BY l.seq, a.id
+    """,
+
+    # R-AFG-02 en R-AFG-04: maatklasse en bezetting komen uit de views,
+    # niet uit een kolom.
+    "locaties_scherm": """
+        SELECT l.code, z.naam AS zone, t.naam AS soort, m.maatklasse,
+               l.l_mm, l.w_mm, l.h_mm,
+               coalesce(v.soorten, 0) AS soorten,
+               coalesce(g.stuks, 0)   AS stuks
+          FROM location l
+          JOIN zone           z ON z.id = l.zone_id
+          JOIN location_type  t ON t.id = l.type_id
+          JOIN v_location_size m ON m.location_id = l.id
+          LEFT JOIN v_location_load v ON v.location_id = l.id
+          LEFT JOIN (SELECT location_id, sum(qty) AS stuks
+                       FROM stock GROUP BY location_id) g
+                 ON g.location_id = l.id
+         WHERE l.actief
+         ORDER BY l.seq, l.id
+         LIMIT %s
+    """,
+
+    # R-AFG-01: de maat in de kolom is de nieuwste meting, geen veld.
+    "artikelen_scherm": """
+        SELECT p.sku, p.oms, pg.naam AS groep,
+               c.l_mm, c.w_mm, c.h_mm, c.g,
+               coalesce(a.aanwezig, 0) AS voorraad, c.bron
+          FROM product p
+          JOIN product_group pg ON pg.id = p.group_id
+          LEFT JOIN v_product_current c ON c.product_id = p.id
+          LEFT JOIN v_available       a ON a.product_id = p.id
+         ORDER BY p.sku
+         LIMIT %s
+    """,
+
+    "artikelkeuze": """
+        SELECT id, sku, oms FROM product ORDER BY sku LIMIT %s
     """,
 }
 
@@ -415,9 +511,15 @@ def open_meldingen(verbinding: Verbinding) -> list[Melding]:
     return uit
 
 
-def meetlijst(verbinding: Verbinding) -> list[tuple]:
-    """R-MEET-04, rechtstreeks uit de view. Nooit gemeten bovenaan."""
-    return _rijen(verbinding, "te_meten")
+def meetlijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
+    """R-MEET-04, rechtstreeks uit de view. Nooit gemeten bovenaan.
+
+    Met een limiet, want R-BASIS-07 geldt ook hier: bij een nieuwe klant
+    staan er negenhonderd artikelen op deze lijst en dan wil je geen
+    scherm van een halve megabyte. De volgorde doet het werk — wie de
+    bovenste twintig afwerkt, heeft de twintig belangrijkste gehad.
+    """
+    return _rijen(verbinding, "te_meten", (limiet,))
 
 
 def metingen_van(verbinding: Verbinding, product_id: int) -> list[tuple]:
@@ -670,12 +772,21 @@ def voer_taak_uit(verbinding: Verbinding, taak_id: int,
 
 
 def tel_locatie(verbinding: Verbinding, location_id: int, product_id: int,
-                geteld: int, gebruiker: str | None = None) -> int | None:
-    """R-OPT-04. Boekt het verschil en zet het telstempel."""
+                geteld: int, gebruiker: str | None = None,
+                reden: str = "TELVERSCHIL",
+                ref: str | None = "Cyclustelling") -> int | None:
+    """R-OPT-04 en R-SCAN-05. Boekt het verschil en zet het telstempel.
+
+    `reden` is TELVERSCHIL, behalve bij een nulmeting: dan is er niets om
+    van af te wijken en heet het NULMETING. Die twee namen staan niet
+    voor niets in het journaal — ze zijn het verschil tussen "hier gaat
+    iets mis" en "hier begint een nieuwe klant".
+    """
     try:
         with verbinding.cursor() as cur:
             cur.execute(QUERIES["tellen"],
-                        (location_id, product_id, geteld, gebruiker))
+                        (location_id, product_id, geteld, gebruiker,
+                         reden, ref))
             rij = cur.fetchone()
             return None if rij is None or rij[0] is None else int(rij[0])
     except Boekfout:
@@ -688,6 +799,51 @@ def tel_locatie(verbinding: Verbinding, location_id: int, product_id: int,
 def werklijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
     """Openstaand werk, op prioriteit en daarna op looproute."""
     return _rijen(verbinding, "werklijst", (limiet,))
+
+
+# ---------------------------------------------------------------------
+#  De schermen (stap 8)
+#
+#  Alleen ophalen. Wat een scherm ermee tekent staat in schermen.py, wat
+#  een knop doet in web.py; hier staat wat de database erover weet.
+# ---------------------------------------------------------------------
+def cijfers(verbinding: Verbinding) -> dict:
+    """De koppen van het dashboard, in de volgorde waarin ze er staan."""
+    r = _rijen(verbinding, "cijfers")[0]
+    namen = ("Open taken", "Meldingen", "Open orders", "Pickregels",
+             "Te meten", "Locaties", "Artikelen", "Stuks")
+    return dict(zip(namen, (int(w) for w in r)))
+
+
+def systeemlog(verbinding: Verbinding, limiet: int = 40) -> list[tuple]:
+    """Wat het systeem zelf besloten heeft, nieuwste eerst."""
+    return _rijen(verbinding, "systeemlog", (limiet,))
+
+
+def orderlijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
+    return _rijen(verbinding, "orders_scherm", (limiet,))
+
+
+def orderregels_scherm(verbinding: Verbinding, order_id: int) -> list[tuple]:
+    return _rijen(verbinding, "orderregels_scherm", (order_id,))
+
+
+def toewijzingen(verbinding: Verbinding, order_id: int) -> list[tuple]:
+    """R-UIT-01. Waar de gereserveerde stuks vandaan komen."""
+    return _rijen(verbinding, "toewijzingen", (order_id,))
+
+
+def locatielijst(verbinding: Verbinding, limiet: int = 500) -> list[tuple]:
+    return _rijen(verbinding, "locaties_scherm", (limiet,))
+
+
+def artikellijst(verbinding: Verbinding, limiet: int = 500) -> list[tuple]:
+    return _rijen(verbinding, "artikelen_scherm", (limiet,))
+
+
+def artikelkeuze(verbinding: Verbinding, limiet: int = 500) -> list[tuple]:
+    """Voor het uitrolmenu op het inslagscherm."""
+    return _rijen(verbinding, "artikelkeuze", (limiet,))
 
 
 # ---------------------------------------------------------------------

@@ -1,16 +1,36 @@
-# Vakto — serverversie, stap 1 tot en met 7
+# Vakto — serverversie, stap 1 tot en met 8
 
-Dit is het begin van de echte versie. Er zitten nog geen schermen in.
-Wat er wel in zit: het **databaseschema**, de **rekenkern**, het
-**boeken** met een echte transactie en rijvergrendeling, de **metingen**
-als tijdlijn, en de hele **uitgaande stroom** — reserveren, picken,
-manco, inpakken, verzenden — en de **zelfcontrole** die zijn eigen werk
-aanmaakt en zijn eigen meldingen sluit, en de **import** die de
-rommelige bestanden van een klant inleest. Met de testgevallen uit de
-specificatie erbij.
+Dit is de echte versie. Wat erin zit: het **databaseschema**, de
+**rekenkern**, het **boeken** met een echte transactie en
+rijvergrendeling, de **metingen** als tijdlijn, de hele **uitgaande
+stroom** — reserveren, picken, manco, inpakken, verzenden — de
+**zelfcontrole** die zijn eigen werk aanmaakt en zijn eigen meldingen
+sluit, de **import** die de rommelige bestanden van een klant inleest,
+en sinds stap 8 de **schermen** en de **scanmodus**. Met de testgevallen
+uit de specificatie erbij.
+
+Wat er nog niet in zit: inloggen en rollen. Dat is stap 9, en tot dan
+draait de webserver alleen op je eigen machine (`127.0.0.1`).
 
 De rest van de stappen staat in hoofdstuk 15 van *De rekenkern,
 uitgeschreven*.
+
+---
+
+## De schermen bekijken
+
+```bash
+pip install -r requirements.txt      # eenmalig: de databasedriver
+python3 -m vakto.web
+```
+
+Open daarna <http://127.0.0.1:8000/>. Dat is dezelfde stijl als de
+browserversie, met echte gegevens uit PostgreSQL. Staat de database nog
+leeg, lees dan eerst de oefenbestanden in — zie *Een klantbestand
+inlezen* verderop.
+
+**Zet dit nog niet op het internet.** Er zit geen inlog omheen; dat is
+stap 9. Wie het adres kent, kan boeken.
 
 ---
 
@@ -145,16 +165,23 @@ vakto/
   inlezen.py        Klantbestanden lezen, raden en controleren (R-IMP).
   zelfcontrole.py   Meldingen beoordelen, taken laten vervallen (R-ZC).
   optimalisatie.py  Samenvoegen, aanvullen, telplan, adviezen (R-OPT).
+  scannen.py        De scanner als stappenmachine (R-SCAN). Raakt niets aan:
+                    hij zegt alleen wat er geboekt moet worden.
+  werkdag.py        Een hele werkdag naspelen, van 07:00 tot 17:00 (T-18).
+  schermen.py       HTML tekenen. Kent geen database en geen webserver.
+  web.py            De webserver: haalt op, boekt, en plakt het aan elkaar.
   opslag.py         De vertaallaag: database -> objecten -> rekenkern.
 
-tests/              T-01 t/m T-31 plus de vertaallaag. Draaien zonder database.
+tests/              T-01 t/m T-31 plus de vertaallaag, de scanmodus, een hele
+                    werkdag en een wandeling langs alle schermen.
 tests-sql/          T-13 t/m T-17, T-32 t/m T-38, de checks, de triggers, de
                     views, en twee sessies die tegelijk de laatste stuks pakken
                     — één keer bij het picken, één keer bij het reserveren.
 ```
 
-**Op `opslag.py` na staat er in `vakto/` geen regel database-code, en dat
-is met opzet.** De rekenregels moeten testbaar zijn zonder dat er een
+**Op `opslag.py` na staat er in `vakto/` geen regel SQL, en dat is met
+opzet.** (`web.py` opent wel een verbinding, maar schrijft geen query:
+alles loopt via `opslag.py`.) De rekenregels moeten testbaar zijn zonder dat er een
 PostgreSQL draait. Verandert het schema, dan verandert alleen `opslag.py`
 mee.
 
@@ -442,12 +469,74 @@ de browserversie.
 
 ---
 
+## Stap 8: schermen en scanmodus
+
+Drie stukken, en alle drie met dezelfde scheiding als de rest van het
+project:
+
+| Bestand | Weet van | Weet niet van |
+|---|---|---|
+| `opslag.py` | SQL | HTML, HTTP |
+| `schermen.py` | HTML | database, webserver |
+| `web.py` | HTTP | SQL |
+
+Daaronder ligt de rekenkern, die van geen van drieën iets weet. Dat
+betekent dat je een scherm kunt natesten zonder dat er iets draait:
+`tests/test_schermen.py` loopt door de router heen en niet door een
+socket. Achttien tests halen een hele order van NIEUW tot VERZONDEN, via
+dezelfde knoppen die een gebruiker indrukt.
+
+Drie keuzes die het uitleggen waard zijn:
+
+1. **Geen framework en geen JavaScript.** `http.server` uit de
+   standaardbibliotheek doet wat hier nodig is. Elk scherm werkt met
+   formulieren die een browser al sinds 1995 kan versturen — handig op
+   de vloer, waar soms een tablet staat waar je niets nieuws op
+   geïnstalleerd krijgt.
+2. **Elke handeling is een POST met een omleiding erna.** Wie na een
+   pick op F5 drukt, herhaalt de omleiding en niet de boeking. De
+   melding reist mee in de URL, dus er is geen koekje nodig en je kunt
+   het scherm dat je ziet gewoon doorsturen.
+3. **Dezelfde `stijl.css` als de demo.** Eén stijlbestand voor beide
+   versies. Zo is een verschil in beeld een verschil in gegevens.
+
+De scanmodus (hoofdstuk 12) staat helemaal in `scannen.py` en raakt geen
+database aan: hij zegt alleen wat er geboekt moet worden, en `web.py`
+boekt dat via dezelfde functies als de rest van het systeem. Daardoor
+zijn de vier taken — picken, tellen, inslaan, vrij — in
+`tests/test_scannen.py` na te lopen zonder dat er iets draait.
+
+En T-18 staat in `vakto/werkdag.py`: een hele werkdag van 07:00 tot
+17:00, met orders die binnenkomen, manco's, ontvangsten, inslag en een
+zelfcontrole na elke golf. Aan het eind moeten er nul negatieve
+voorraadregels zijn, mag nergens `res > qty` staan en mag er geen enkele
+hangende reservering over zijn.
+
+```bash
+python3 -m vakto.werkdag        # de dag naspelen en het verslag zien
+```
+
+Wat deze stap aan het licht bracht: `vakto_tellen()` boekte een
+telverschil met reden `TELLING`, terwijl R-SCAN-05 en de browserversie
+`TELVERSCHIL` zeggen — en `NULMETING` als er nog niets was vastgelegd.
+Dat verschil is niet cosmetisch: het is het verschil tussen "hier gaat
+iets mis" en "hier begint een nieuwe klant". Het document had gelijk, de
+database is bijgetrokken.
+
+---
+
 ## De volgende stap
 
-Stap 8 uit hoofdstuk 15: schermen en scanmodus. Reken op zes avonden, en
-op het eerste moment dat je beide versies naast elkaar nodig hebt. Neem
-stap 4 van de herindeling erbij: de zeven `ui`-bestanden hernoemen naar
-wat er in zit.
+Stap 9 uit hoofdstuk 15: inloggen, rollen, back-up en een echte server.
+Reken op vier avonden. Drie dingen die daar als eerste bij horen:
+
+* **Een sessie per medewerker.** De scanstand in `web.py` is er nu één,
+  gedeeld. Dat kan zolang jij de enige bent die kijkt.
+* **Rollen.** De browserversie kent ze al (`mag()` in `gebruikers.js`);
+  hier bepaalt de rol straks welke schermen in het menu staan.
+* **Back-up.** `pg_dump` in een cron, en één keer terugzetten om te
+  bewijzen dat het werkt. Een back-up die nooit is teruggezet is geen
+  back-up.
 
 Begin nergens aan voordat de tests van deze stap groen zijn. Als de kern
 niet klopt, bouw je er alleen maar bovenop.

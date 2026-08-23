@@ -489,6 +489,15 @@ input[type="file"][hidden]{display:none !important}
 .stappen li::marker{color:var(--accent)}
 .stappen b{color:var(--ink)}
 
+/* ===================== OPMETEN ===================================== */
+/* Vier maten en een knop, op één regel in een tabelcel. Zonder deze
+   regel duwt de standaardmarge van een formulier de knop een regel naar
+   beneden en staat hij niet meer naast het artikel waar hij bij hoort. */
+.meetrij{display:flex;gap:6px;align-items:center;margin:0}
+.meetrij input{width:5.5em;margin-top:0;padding:6px 8px;font-size:13px;
+  font-family:var(--code)}
+.meetrij button{padding:6px 13px;font-size:12px;white-space:nowrap}
+
 /* ===================== ETIKETTEN =================================== */
 .etiketvel{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(246px,1fr))}
 .etiket{border:1px solid var(--line);border-radius:var(--r-klein);padding:10px 11px;

@@ -137,9 +137,24 @@ else
   printf '\n'; cat /tmp/vakto_glr.log; stop "De reserveringstest onder gelijktijdigheid is gezakt."
 fi
 
+kop "8. De schermen"
+if [ -z "$PY" ]; then
+  let_ "Python niet gevonden — overgeslagen."
+elif "$PY" -c "import psycopg" >/dev/null 2>&1; then
+  ok "psycopg staat klaar — de webserver kan draaien"
+else
+  let_ "psycopg ontbreekt; de schermen zelf zijn wel getest (die praten"
+  let_ "niet rechtstreeks met de database). Voor de webserver:"
+  let_ "    pip install -r requirements.txt"
+fi
+
 # ------------------------------------------------------------------ klaar
 printf '\n%s  Alles staat en alles is groen.%s\n\n' "$groen$dik" "$uit"
 cat <<KLAAR
+  De schermen bekijken:
+      $PY -m vakto.web
+    en open daarna http://127.0.0.1:8000/ in je browser.
+
   Wat je nu hebt:
     - een database '$DB' met het volledige schema
     - de rekenkern in Python, gelijk aan de browserversie
@@ -152,6 +167,9 @@ cat <<KLAAR
       laat vervallen en zijn eigen meldingen sluit
     - een import die de rommelige bestanden van een klant inleest en
       eerst laat zien wat eruit komt
+    - de schermen: dashboard, taken, orders, picken, scanmodus,
+      inslag, opmeten, locaties en artikelen — met dezelfde stijl
+      als de browserversie
 
   Rondkijken in de database:
       $PSQL -U $GEBRUIKER -d $DB

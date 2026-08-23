@@ -42,7 +42,7 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 
 ## Waar we staan
 
-Stap **7 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 15:
+Stap **8 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 15:
 
 | | Stap | Status |
 |---|---|---|
@@ -53,11 +53,42 @@ Stap **7 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 15:
 | 5 | Uitgaand: reserveren, picken, manco | ✅ |
 | 6 | Zelfcontrole en optimalisatie | ✅ |
 | 7 | Import van klantbestanden | ✅ |
-| 8 | Schermen en scanmodus | ← nu |
-| 9 | Inloggen, rollen, back-up, server | |
+| 8 | Schermen en scanmodus | ✅ |
+| 9 | Inloggen, rollen, back-up, server | ← nu |
 
-Alles groen: **243 Python-tests** en **198 SQL-controles**, plus twee tests met
+Alles groen: **312 Python-tests** en **198 SQL-controles**, plus twee tests met
 twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren).
+
+**Wat stap 8 opleverde.** De serverversie heeft nu schermen. Drie lagen die alleen van
+elkaar weten wat ze moeten weten: `vakto/opslag.py` kent SQL, `vakto/schermen.py` kent
+geen database, `vakto/web.py` kent HTTP. Daaronder ligt de rekenkern, die van geen van
+drieën iets weet. Starten: `python3 -m vakto.web`, dan <http://127.0.0.1:8000/>.
+
+Geen framework en geen JavaScript: `http.server` uit de standaardbibliotheek, en elk
+scherm werkt met formulieren. Elke handeling is een POST met een omleiding erna, zodat
+F5 na een pick niets nog een keer afboekt; de melding reist mee in de URL, dus er is geen
+sessiekoekje nodig. De opmaak komt uit `demo/stijl.css` — hetzelfde bestand als de
+browserversie, zodat een verschil in beeld een verschil in gegevens is.
+
+De scanmodus is **hoofdstuk 12 (R-SCAN-01 t/m R-SCAN-07)** geworden; Instellingen,
+Testgevallen en Volgorde zijn daardoor 13, 14 en 15. `vakto/scannen.py` raakt geen
+database aan: hij zegt alleen wat er geboekt moet worden, en `web.py` boekt dat via
+dezelfde functies als de rest. En T-18 staat in `vakto/werkdag.py` — een hele werkdag
+van 07:00 tot 17:00 naspelen (`python3 -m vakto.werkdag`), met aan het eind nul negatieve
+voorraadregels, nergens `res > qty` en geen hangende reserveringen.
+
+Twee dingen kwamen boven water, allebei rechtgezet (spec v1.7):
+
+* `vakto_tellen()` boekte een telverschil met reden `TELLING`, terwijl R-SCAN-05 en de
+  browserversie `TELVERSCHIL` zeggen — en `NULMETING` als er nog niets was vastgelegd.
+  Het document had gelijk; de database is bijgetrokken.
+* Een locatie die nog nooit geteld is kreeg als reden *"20508 dag(en) over het
+  telinterval"*. Rekenkundig waar (`geteld_op` is dan 1970), maar bij een nieuwe klant
+  staat dat op elke taak, en wie dat leest gelooft de rest van het scherm ook niet meer.
+  Nu heet het *"nog nooit geteld"*, in beide versies.
+
+Ook nieuw: `python3 -m vakto.inlezen <locaties> <artikelen> <voorraad> --overnemen`, om
+een database met echte klantbestanden te vullen voordat je de schermen bekijkt.
 
 **Wat stap 7 opleverde.** De import zit in `server/vakto/inlezen.py` (lezen, kolommen
 raden, eenheid raden, controleren) en `server/import.sql` (overnemen, in één transactie).
@@ -131,7 +162,7 @@ Vakto/
 ├── LEESMIJ.md             de wegwijzer
 ├── OVERDRACHT.md          dit bestand
 ├── server/                het product — Python + PostgreSQL
-│   ├── vakto/             de rekenkern, dertien modules
+│   ├── vakto/             de rekenkern, zestien modules
 │   ├── db/                het schema en de databasefuncties
 │   ├── tests/  tests-sql/
 │   └── opzetten.sh
@@ -170,6 +201,9 @@ psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_import.sql
 bash tests-sql/test_gelijktijdig.sh
 bash tests-sql/test_gelijktijdig_reserveren.sh
 
+# de schermen bekijken (heeft psycopg nodig):
+cd server && pip install -r requirements.txt && python3 -m vakto.web
+
 # browserversie:
 cd demo && python3 bouw.py
 cd test && node test3.mjs && node test-import.mjs && node test-paden.mjs && node rooktest.mjs
@@ -200,7 +234,7 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Links
 
-- Specificatie (v1.6): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.7): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133
@@ -209,11 +243,23 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Een nieuw gesprek beginnen
 
-Stuur dit bestand mee plus de map waar je aan werkt. Voor stap 8 heb je ze
-uitzonderlijk allebei nodig: je bouwt de serverschermen met de browserversie ernaast. Niet allebei tegelijk: dat is de helft duurder
-en meestal niet nodig.
+Stuur dit bestand mee plus de map waar je aan werkt. Voor stap 9 is dat alleen
+`server/` — de browserversie heb je er niet meer bij nodig. Niet allebei tegelijk:
+dat is de helft duurder en meestal niet nodig.
 
 Openingszin die werkt:
 
 > Dit is mijn WMS-project Vakto. In OVERDRACHT.md staat waar we zijn en welke
-> afspraken gelden. Ik wil verder met stap 8 (schermen en scanmodus).
+> afspraken gelden. Ik wil verder met stap 9 (inloggen, rollen, back-up, server).
+
+Drie dingen die als eerste bij stap 9 horen:
+
+* **Een sessie per medewerker.** De scanstand in `web.py` is er nu één, gedeeld.
+  Dat kan zolang jij de enige bent die kijkt.
+* **Rollen.** De browserversie kent ze al (`mag()` in `gebruikers.js`); op de server
+  bepaalt de rol straks welke schermen in het menu staan.
+* **Back-up.** `pg_dump` in een cron, en één keer terugzetten om te bewijzen dat het
+  werkt. Een back-up die nooit is teruggezet is geen back-up.
+
+**Zet de webserver niet op het internet voordat stap 9 af is.** Er zit geen inlog
+omheen; wie het adres kent, kan boeken.

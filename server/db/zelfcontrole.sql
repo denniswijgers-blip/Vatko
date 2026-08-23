@@ -32,6 +32,7 @@ DROP FUNCTION IF EXISTS vakto_taak_bijwerken(bigint,integer,integer,text,text);
 DROP FUNCTION IF EXISTS vakto_taak_vervallen(bigint,text);
 DROP FUNCTION IF EXISTS vakto_taak_uitvoeren(bigint,integer,text);
 DROP FUNCTION IF EXISTS vakto_tellen(integer,integer,integer,text);
+DROP FUNCTION IF EXISTS vakto_tellen(integer,integer,integer,text,text,text);
 DROP FUNCTION IF EXISTS vakto_log(text,text,text,text);
 DROP FUNCTION IF EXISTS vakto_melding_bijwerken(bigint,text);
 
@@ -237,7 +238,13 @@ CREATE FUNCTION vakto_tellen(
   p_locatie   integer,
   p_product   integer,
   p_geteld    integer,
-  p_gebruiker text DEFAULT NULL
+  p_gebruiker text DEFAULT NULL,
+  -- R-SCAN-05. Een verschil heet TELVERSCHIL; bij een nulmeting heet het
+  -- NULMETING, want er was nog niets vastgelegd om van af te wijken.
+  -- Wie dat door elkaar haalt, ziet de eerste dag van een nieuwe klant
+  -- als een dag vol telfouten.
+  p_reden     text DEFAULT 'TELVERSCHIL',
+  p_ref       text DEFAULT 'Cyclustelling'
 ) RETURNS bigint AS $$
 DECLARE
   v_aanwezig integer;
@@ -265,10 +272,10 @@ BEGIN
 
   IF v_verschil > 0 THEN
     v_journaal := vakto_boek(p_product, v_verschil, 'COUNT', NULL, p_locatie,
-                             'TELLING', NULL, p_gebruiker);
+                             p_reden, p_ref, p_gebruiker);
   ELSIF v_verschil < 0 THEN
     v_journaal := vakto_boek(p_product, -v_verschil, 'COUNT', p_locatie, NULL,
-                             'TELLING', NULL, p_gebruiker);
+                             p_reden, p_ref, p_gebruiker);
   END IF;
 
   UPDATE location SET geteld_op = now() WHERE id = p_locatie;

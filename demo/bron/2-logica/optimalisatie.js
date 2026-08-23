@@ -254,12 +254,17 @@ function optTellen(db, r){
   for(const k of kandidaten){
     if(open >= max) break;
     if(db.taken.some(t=>t.soort==="CYCLE_COUNT" && t.status==="TODO" && t.naar===k.loc.id)) continue;
+    /* R-OPT-04. Nooit geteld heet ook zo. "20508 dag(en) over het telinterval"
+       is rekenkundig waar (geteldOp is dan 0) maar onzin om te lezen, en bij een
+       nieuwe klant staat het op elke taak. Wie dat leest, gelooft de rest van het
+       scherm ook niet meer. */
     const dagen = Math.floor(k.over/86400000);
+    const reden = k.loc.geteldOp
+      ? `${dagen} dag(en) over het telinterval van ${Math.round(k.interval/86400000)} dagen`
+      : "nog nooit geteld";
     db.taken.push({id:db.taken.length, soort:"CYCLE_COUNT", naam:"Locatie tellen",
       prio:45, status:"TODO", productId:k.pid, van:k.loc.id, naar:k.loc.id, qty:k.qty,
-      automatisch:true, aanleiding:"telinterval",
-      reden:`${dagen} dag(en) over het telinterval van ${Math.round(k.interval/86400000)} dagen`,
-      at:Date.now()});
+      automatisch:true, aanleiding:"telinterval", reden, at:Date.now()});
     r.aangemaakt++;
     open++;
   }

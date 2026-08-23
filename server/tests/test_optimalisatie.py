@@ -268,7 +268,12 @@ class TestTelplan(unittest.TestCase):
 
     def test_nooit_geteld_staat_vooraan(self):
         mag = magazijn([(PICK, 10)], telinterval=30, geteld_dagen_geleden=None)
-        self.assertEqual(len(telplan(mag, [], nu=NU)), 1)
+        taken = telplan(mag, [], nu=NU)
+        self.assertEqual(len(taken), 1)
+        # R-OPT-04. Rekenkundig is dit "20508 dag(en) over het
+        # telinterval" — geteld_op is dan 1970 — maar dat is onzin om te
+        # lezen, en bij een nieuwe klant staat het op elke taak.
+        self.assertEqual(taken[0].reden, "nog nooit geteld")
 
     def test_de_relatieve_overschrijding_bepaalt_de_volgorde(self):
         """Honderd dagen over een interval van dertig is erger dan

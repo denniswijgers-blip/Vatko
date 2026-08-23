@@ -253,7 +253,7 @@ SELECT eis(vakto_tellen(921, 920, 476) IS NOT NULL,
 SELECT eis((SELECT qty FROM stock WHERE product_id=920 AND location_id=921) = 476,
            'de voorraad staat op het getelde aantal');
 SELECT eis((SELECT count(*) FROM journal
-             WHERE product_id=920 AND soort='COUNT' AND reden='TELLING'
+             WHERE product_id=920 AND soort='COUNT' AND reden='TELVERSCHIL'
                AND van=921 AND qty=2) = 1,
            'het verschil is als COUNT geboekt, niet als correctie erlangs');
 SELECT eis((SELECT count(*) FROM event_log

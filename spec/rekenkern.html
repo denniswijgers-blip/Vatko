@@ -172,7 +172,7 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.6</span>
+    <span><b>Versie</b> 1.7</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
     <span><b>Regels</b> 56</span>
@@ -814,7 +814,13 @@ colli   = max(1, ceil(gewicht / uit.max_colli_gewicht_g))</pre>
     langzame groepen nooit aan bod. Plafond:
     <code>opt.max_open_teltaken</code>, standaard 12.</p>
     <p>Teltaken uit een manco (R-UIT-05) vallen buiten dat plafond: die zijn urgent en
-    hebben een andere aanleiding.</p></div>
+    hebben een andere aanleiding.</p>
+    <p><b>Een locatie die nog nooit geteld is, heet ook zo.</b> Een leeg
+    <code>geteld_op</code> telt als oneindig over tijd &mdash; dat is precies de bedoeling,
+    want zo komt zo'n vak vanzelf bovenaan. Maar de reden op de taak wordt dan
+    <em>nog nooit geteld</em> en niet het aantal dagen sinds 1970. Bij een nieuwe klant
+    staat anders op elke taak &ldquo;20508 dag(en) over het telinterval&rdquo;, en een
+    picker die dat leest gelooft de rest van het scherm ook niet meer.</p></div>
 
   <div class="regel"><div class="regelkop"><span class="rid">R-OPT-05</span>
     <span class="rtitel">Drempeladvies</span></div>
@@ -1318,7 +1324,8 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
         <td>Dezelfde oefenbestanden geven hetzelfde rapport
         <span class="pil g">gedaan</span></td><td class="num">3 avonden</td></tr>
       <tr><td class="num mono">8</td><td>Schermen en scanmodus</td>
-        <td>Een werkdag is van begin tot eind na te spelen: T-18</td><td class="num">6 avonden</td></tr>
+        <td>Een werkdag is van begin tot eind na te spelen: T-18
+        <span class="pil g">gedaan</span></td><td class="num">6 avonden</td></tr>
       <tr><td class="num mono">9</td><td>Inloggen, rollen, back-up, server</td>
         <td>Een tweede persoon kan tegelijk werken zonder dat de voorraad scheef loopt</td><td class="num">4 avonden</td></tr>
     </tbody>
@@ -1335,6 +1342,16 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.7</strong> &mdash; stap 8 gebouwd en getest. De schermen draaien nu
+  ook op de server, met dezelfde stijl als de browserversie &mdash; zo is een verschil in
+  beeld een verschil in gegevens en niet in opmaak. Drie lagen die alleen van elkaar weten
+  wat ze moeten weten: <code>opslag.py</code> kent SQL, <code>schermen.py</code> kent geen
+  database, <code>web.py</code> kent HTTP. Elke handeling is een POST met een omleiding
+  erna, zodat F5 na een pick niets nog een keer afboekt. Eén afwijking kwam boven water:
+  <code>vakto_tellen()</code> boekte een telverschil met reden <code>TELLING</code>,
+  terwijl R-SCAN-05 en de browserversie <code>TELVERSCHIL</code> zeggen (en
+  <code>NULMETING</code> bij een nulmeting). Het document had gelijk; de database is
+  bijgetrokken.<br><br>
   <strong>Versie 1.6</strong> &mdash; stap 7 gebouwd en getest, en er is een hoofdstuk
   bij gekomen. De import stond nergens beschreven terwijl er wel degelijk rekenregels in
   zitten &mdash; eenheden raden, kolommen herkennen, een looproute uit een locatiecode
