@@ -91,10 +91,10 @@ niet in Python: ze vergrendelen rijen en boeken voorraad, dus geldt R-BOEK-03 ne
 als bij `boek()`. Python heeft wat er zonder database moet gelden — de looproute, de
 statusreeks en het inpakken — in `server/vakto/uitgaand.py`.
 
-**Herindeling:** stap 0 t/m 4 uit `spec/herindeling.html` zijn gedaan (versiebeheer,
-één projectmap, `router.js` en `import.js` opgesplitst, en de zeven `ui`-bestanden
-herverdeeld over tien schermbestanden). Open staan nog stap 5 (de SQL-bestanden naar
-`server/db/`) en stap 6 (één LEESMIJ bovenaan de projectmap) — samen een half uur.
+**Herindeling:** helemaal af. Alle zeven stappen uit `spec/herindeling.html` zijn
+gedaan: versiebeheer, één projectmap, `router.js` en `import.js` opgesplitst, de zeven
+`ui`-bestanden herverdeeld over tien schermbestanden, de SQL naar `server/db/`, en een
+`LEESMIJ.md` bovenaan die de weg wijst.
 
 Bij stap 4 stond nog één keuze open: je kreeg `2-logica/uitgaand.js` én
 `4-schermen/uitgaand.js`. Het scherm heet nu `uitgaand-scherm.js` en de logica houdt
@@ -128,11 +128,13 @@ Deze gelden zonder dat ze elke keer opnieuw gezegd hoeven te worden.
 
 ```
 Vakto/
+├── LEESMIJ.md             de wegwijzer
 ├── OVERDRACHT.md          dit bestand
 ├── server/                het product — Python + PostgreSQL
 │   ├── vakto/             de rekenkern, dertien modules
+│   ├── db/                het schema en de databasefuncties
 │   ├── tests/  tests-sql/
-│   └── *.sql  opzetten.sh
+│   └── opzetten.sh
 ├── demo/                  de browserversie
 │   ├── bron/1-kern/       passen, voorstellen, grafieken
 │   │      2-logica/       boeken, meten, uitgaand, optimaliseren, scannen

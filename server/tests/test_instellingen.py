@@ -24,13 +24,13 @@ def sleutels_uit_sql(bestand: str, tabel: str) -> set[str]:
 class TestInstellingen(unittest.TestCase):
 
     def test_code_en_sql_kennen_dezelfde_instellingen(self):
-        uit_sql = sleutels_uit_sql("seed_config.sql", "setting")
+        uit_sql = sleutels_uit_sql("db/seed_config.sql", "setting")
         self.assertEqual(set(STANDAARD), uit_sql,
                          "STANDAARD in instellingen.py en seed_config.sql "
                          "moeten precies dezelfde sleutels hebben")
 
     def test_code_en_sql_kennen_dezelfde_wegingen(self):
-        uit_sql = sleutels_uit_sql("seed_config.sql", "weging")
+        uit_sql = sleutels_uit_sql("db/seed_config.sql", "weging")
         self.assertEqual(set(WEGING), uit_sql)
 
     def test_de_straf_weegt_zwaarder_dan_hele_partij_past(self):

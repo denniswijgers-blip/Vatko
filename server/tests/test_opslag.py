@@ -165,8 +165,8 @@ class TestQueriesTegenHetSchema(unittest.TestCase):
         cls.psql = psql_beschikbaar()
         if not cls.psql:
             raise unittest.SkipTest(
-                "Geen bereikbare PostgreSQL. Zet hem op met schema.sql en "
-                "boeken.sql, of sla deze tests over — de rest draait gewoon.")
+                "Geen bereikbare PostgreSQL. Zet hem op met opzetten.sh, of "
+                "sla deze tests over — de rest draait gewoon.")
 
     def test_elke_query_klopt_met_het_schema(self):
         db = os.environ.get("PGDATABASE", "vakto")

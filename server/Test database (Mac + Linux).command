@@ -14,13 +14,13 @@ fi
 if ! psql -d "$DB" -c "SELECT 1" >/dev/null 2>&1; then
   echo "  Kan geen verbinding maken met database '$DB'."
   echo "  Zet hem op:   createdb $DB"
-  echo "                psql -d $DB -f schema.sql"
-  echo "                psql -d $DB -f seed_config.sql"
-  echo "                psql -d $DB -f boeken.sql"
-  echo "                psql -d $DB -f meten.sql"
-  echo "                psql -d $DB -f uitgaand.sql"
-  echo "                psql -d $DB -f zelfcontrole.sql"
-  echo "                psql -d $DB -f import.sql"
+  echo "                psql -d $DB -f db/schema.sql"
+  echo "                psql -d $DB -f db/seed_config.sql"
+  echo "                psql -d $DB -f db/boeken.sql"
+  echo "                psql -d $DB -f db/meten.sql"
+  echo "                psql -d $DB -f db/uitgaand.sql"
+  echo "                psql -d $DB -f db/zelfcontrole.sql"
+  echo "                psql -d $DB -f db/import.sql"
   echo ""; read -r -p "  Druk op enter om te sluiten." _; exit 1
 fi
 echo "  1. Boeken, meten, uitgaand, zelfcontrole, import, checks en views"

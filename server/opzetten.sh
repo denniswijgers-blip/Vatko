@@ -81,8 +81,8 @@ fi
 
 # ---------------------------------------------------------------- schema
 kop "4. Schema en configuratie"
-for bestand in schema.sql seed_config.sql boeken.sql meten.sql uitgaand.sql zelfcontrole.sql \
-                import.sql; do
+for bestand in db/schema.sql db/seed_config.sql db/boeken.sql db/meten.sql \
+                db/uitgaand.sql db/zelfcontrole.sql db/import.sql; do
   [ -f "$bestand" ] || stop "Bestand $bestand ontbreekt. Zit je wel in de juiste map?"
   if P -d "$DB" -v ON_ERROR_STOP=1 -q -f "$bestand" >/tmp/vakto_sql.log 2>&1; then
     ok "$bestand geladen"

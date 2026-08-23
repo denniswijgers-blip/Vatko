@@ -39,7 +39,7 @@ Dat is alles. Je krijgt zoiets te zien:
   ✓ gevonden: /Applications/Postgres.app/.../psql
   ✓ ingelogd als gebruiker 'dennis'
   ✓ database aangemaakt
-  ✓ schema.sql geladen
+  ✓ db/schema.sql geladen
   ✓ 21 tabellen en 5 views staan klaar
   ✓ Ran 67 tests in 0.13s  —  alle tests groen
   ✓ 47 controles geslaagd (boeken, meten, checks, triggers, views)
@@ -118,18 +118,19 @@ Wil je zien wat er getest wordt, zet er `-v` achter.
 ## Wat waar staat
 
 ```
-schema.sql          Het PostgreSQL-schema. Tabellen, checks, views, triggers.
-seed_config.sql     De configuratietabellen: locatiesoorten, maatklassen,
+db/                 alles wat de database zelf doet
+  schema.sql        Het PostgreSQL-schema. Tabellen, checks, views, triggers.
+  seed_config.sql   De configuratietabellen: locatiesoorten, maatklassen,
                     wegingen, instellingen. Geen demodata — dit zijn de
                     regels waarmee gerekend wordt.
-boeken.sql          vakto_boek(): de enige route waarlangs voorraad verandert.
-meten.sql           vakto_meting(): meting en melding in één transactie.
+  boeken.sql        vakto_boek(): de enige route waarlangs voorraad verandert.
+  meten.sql         vakto_meting(): meting en melding in één transactie.
                     Plus de meetlijst v_te_meten (R-MEET-04).
-uitgaand.sql        Reserveren, vrijgeven, picken, manco, inpakken, verzenden
+  uitgaand.sql      Reserveren, vrijgeven, picken, manco, inpakken, verzenden
                     (R-UIT). Plus de picklijst v_picklijst, op looproute.
-zelfcontrole.sql    Taken klaarzetten, laten vervallen en uitvoeren, en
+  zelfcontrole.sql  Taken klaarzetten, laten vervallen en uitvoeren, en
                     tellen (R-ZC, R-OPT). Plus v_werklijst en v_ordervraag.
-import.sql          Een gecontroleerd rapport overnemen (R-IMP), in één
+  import.sql        Een gecontroleerd rapport overnemen (R-IMP), in één
                     transactie. Plus vakto_zone en vakto_artikelgroep.
 
 vakto/
@@ -164,7 +165,7 @@ De grens die we aanhouden:
 | **De database** | bewaakt integriteit: boeken, vergrendelen, checks, append-only |
 | **Python** | doet de berekeningen: passen, benutting, scoren, optimaliseren |
 
-Boeken zit dus in de database (`vakto_boek` in boeken.sql) en niet in
+Boeken zit dus in de database (`vakto_boek` in db/boeken.sql) en niet in
 Python. Dat is geen luiheid maar R-BASIS-01: zet je die logica in de
 applicatie, dan geldt hij alleen zolang iedereen die route gebruikt. Eén
 importscriptje dat "even snel" een UPDATE doet, en je journaal klopt niet
@@ -199,13 +200,13 @@ Vanuit deze map:
 
 ```bash
 createdb vakto
-psql -d vakto -f schema.sql
-psql -d vakto -f seed_config.sql
-psql -d vakto -f boeken.sql
-psql -d vakto -f meten.sql
-psql -d vakto -f uitgaand.sql
-psql -d vakto -f zelfcontrole.sql
-psql -d vakto -f import.sql
+psql -d vakto -f db/schema.sql
+psql -d vakto -f db/seed_config.sql
+psql -d vakto -f db/boeken.sql
+psql -d vakto -f db/meten.sql
+psql -d vakto -f db/uitgaand.sql
+psql -d vakto -f db/zelfcontrole.sql
+psql -d vakto -f db/import.sql
 ```
 
 Op Windows draai je die zeven regels in de SQL Shell (staat in je
