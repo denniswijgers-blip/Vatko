@@ -64,6 +64,12 @@ INSERT INTO setting (sleutel, waarde, groep, uitleg) VALUES
   ('uit.max_colli_gewicht_g','25000','Uitgaand',
    'Maximaal gewicht per collo in gram. Hieruit volgt het aantal dozen (R-UIT-07).'),
   ('ui.rows_per_page','60','Weergave',
-   'Maximaal aantal rijen per scherm. Nooit onbeperkt.');
+   'Maximaal aantal rijen per scherm. Nooit onbeperkt.'),
+  ('sessie.duur_uren','12','Toegang',
+   'Hoe lang een inlog geldig blijft (R-GEB-05). Twaalf uur is een lange dienst.'),
+  ('inlog.max_pogingen','10','Toegang',
+   'Mislukte pogingen binnen een kwartier voordat de naam een kwartier op slot gaat.'),
+  ('inlog.badge_voor_scanner','true','Toegang',
+   'Mag iemand zich met alleen een badge aanmelden voor de scanmodus (R-GEB-03)?');
 
 COMMIT;

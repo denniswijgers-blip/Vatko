@@ -42,7 +42,7 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 
 ## Waar we staan
 
-Stap **8 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 15:
+**Alle negen stappen zijn af.** Uit `spec/rekenkern.html`, hoofdstuk 16:
 
 | | Stap | Status |
 |---|---|---|
@@ -54,10 +54,41 @@ Stap **8 van 9** is af. Uit `spec/rekenkern.html`, hoofdstuk 15:
 | 6 | Zelfcontrole en optimalisatie | ✅ |
 | 7 | Import van klantbestanden | ✅ |
 | 8 | Schermen en scanmodus | ✅ |
-| 9 | Inloggen, rollen, back-up, server | ← nu |
+| 9 | Inloggen, rollen, back-up, server | ✅ |
 
-Alles groen: **312 Python-tests** en **198 SQL-controles**, plus twee tests met
-twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren).
+Alles groen: **370 Python-tests** en **234 SQL-controles**, plus twee tests met
+twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren),
+en een back-up die zichzelf terugzet om te bewijzen dat het kan.
+
+**Wat stap 9 opleverde.** Er zit een inlog omheen. Drie rollen met een rang —
+magazijnmedewerker, teamleider, beheerder — precies zoals de browserversie ze al kende.
+Dat is nu **hoofdstuk 13 (R-GEB-01 t/m R-GEB-08)**; Instellingen, Testgevallen en
+Volgorde zijn 14, 15 en 16 geworden.
+
+Vier keuzes die het uitleggen waard zijn:
+
+* **Rechten worden op de server getoetst, niet in het menu.** Een scherm weglaten is
+  opmaak; wie het adres typt komt er anders alsnog. Elke aanvraag toetst zelf, en een
+  POST net zo goed als een GET — anders is de knop weg maar het formulier nog te
+  versturen. Dat is T-40.
+* **Een badge is geen wachtwoord.** Hij ligt op tafel en iedereen kan hem lezen. Een
+  badge geeft daarom alleen toegang tot de scanmodus, ook als de rol erachter beheerder
+  is.
+* **Een sessie is een rij in de database.** Een herstart logt niemand uit, twee mensen
+  kunnen tegelijk werken zonder elkaars stand te zien, en een sessie is in te trekken —
+  iemand die uit dienst gaat is er ook echt uit.
+* **Wachtwoorden staan er als scrypt-afdruk in**, met de parameters erbij, zodat je die
+  over vijf jaar kunt verhogen zonder dat bestaande rijen onleesbaar worden. En er zit
+  géén standaardwachtwoord in het schema: is de gebruikerstabel leeg, dan vraagt het
+  eerste scherm om een beheerder aan te maken en daarna is die weg dicht (R-GEB-08).
+
+T-39 is waar deze stap op afgerekend werd: twee mensen tegelijk ingelogd, allebei in de
+scanmodus op dezelfde picklijst. Ieder ziet zijn eigen stand, de een die overslaat
+schuift bij de ander niets op, en precies één van de twee krijgt de laatste stuks.
+
+Verder: `db/backup.sh --proef` maakt een back-up én zet hem meteen terug in een
+wegwerpdatabase om te bewijzen dat het kan, en `DRAAIEN.md` beschrijft https met nginx,
+een systemd-unit, de cron voor de back-up en een firewall.
 
 **Wat stap 8 opleverde.** De serverversie heeft nu schermen. Drie lagen die alleen van
 elkaar weten wat ze moeten weten: `vakto/opslag.py` kent SQL, `vakto/schermen.py` kent
@@ -162,7 +193,8 @@ Vakto/
 ├── LEESMIJ.md             de wegwijzer
 ├── OVERDRACHT.md          dit bestand
 ├── server/                het product — Python + PostgreSQL
-│   ├── vakto/             de rekenkern, zestien modules
+│   ├── DRAAIEN.md         op een echte server zetten: https, systemd, back-up
+│   ├── vakto/             de rekenkern, zeventien modules
 │   ├── db/                het schema en de databasefuncties
 │   ├── tests/  tests-sql/
 │   └── opzetten.sh
@@ -198,11 +230,15 @@ psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_import.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_gebruikers.sql
 bash tests-sql/test_gelijktijdig.sh
 bash tests-sql/test_gelijktijdig_reserveren.sh
 
 # de schermen bekijken (heeft psycopg nodig):
 cd server && pip install -r requirements.txt && python3 -m vakto.web
+
+# een back-up maken én toetsen of hij terug te zetten is:
+cd server && bash db/backup.sh --proef
 
 # browserversie:
 cd demo && python3 bouw.py
@@ -223,18 +259,26 @@ na elke afgeronde stap opnieuw vast, dan kun je altijd terug.
 
 ## Wat er nog moet
 
-**Juridisch.** Aan het begin van dit project zijn schermafbeeldingen van het WMS van
-Dennis' werkgever (REV'IT) als referentie gebruikt. Die bevatten bedrijfsgegevens:
-klantnamen, 41 medewerkersnamen, interne IP-adressen, de magazijnindeling. Afspraak:
-niet bewaren, niet delen, en verder bouwen vanuit openbare bronnen. Nog te doen:
-een ICT/IE-jurist naar het arbeidscontract laten kijken (nevenwerkzaamheden,
-geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
+**Juridisch: afgehandeld.** Een ICT/IE-jurist heeft het arbeidscontract bekeken
+(nevenwerkzaamheden, geheimhouding, art. 7 Auteurswet) en ziet geen belemmering. De
+afspraak over de REV'IT-schermafbeeldingen uit het begin van het project blijft staan:
+niet bewaren, niet delen, en verder bouwen vanuit openbare bronnen.
+
+**Bewust niet gebouwd**, met de reden erbij (staat ook onderaan `server/DRAAIEN.md`):
+geen tweefactorauthenticatie, geen wachtwoordherstel per e-mail, en één
+databaseverbinding tegelijk. Geen van drieën is nodig voor één magazijn binnen een
+bedrijfsnetwerk; alle drie worden ze het zodra dat verandert.
+
+**De volgende stap is geen code.** De negen stappen zijn af. Wat er nu moet gebeuren is
+een eerste klant: de browserversie verkoopt, de serverversie levert. Zodra die draait,
+gaat de browserversie uit de lucht als product en blijft hij alleen demo — twee
+codebases onderhouden naast een baan gaat niet.
 
 ---
 
 ## Links
 
-- Specificatie (v1.7): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.8): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133
@@ -243,23 +287,14 @@ geheimhouding, art. 7 Auteurswet) voordat er iets verkocht wordt.
 
 ## Een nieuw gesprek beginnen
 
-Stuur dit bestand mee plus de map waar je aan werkt. Voor stap 9 is dat alleen
-`server/` — de browserversie heb je er niet meer bij nodig. Niet allebei tegelijk:
-dat is de helft duurder en meestal niet nodig.
+Stuur dit bestand mee plus de map waar je aan werkt — meestal alleen `server/`. Niet
+allebei de versies tegelijk: dat is de helft duurder en sinds stap 8 nog maar zelden
+nodig.
 
 Openingszin die werkt:
 
 > Dit is mijn WMS-project Vakto. In OVERDRACHT.md staat waar we zijn en welke
-> afspraken gelden. Ik wil verder met stap 9 (inloggen, rollen, back-up, server).
+> afspraken gelden. Ik wil [wat je wilt].
 
-Drie dingen die als eerste bij stap 9 horen:
-
-* **Een sessie per medewerker.** De scanstand in `web.py` is er nu één, gedeeld.
-  Dat kan zolang jij de enige bent die kijkt.
-* **Rollen.** De browserversie kent ze al (`mag()` in `gebruikers.js`); op de server
-  bepaalt de rol straks welke schermen in het menu staan.
-* **Back-up.** `pg_dump` in een cron, en één keer terugzetten om te bewijzen dat het
-  werkt. Een back-up die nooit is teruggezet is geen back-up.
-
-**Zet de webserver niet op het internet voordat stap 9 af is.** Er zit geen inlog
-omheen; wie het adres kent, kan boeken.
+De negen stappen zijn af, dus er is geen "volgende stap" meer die vastligt. Wat er nu
+speelt is onderhoud, een eerste klant, en wat die klant vraagt.

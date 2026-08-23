@@ -247,6 +247,10 @@ td input{margin-top:0;padding:6px 8px;font-size:13px;min-width:78px;
 input.mono{font-family:var(--code)}
 .filters{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:15px}
 .filters label{margin-bottom:0;min-width:170px}
+/* Een toelichting in een label is een toelichting, geen kop: de
+   kapitalen en de letterafstand van het label horen er niet bij. */
+.filters label .hint,.aanmeldform label .hint{text-transform:none;
+  letter-spacing:0;font-weight:400}
 .filters label.breed{min-width:320px;flex:1}
 .filters .rechts{margin-left:auto;padding-bottom:9px}
 
@@ -488,6 +492,31 @@ input[type="file"][hidden]{display:none !important}
 .stappen li{margin-bottom:7px}
 .stappen li::marker{color:var(--accent)}
 .stappen b{color:var(--ink)}
+
+/* ===================== INLOGGEN (R-GEB) ============================
+   Eén vak in het midden en verder niets. Wie hier staat, is nog niet
+   binnen: geen menu, geen cijfers, geen afleiding. */
+body.kaal{display:block;background:var(--nav-2)}
+body.kaal main{max-width:none;padding:0;min-height:100vh;
+  display:flex;align-items:center;justify-content:center}
+.aanmeldvak{width:min(420px,calc(100% - 32px));background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:26px 28px 30px;
+  box-shadow:var(--schaduw-op);margin:28px auto}
+.aanmeldvak .merk{display:flex;align-items:center;gap:9px;color:var(--ink);
+  margin-bottom:18px;font:600 19px/1 var(--ui);letter-spacing:-.02em}
+.aanmeldvak .merk svg{width:23px;height:23px;flex:0 0 23px;color:var(--accent)}
+.aanmeldvak h1{margin-top:0}
+.aanmeldvak .lead{margin-bottom:16px;font-size:13.5px}
+.aanmeldform{display:flex;flex-direction:column;gap:2px}
+.aanmeldform label{display:block;margin-bottom:9px}
+.aanmeldform input{width:100%;margin-top:0}
+/* Het scheidingsstreepje tussen wachtwoord en badge: twee manieren om
+   binnen te komen, en ze horen niet op elkaar te lijken. */
+.aanmeldof{display:flex;align-items:center;gap:11px;margin:22px 0 16px;
+  font-size:11px;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--ink-3);font-weight:600}
+.aanmeldof::before,.aanmeldof::after{content:"";flex:1;height:1px;
+  background:var(--hair)}
 
 /* ===================== OPMETEN ===================================== */
 /* Vier maten en een knop, op één regel in een tabelcel. Zonder deze

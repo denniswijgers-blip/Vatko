@@ -20,6 +20,7 @@ Python, dan geldt hij alleen zolang iedereen die route gebruikt.
 
 from __future__ import annotations
 import json
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from datetime import datetime
@@ -30,6 +31,7 @@ from .meten import Melding
 from .optimalisatie import Pick
 from .uitgaand import Inpak, Order, Orderregel, Pickregel
 from .zelfcontrole import Uitkomst
+from . import gebruikers as _gebruikers
 from . import inlezen as _inlezen
 from . import meten as _meten
 from . import uitgaand as _uitgaand
@@ -358,6 +360,75 @@ QUERIES: dict[str, str] = {
 
     "artikelkeuze": """
         SELECT id, sku, oms FROM product ORDER BY sku LIMIT %s
+    """,
+
+    # ---------------------------------------------------------------
+    #  Gebruikers, rollen en sessies (R-GEB)
+    #
+    #  Het rekenwerk staat in gebruikers.py: welke rol wat mag, en een
+    #  wachtwoord tot een afdruk maken en die toetsen. Hier staat wat de
+    #  database bewaakt — wie er is, wie er ingelogd is en tot wanneer.
+    #  Het wachtwoord komt er alleen versleuteld in en gaat er alleen
+    #  versleuteld weer uit.
+    # ---------------------------------------------------------------
+    "gebruiker_bewaren": """
+        SELECT vakto_gebruiker(%s, %s, %s, %s, %s) AS id
+    """,
+
+    "gebruiker_op_naam": """
+        SELECT id, naam, gebruikersnaam, rol, badge, wachtwoord
+          FROM app_user
+         WHERE gebruikersnaam = lower(trim(%s)) AND actief
+    """,
+
+    "gebruiker_op_badge": """
+        SELECT id, naam, gebruikersnaam, rol, badge, wachtwoord
+          FROM app_user
+         WHERE badge = %s AND actief
+    """,
+
+    "sessie_start": """
+        SELECT vakto_sessie_start(%s, %s, %s, %s, %s) AS tot
+    """,
+
+    "sessie": """
+        SELECT user_id, naam, gebruikersnaam, rol, badge, alleen_scanner, tot
+          FROM vakto_sessie(%s)
+    """,
+
+    "sessie_eind": """
+        SELECT vakto_sessie_eind(%s) AS gelukt
+    """,
+
+    "sessies_van": """
+        SELECT vakto_sessies_van(%s) AS aantal
+    """,
+
+    # R-GEB-07. Eerst kijken of de naam op slot staat, en pas daarna
+    # rekenen — anders is een slot een uitnodiging om door te gaan.
+    "op_slot": """
+        SELECT vakto_op_slot(%s, %s, %s) AS op_slot
+    """,
+
+    "inlogpoging": """
+        SELECT vakto_inlogpoging(%s, %s, %s)
+    """,
+
+    "gebruikers": """
+        SELECT id, naam, gebruikersnaam, rol, badge, actief, at,
+               heeft_wachtwoord, sessies
+          FROM v_gebruikers
+         LIMIT %s
+    """,
+
+    # R-GEB-08. Is de tabel leeg, dan — en alleen dan — mag het eerste
+    # scherm om een beheerder vragen.
+    "aantal_gebruikers": """
+        SELECT count(*) AS n FROM app_user
+    """,
+
+    "gebruiker_uitzetten": """
+        SELECT vakto_gebruiker_uit(%s) AS naam
     """,
 }
 
@@ -844,6 +915,185 @@ def artikellijst(verbinding: Verbinding, limiet: int = 500) -> list[tuple]:
 def artikelkeuze(verbinding: Verbinding, limiet: int = 500) -> list[tuple]:
     """Voor het uitrolmenu op het inslagscherm."""
     return _rijen(verbinding, "artikelkeuze", (limiet,))
+
+
+# ---------------------------------------------------------------------
+#  Gebruikers, rollen en sessies (R-GEB)
+#
+#  Dit is de enige plek waar een wachtwoord in leesbare vorm langskomt,
+#  en het gaat er meteen versleuteld weer uit. Geen enkele aanroeper
+#  hoeft te weten hoe dat werkt, en niemand kan het per ongeluk overslaan.
+# ---------------------------------------------------------------------
+@dataclass(frozen=True)
+class Aanmelding:
+    """Wat er uit een inlogpoging komt.
+
+    Bij een weigering staat er een tekst in `fout` die je aan de
+    gebruiker kunt laten zien. Die tekst is met opzet vaag over wát er
+    mis was (R-GEB-07): "onbekende gebruiker" vertelt wie er wél bestaat.
+    """
+    token: str | None = None
+    gebruiker: _gebruikers.Gebruiker | None = None
+    fout: str | None = None
+
+    @property
+    def gelukt(self) -> bool:
+        return self.token is not None
+
+
+def bewaar_gebruiker(verbinding: Verbinding, gebruikersnaam: str, naam: str,
+                     rol: str = "OPERATOR", wachtwoord: str | None = None,
+                     badge: str | None = None) -> int:
+    """Aanmaken of bijwerken. Geeft het gebruikersnummer terug.
+
+    Het wachtwoord wordt hier versleuteld en gaat als afdruk de database
+    in (R-GEB-04). Laat je het leeg, dan blijft het bestaande staan —
+    dat is wat je wilt als je alleen de rol aanpast.
+    """
+    if rol not in _gebruikers.ROLLEN:
+        raise Boekfout(f"Onbekende rol {rol!r}")
+    if wachtwoord:
+        klacht = _gebruikers.zwak(wachtwoord)
+        if klacht:
+            raise Boekfout(klacht)
+    afdruk = _gebruikers.versleutel(wachtwoord) if wachtwoord else None
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["gebruiker_bewaren"],
+                    (gebruikersnaam, naam, rol, afdruk, badge))
+        return int(cur.fetchone()[0])
+
+
+def _uit_rij(rij, alleen_scanner: bool = False) -> _gebruikers.Gebruiker:
+    return _gebruikers.Gebruiker(
+        id=rij[0], naam=rij[1], gebruikersnaam=rij[2], rol=rij[3],
+        badge=rij[4], alleen_scanner=alleen_scanner)
+
+
+def meld_aan(verbinding: Verbinding, gebruikersnaam: str, wachtwoord: str,
+             inst=None, vanaf: str | None = None) -> Aanmelding:
+    """R-GEB-03, R-GEB-05 en R-GEB-07. Inloggen met naam en wachtwoord.
+
+    De volgorde is met opzet zo:
+
+      1. Staat de naam op slot? Dan meteen weg, zonder te rekenen.
+      2. De gebruiker opzoeken — bestaat hij niet, dan toch toetsen,
+         tegen een afdruk die niemand heeft. Anders verraadt de snelheid
+         van het antwoord wie er wél bestaat.
+      3. De poging opschrijven, gelukt of niet.
+      4. Pas dan een sessie.
+    """
+    inst = inst or laad_instellingen(verbinding)
+    naam = (gebruikersnaam or "").strip()
+    if not naam:
+        return Aanmelding(fout="Vul een gebruikersnaam in.")
+
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["op_slot"],
+                    (naam, int(inst.getal("inlog.max_pogingen")), 15))
+        if bool(cur.fetchone()[0]):
+            return Aanmelding(fout="Te veel mislukte pogingen. Probeer het "
+                                   "over een kwartier opnieuw.")
+
+    rijen = _rijen(verbinding, "gebruiker_op_naam", (naam,))
+    rij = rijen[0] if rijen else None
+    goed = _gebruikers.klopt(wachtwoord, rij[5] if rij else None)
+
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["inlogpoging"], (naam, goed, vanaf))
+        cur.fetchone()
+
+    if not goed:
+        return Aanmelding(fout="Gebruikersnaam of wachtwoord klopt niet.")
+    return _start_sessie(verbinding, _uit_rij(rij), inst, vanaf)
+
+
+def meld_aan_met_badge(verbinding: Verbinding, badge: str, inst=None,
+                       vanaf: str | None = None) -> Aanmelding:
+    """R-GEB-03. Een badge geeft toegang tot de scanmodus en tot niets anders.
+
+    Hij ligt op tafel en iedereen kan hem lezen; dat is geen wachtwoord.
+    Een teamleider die zich zo aanmeldt staat op de vloer als medewerker
+    — wil hij bij de orders, dan logt hij in.
+    """
+    inst = inst or laad_instellingen(verbinding)
+    if not inst.aan("inlog.badge_voor_scanner"):
+        return Aanmelding(fout="Aanmelden met een badge staat uit. Log in "
+                               "met je gebruikersnaam en wachtwoord.")
+    code = (badge or "").strip()
+    if not code:
+        return Aanmelding(fout="Scan je badge.")
+    rijen = _rijen(verbinding, "gebruiker_op_badge", (code,))
+    if not rijen:
+        with verbinding.cursor() as cur:
+            cur.execute(QUERIES["inlogpoging"], (f"badge:{code}", False, vanaf))
+            cur.fetchone()
+        return Aanmelding(fout="Deze badge kennen we niet.")
+    return _start_sessie(verbinding, _uit_rij(rijen[0], alleen_scanner=True),
+                         inst, vanaf)
+
+
+def _start_sessie(verbinding: Verbinding, gebruiker, inst,
+                  vanaf: str | None) -> Aanmelding:
+    token = _gebruikers.nieuw_token()
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["sessie_start"],
+                    (gebruiker.id, _gebruikers.afdruk(token),
+                     int(inst.getal("sessie.duur_uren")),
+                     gebruiker.alleen_scanner, vanaf))
+        cur.fetchone()
+    return Aanmelding(token=token, gebruiker=gebruiker)
+
+
+def wie_is(verbinding: Verbinding, token: str | None):
+    """De gebruiker achter een sessietoken, of None.
+
+    Geeft ook None als de sessie verlopen is of als de gebruiker
+    inmiddels uitstaat. Dat laatste is het punt van R-GEB-05: iemand die
+    uit dienst gaat is er bij de volgende aanvraag uit, en niet pas als
+    de server toevallig herstart.
+    """
+    if not token:
+        return None
+    rijen = _rijen(verbinding, "sessie", (_gebruikers.afdruk(token),))
+    if not rijen:
+        return None
+    r = rijen[0]
+    return _gebruikers.Gebruiker(id=r[0], naam=r[1], gebruikersnaam=r[2],
+                                 rol=r[3], badge=r[4], alleen_scanner=r[5])
+
+
+def meld_af(verbinding: Verbinding, token: str | None) -> bool:
+    """Uitloggen. De rij weg, niet alleen het koekje."""
+    if not token:
+        return False
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["sessie_eind"], (_gebruikers.afdruk(token),))
+        return bool(cur.fetchone()[0])
+
+
+def trek_sessies_in(verbinding: Verbinding, user_id: int) -> int:
+    """Alle sessies van één gebruiker. Voor als een telefoon kwijt is."""
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["sessies_van"], (user_id,))
+        return int(cur.fetchone()[0])
+
+
+def zet_gebruiker_uit(verbinding: Verbinding, user_id: int) -> str | None:
+    """Uit dienst: geen toegang meer, maar zijn naam blijft in het
+    journaal staan. Verwijderen zou de geschiedenis onleesbaar maken."""
+    with verbinding.cursor() as cur:
+        cur.execute(QUERIES["gebruiker_uitzetten"], (user_id,))
+        rij = cur.fetchone()
+    return None if rij is None or rij[0] is None else str(rij[0])
+
+
+def gebruikerslijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
+    return _rijen(verbinding, "gebruikers", (limiet,))
+
+
+def aantal_gebruikers(verbinding: Verbinding) -> int:
+    """R-GEB-08. Nul betekent: er moet nog een eerste beheerder komen."""
+    return int(_rijen(verbinding, "aantal_gebruikers")[0][0])
 
 
 # ---------------------------------------------------------------------

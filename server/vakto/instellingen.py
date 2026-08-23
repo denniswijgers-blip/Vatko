@@ -8,7 +8,7 @@ rekenkern testbaar zonder PostgreSQL.
 from __future__ import annotations
 from typing import Mapping
 
-# De standaardwaarden. Gelijk aan hoofdstuk 13 van de specificatie en aan
+# De standaardwaarden. Gelijk aan hoofdstuk 14 van de specificatie en aan
 # seed_config.sql — die twee moeten altijd hetzelfde zeggen.
 STANDAARD: dict[str, str] = {
     "putaway.fill_factor":          "0.85",
@@ -25,6 +25,9 @@ STANDAARD: dict[str, str] = {
     "opstart.onbekend_aanmaken":    "false",
     "uit.max_colli_gewicht_g":      "25000",
     "ui.rows_per_page":             "60",
+    "sessie.duur_uren":             "12",
+    "inlog.max_pogingen":           "10",
+    "inlog.badge_voor_scanner":     "true",
 }
 
 # De punten van het inslagvoorstel (R-INS-04).

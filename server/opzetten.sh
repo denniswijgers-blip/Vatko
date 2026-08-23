@@ -82,7 +82,8 @@ fi
 # ---------------------------------------------------------------- schema
 kop "4. Schema en configuratie"
 for bestand in db/schema.sql db/seed_config.sql db/boeken.sql db/meten.sql \
-                db/uitgaand.sql db/zelfcontrole.sql db/import.sql; do
+                db/uitgaand.sql db/zelfcontrole.sql db/import.sql \
+                db/gebruikers.sql; do
   [ -f "$bestand" ] || stop "Bestand $bestand ontbreekt. Zit je wel in de juiste map?"
   if P -d "$DB" -v ON_ERROR_STOP=1 -q -f "$bestand" >/tmp/vakto_sql.log 2>&1; then
     ok "$bestand geladen"
@@ -113,7 +114,7 @@ kop "6. Tests tegen de database"
 : > /tmp/vakto_db.log
 for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql \
          tests-sql/test_uitgaand.sql tests-sql/test_zelfcontrole.sql \
-         tests-sql/test_import.sql; do
+         tests-sql/test_import.sql tests-sql/test_gebruikers.sql; do
   if P -d "$DB" -v ON_ERROR_STOP=1 -f "$t" >>/tmp/vakto_db.log 2>&1; then
     :
   else
@@ -121,7 +122,7 @@ for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql \
   fi
 done
 GOED=$(grep -c 'OK ' /tmp/vakto_db.log)
-ok "$GOED controles geslaagd (boeken, meten, uitgaand, zelfcontrole, import, views)"
+ok "$GOED controles geslaagd (boeken, meten, uitgaand, zelfcontrole, import, toegang, views)"
 
 kop "7. Twee mensen tegelijk"
 if PSQL="$PSQL -U $GEBRUIKER" PGDATABASE="$DB" bash tests-sql/test_gelijktijdig.sh >/tmp/vakto_glt.log 2>&1; then
@@ -137,7 +138,7 @@ else
   printf '\n'; cat /tmp/vakto_glr.log; stop "De reserveringstest onder gelijktijdigheid is gezakt."
 fi
 
-kop "8. De schermen"
+kop "8. De schermen en de webserver"
 if [ -z "$PY" ]; then
   let_ "Python niet gevonden — overgeslagen."
 elif "$PY" -c "import psycopg" >/dev/null 2>&1; then
@@ -147,13 +148,31 @@ else
   let_ "niet rechtstreeks met de database). Voor de webserver:"
   let_ "    pip install -r requirements.txt"
 fi
+GEBRUIKERS=$(P -d "$DB" -qtAX -c "SELECT count(*) FROM app_user" 2>/dev/null || echo 0)
+if [ "${GEBRUIKERS:-0}" -eq 0 ]; then
+  let_ "er is nog geen gebruiker; het eerste scherm vraagt om een beheerder"
+else
+  ok "$GEBRUIKERS gebruiker(s) staan klaar"
+fi
+
+kop "9. Back-up"
+if bash db/backup.sh --proef >/tmp/vakto_bak.log 2>&1; then
+  grep -E '^\s+.\[32m' /tmp/vakto_bak.log | sed 's/^/  /' | tail -8
+  ok "een back-up gemaakt, teruggezet en nageteld"
+else
+  printf '\n'; tail -12 /tmp/vakto_bak.log
+  let_ "de back-uptoets is gezakt — kijk hier naar vóór er een klant op zit"
+fi
 
 # ------------------------------------------------------------------ klaar
 printf '\n%s  Alles staat en alles is groen.%s\n\n' "$groen$dik" "$uit"
 cat <<KLAAR
   De schermen bekijken:
       $PY -m vakto.web
-    en open daarna http://127.0.0.1:8000/ in je browser.
+    en open daarna http://127.0.0.1:8000/ in je browser. De eerste keer
+    vraagt hij om een beheerder aan te maken.
+
+  Op een echte server zetten: zie DRAAIEN.md.
 
   Wat je nu hebt:
     - een database '$DB' met het volledige schema
@@ -170,6 +189,9 @@ cat <<KLAAR
     - de schermen: dashboard, taken, orders, picken, scanmodus,
       inslag, opmeten, locaties en artikelen — met dezelfde stijl
       als de browserversie
+    - inloggen met wachtwoord of badge, drie rollen, en rechten die
+      bij elke aanvraag op de server getoetst worden
+    - een back-up die zichzelf terugzet om te bewijzen dat het kan
 
   Rondkijken in de database:
       $PSQL -U $GEBRUIKER -d $DB

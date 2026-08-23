@@ -26,13 +26,17 @@ import re
 import unittest
 from pathlib import Path
 
-from vakto import schermen, web
+from vakto import opslag, schermen, web
 from vakto.modellen import Magazijn
 from vakto.scannen import Scanner
 from vakto.uitgaand import Pickregel
 from vakto.inlezen import (controleer, herken_kolommen, lees_bestand,
                            raad_eenheden)
 from vakto.opslag import neem_over
+
+# Alleen voor deze tests. Twaalf tekens, want dat is de ondergrens uit
+# R-GEB-04 en die geldt ook hier.
+WACHTWOORD = "proefwachtwoord"
 
 from .psqlschil import PsqlVerbinding, psql_beschikbaar
 
@@ -95,6 +99,10 @@ class TestSchermen(unittest.TestCase):
         cls.echt.stuur(LEEG)
         neem_over(cls.echt, rapport, gebruiker="dennis")
         cls.v = Proefverbinding(cls.echt)
+        cls.echt.stuur("TRUNCATE app_user CASCADE;")
+        opslag.bewaar_gebruiker(cls.v, "dennis", "Dennis Wijgers", "ADMIN",
+                                WACHTWOORD, "BADGE-1001")
+        cls.v.commit()
 
     @classmethod
     def tearDownClass(cls):
@@ -103,18 +111,34 @@ class TestSchermen(unittest.TestCase):
             cls.echt.sluit()
 
     def setUp(self):
-        self.sessie = web.Sessie(klant="Proefklant")
+        # Sinds stap 9 zit er een inlog omheen. Elke test logt in als
+        # beheerder; wat de rollen zelf doen staat in test_toegang.py.
+        self.standen = web.Standen(klant="Proefklant")
+        self.token = self.inloggen("dennis", WACHTWOORD)
+
+    def inloggen(self, naam: str, wachtwoord: str) -> str:
+        aanmelding = opslag.meld_aan(self.v, naam, wachtwoord)
+        self.assertTrue(aanmelding.gelukt, aanmelding.fout)
+        self.v.commit()
+        return aanmelding.token
 
     # -----------------------------------------------------------------
     #  Hulpjes
     # -----------------------------------------------------------------
     def haal(self, pad: str, **vraag):
         vraag = {k: [str(w)] for k, w in vraag.items()}
-        return web.behandel(self.v, self.sessie, "GET", pad, vraag, {})
+        return web.behandel(self.v, self.standen, "GET", pad, vraag, {},
+                            token=self.token)
 
     def post(self, pad: str, **velden):
         form = {k: [str(w)] for k, w in velden.items()}
-        return web.behandel(self.v, self.sessie, "POST", pad, {}, form)
+        return web.behandel(self.v, self.standen, "POST", pad, {}, form,
+                            token=self.token)
+
+    @property
+    def sessie(self):
+        """De scanstand van de ingelogde gebruiker."""
+        return self.standen.van(opslag.wie_is(self.v, self.token))
 
     def rij(self, sql: str):
         with self.v.cursor() as cur:
@@ -481,6 +505,78 @@ class TestStijl(unittest.TestCase):
              None)]))
         self.toets(schermen.meetlijst([
             (1, "ART-1", "Een doos", None, None, "NOOIT_GEMETEN")]))
+
+    def test_de_toegangsschermen(self):
+        """R-GEB. Ook het scherm waar iemand nog niet binnen is."""
+        from vakto.gebruikers import Gebruiker
+        baas = Gebruiker(1, "Dennis Wijgers", "dennis", "ADMIN")
+        picker = Gebruiker(2, "Kevin Timmermans", "kevin", "OPERATOR")
+        self.toets(schermen.kaal("Inloggen", schermen.inloggen(
+            fout="het klopt niet", terug="/locaties")))
+        self.toets(schermen.kaal("Inloggen", schermen.inloggen(
+            badge_mag=False)))
+        self.toets(schermen.kaal("Eerste beheerder",
+                                 schermen.eerste_beheerder("te kort")))
+        self.toets(schermen.geweigerd(picker, "/orders", "Teamleider"))
+        self.toets(schermen.gebruikers([
+            (1, "Dennis Wijgers", "dennis", "ADMIN", "BADGE-1001", True,
+             None, True, 2),
+            (2, "Kevin Timmermans", "kevin", "OPERATOR", None, False,
+             None, False, 0)], 1))
+        self.toets(schermen.ikzelf(baas))
+        # En het geraamte met een gebruiker erin: de wie-chip en de
+        # uitlogknop horen er ook bij te staan.
+        self.toets(schermen.bladzijde("Proef", "<p>hoi</p>", pad="/taken",
+                                      gebruiker=baas))
+
+    def test_wat_je_intypte_blijft_staan(self):
+        """Een formulier dat je invoer kwijtraakt bij een foutmelding is
+        een formulier waar je twee keer je naam in typt.
+
+        Deze test is er omdat het één keer misging: bij een wijziging
+        viel de aanhalingstekens-opbouw van `value=` uit elkaar en stond
+        er letterlijk `value= + esc(naam) +` in de HTML. De stijltest zag
+        dat niet — die kijkt alleen naar klassenamen.
+        """
+        h = schermen.inloggen(fout="klopt niet", naam="kevin",
+                              terug="/locaties")
+        self.assertIn('value="kevin"', h)
+        self.assertIn('name="terug" value="/locaties"', h)
+        self.assertNotIn("esc(", h)
+
+        b = schermen.eerste_beheerder("te kort", "Dennis Wijgers", "dennis")
+        self.assertIn('value="Dennis Wijgers"', b)
+        self.assertIn('value="dennis"', b)
+        self.assertNotIn("esc(", b)
+
+        # Het wachtwoordveld komt altijd leeg terug. Vullen zou wél
+        # vriendelijk zijn en is precies hoe een wachtwoord in een
+        # serverlog of een schermafdruk belandt.
+        self.assertIn('name="wachtwoord" type="password" value=""', h)
+
+    def test_een_gebruikersnaam_met_aanhalingstekens_breekt_niets(self):
+        """Wie zijn naam als `"><script>` invult, hoort dat gewoon terug
+        te zien staan — niet uitgevoerd."""
+        h = schermen.inloggen(naam='"><script>alert(1)</script>')
+        self.assertNotIn("<script>", h)
+        self.assertIn("&lt;script&gt;", h)
+
+    def test_het_menu_volgt_de_rol(self):
+        """R-GEB-01. Opmaak, geen beveiliging — die zit in web.py."""
+        from vakto.gebruikers import Gebruiker
+        baas = Gebruiker(1, "Dennis", "dennis", "ADMIN")
+        picker = Gebruiker(2, "Kevin", "kevin", "OPERATOR")
+        vloer = schermen.bladzijde("x", "<p>y</p>", pad="/picken",
+                                   gebruiker=picker)
+        kantoor = schermen.bladzijde("x", "<p>y</p>", pad="/",
+                                     gebruiker=baas)
+        self.assertNotIn('href="/orders"', vloer)
+        self.assertNotIn('href="/gebruikers"', vloer)
+        self.assertIn('href="/picken"', vloer)
+        self.assertIn('href="/orders"', kantoor)
+        self.assertIn('href="/gebruikers"', kantoor)
+        # De uitlogknop staat er altijd; anders zit iemand vast.
+        self.assertIn("/uitloggen", vloer)
 
     def test_het_pickscherm_met_een_regel(self):
         regel = Pickregel(allocation_id=1, order_id=1, ordernummer="ORD-1",

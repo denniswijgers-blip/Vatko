@@ -35,6 +35,7 @@ MENU = (
     ("/scan",      "Scanmodus", "Op de vloer", "scherm voor de scanner"),
     ("/locaties",  "Locaties",  "Magazijn",    "de vakken en stellingen"),
     ("/artikelen", "Artikelen", "Magazijn",    "de producten zelf"),
+    ("/gebruikers", "Gebruikers", "Beheer",    "wie er mag werken"),
 )
 
 # Hetzelfde merkteken als in de browserversie: een doos in een vak.
@@ -67,6 +68,12 @@ def getal(n) -> str:
         return esc(n)
 
 
+def initialen(naam: str) -> str:
+    """Twee letters voor het rondje in de bovenbalk."""
+    delen = [w for w in (naam or "").split() if w]
+    return "".join(w[0] for w in delen[:2]).upper() or "?"
+
+
 def datum(waarde) -> str:
     """Alleen de dag. Wie het tijdstip nodig heeft kijkt in het journaal."""
     if waarde is None:
@@ -81,11 +88,20 @@ def datum(waarde) -> str:
 def bladzijde(titel: str, inhoud: str, pad: str = "/",
               melding: tuple[str, str] | None = None,
               klant: str = "Vakto", tellers: dict | None = None,
-              lichaam: str = "", kruimel: str = "") -> str:
-    """Het hele scherm, met navigatie eromheen."""
+              lichaam: str = "", kruimel: str = "", gebruiker=None) -> str:
+    """Het hele scherm, met navigatie eromheen.
+
+    Zonder `gebruiker` staat het hele menu er (dat is hoe de tests een
+    los scherm bekijken). Met een gebruiker erbij staan alleen de
+    schermen erin waar zijn rol bij mag — R-GEB-01. Dat is opmaak en
+    geen beveiliging: het weigeren zelf gebeurt in `web.py`, bij elke
+    aanvraag, want wie het adres typt komt er anders alsnog (R-GEB-02).
+    """
     tellers = tellers or {}
     groepen: list[tuple[str, list]] = []
     for p, naam, groep, bij in MENU:
+        if gebruiker is not None and not gebruiker.mag(p):
+            continue
         if not groepen or groepen[-1][0] != groep:
             groepen.append((groep, []))
         groepen[-1][1].append((p, naam, bij))
@@ -118,6 +134,26 @@ def bladzijde(titel: str, inhoud: str, pad: str = "/",
                 "<b>" + esc(kruimel or naam_van.get(pad, titel))
                 + "</b></nav>")
 
+    wie = ""
+    if gebruiker is not None:
+        wie = ('<div class="balkrechts">'
+               '<span class="klantchip">' + esc(klant) + "</span>"
+               '<a class="wiechip" href="/ik" title="' + esc(gebruiker.naam)
+               + " — " + esc(gebruiker.rolnaam) + '">'
+               '<span class="avatar">' + esc(initialen(gebruiker.naam))
+               + "</span>"
+               '<span class="wienaam">' + esc(gebruiker.naam.split(" ")[0])
+               + "</span></a></div>")
+
+    visite = ('  <div class="visite"><div class="visite-merk">Magazijn</div>'
+              "<div>" + esc(klant) + "</div></div>")
+    if gebruiker is not None:
+        visite = ('  <div class="visite">'
+                  '<div class="visite-merk">' + esc(gebruiker.naam) + "</div>"
+                  "<div>" + esc(gebruiker.rolnaam) + "</div>"
+                  + knop("Uitloggen", "/uitloggen", soort="stil klein")
+                  + "</div>")
+
     return ('<!doctype html>\n<html lang="nl"><head><meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
             "<title>" + esc(titel) + " — Vakto</title>\n"
@@ -129,10 +165,9 @@ def bladzijde(titel: str, inhoud: str, pad: str = "/",
             + '<span class="merknaam">Vakto</span></div>\n'
             '  <div class="ondertitel">Warehouse Management</div>\n  '
             + "\n  ".join(nav) + "\n"
-            '  <div class="visite"><div class="visite-merk">Magazijn</div>'
-            "<div>" + esc(klant) + "</div></div>\n"
+            + visite + "\n"
             "</div>\n<main>\n"
-            '  <header id="balkboven">' + kruimels + "</header>\n"
+            '  <header id="balkboven">' + kruimels + wie + "</header>\n"
             '  <div id="inhoud">' + inhoud + "</div>\n"
             + vlag + "\n</main>\n</body></html>")
 
@@ -537,3 +572,196 @@ def inslag(keuze_in: list[tuple], gekozen=None, aantal: int = 24,
             + tabel(["Locatie", "Maat", "Past", "Alles?", "Benutting",
                      "Score", "Waarom"], rijen,
                     "Geen plek gevonden. Is het artikel al opgemeten?"))
+
+
+# ---------------------------------------------------------------------
+#  Toegang (R-GEB)
+#
+#  Deze drie staan los van het geraamte: er is nog geen menu om te tonen
+#  en geen gebruiker om in de balk te zetten.
+# ---------------------------------------------------------------------
+def kaal(titel: str, inhoud: str, melding: tuple[str, str] | None = None) -> str:
+    """Een scherm zonder navigatie. Voor wie nog niet binnen is."""
+    vlag = ""
+    if melding:
+        soort, tekst = melding
+        vlag = '<div class="vlag ' + esc(soort) + '">' + esc(tekst) + "</div>"
+    return ('<!doctype html>\n<html lang="nl"><head><meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            "<title>" + esc(titel) + " — Vakto</title>\n"
+            '<link rel="stylesheet" href="/stijl.css">\n'
+            '</head><body class="kaal">\n<main>\n'
+            '<div class="aanmeldvak">'
+            '<div class="merk">' + MERKTEKEN
+            + '<span class="merknaam">Vakto</span></div>'
+            + inhoud + "</div>\n" + vlag + "\n</main>\n</body></html>")
+
+
+def veld(label: str, naam: str, waarde: str = "", soort: str = "text",
+         hint: str = "", **rest) -> str:
+    """Eén invoerregel. Losse functie omdat het er hier veel zijn en de
+    aanhalingstekens anders niet meer te volgen zijn — dat is precies hoe
+    er een keer een `value=` zonder waarde in een formulier belandt."""
+    extra = "".join(
+        " " + k.rstrip("_") + ('="' + esc(w) + '"' if w is not True else "")
+        for k, w in rest.items() if w)
+    return ("<label>" + esc(label)
+            + ('<span class="hint"> ' + esc(hint) + "</span>" if hint else "")
+            + '<input name="' + esc(naam) + '" type="' + esc(soort)
+            + '" value="' + esc(waarde) + '"' + extra + "></label>")
+
+
+def inloggen(fout: str | None = None, naam: str = "",
+             badge_mag: bool = True, terug: str = "") -> str:
+    """R-GEB-03. Wachtwoord op kantoor, badge op de vloer.
+
+    `terug` is het scherm waar iemand heen wilde toen hij tegen de inlog
+    aan liep. Dat reist als verborgen veld mee, zodat hij na het inloggen
+    niet nog een keer hoeft te zoeken.
+    """
+    heen = ('<input type="hidden" name="terug" value="' + esc(terug) + '">'
+            if terug else "")
+    melding = ('<div class="melding fout">' + esc(fout) + "</div>"
+               if fout else "")
+
+    badge = ""
+    if badge_mag:
+        badge = ('<div class="aanmeldof">of, op de vloer</div>'
+                 '<form method="post" action="/inloggen" class="aanmeldform">'
+                 '<input type="hidden" name="soort" value="badge">' + heen
+                 + veld("Badge", "badge", placeholder="Scan je badge",
+                        autocomplete="off")
+                 + '<button class="groot stil">Aanmelden voor de scanmodus'
+                 "</button></form>"
+                 '<p class="hint">Met een badge kom je alleen in de '
+                 "scanmodus. Een badge ligt op tafel; dat is geen "
+                 "wachtwoord.</p>")
+
+    return ("<h1>Inloggen</h1>" + melding
+            + '<form method="post" action="/inloggen" class="aanmeldform">'
+            '<input type="hidden" name="soort" value="wachtwoord">' + heen
+            + veld("Gebruikersnaam", "gebruikersnaam", naam,
+                   autocomplete="username", autofocus=True, required=True)
+            + veld("Wachtwoord", "wachtwoord", soort="password",
+                   autocomplete="current-password", required=True)
+            + '<button class="groot">Inloggen</button></form>' + badge)
+
+
+def eerste_beheerder(fout: str | None = None, naam: str = "",
+                     gebruikersnaam: str = "") -> str:
+    """R-GEB-08. Alleen als de gebruikerstabel leeg is.
+
+    Geen standaardwachtwoord in het schema: dat staat in de
+    installatiehandleiding en die staat op internet.
+    """
+    melding = ('<div class="melding fout">' + esc(fout) + "</div>"
+               if fout else "")
+    return ("<h1>Eerste beheerder</h1>"
+            '<p class="lead">Er is nog niemand. Maak jezelf aan als '
+            "beheerder; daarna is deze weg dicht en maak je de rest van de "
+            "mensen aan vanuit het gebruikersscherm.</p>" + melding
+            + '<form method="post" action="/opzetten" class="aanmeldform">'
+            + veld("Je naam", "naam", naam, placeholder="Dennis Wijgers",
+                   required=True, autofocus=True)
+            + veld("Gebruikersnaam", "gebruikersnaam", gebruikersnaam,
+                   placeholder="dennis", autocomplete="username",
+                   required=True)
+            + veld("Wachtwoord", "wachtwoord", soort="password",
+                   autocomplete="new-password", required=True)
+            + veld("Nog een keer", "nogmaals", soort="password",
+                   autocomplete="new-password", required=True)
+            + veld("Badge", "badge", hint="(mag leeg)",
+                   placeholder="BADGE-1001", autocomplete="off")
+            + '<button class="groot">Aanmaken en inloggen</button></form>'
+            '<p class="hint">Minstens twaalf tekens. Lengte doet het werk; '
+            'een regel over hoofdletters en leestekens levert alleen '
+            '"Zomer2024!" op.</p>')
+
+
+def geweigerd(gebruiker, pad: str, nodig: str) -> str:
+    """R-GEB-02. Zeggen wat er nodig is, niet alleen nee."""
+    return ("<h1>Hier mag je niet bij</h1>"
+            '<p class="lead">Je bent ingelogd als '
+            + esc(gebruiker.rolnaam.lower()) + ". Voor <span class=\"mono\">"
+            + esc(pad) + "</span> heb je " + esc(nodig.lower())
+            + " nodig.</p>"
+            '<p class="hint">Klopt dat niet, vraag dan de beheerder om je rol '
+            "aan te passen. Dat is één regel in het gebruikersscherm.</p>"
+            '<div class="knoprij"><a class="knop" href="/">Naar je '
+            "beginscherm</a></div>")
+
+
+ROLKEUZE = (("OPERATOR", "Magazijnmedewerker"),
+            ("SUPERVISOR", "Teamleider"),
+            ("ADMIN", "Beheerder"))
+
+
+def gebruikers(rijen_in: list[tuple], ikzelf: int | None = None) -> str:
+    """Het beheerscherm. Alleen voor rang 3."""
+    KLEUR = {"ADMIN": "r", "SUPERVISOR": "a", "OPERATOR": "n"}
+    rijen = []
+    for (uid, naam, gnaam, rol, badge, actief, at, heeft_ww,
+         sessies) in rijen_in:
+        rolkeuze = "".join(
+            '<option value="' + k + '"' + (" selected" if k == rol else "")
+            + ">" + v + "</option>" for k, v in ROLKEUZE)
+        rijen.append([
+            esc(naam) + (' <span class="hint">(jij)</span>'
+                         if uid == ikzelf else ""),
+            '<span class="mono">' + esc(gnaam) + "</span>",
+            pil(KLEUR.get(rol, "n"), rol),
+            '<span class="mono">' + esc(badge) + "</span>",
+            (pil("g", "actief") if actief else pil("r", "uit dienst")),
+            (pil("g", str(sessies)) if sessies else
+             '<span class="hint">—</span>'),
+            ('<form method="post" action="/gebruikers" class="meetrij">'
+             '<input type="hidden" name="actie" value="rol">'
+             '<input type="hidden" name="id" value="' + esc(uid) + '">'
+             '<select name="rol">' + rolkeuze + "</select>"
+             '<button class="klein">Rol</button></form>'),
+            (knop("Uit dienst", "/gebruikers",
+                  {"actie": "uit", "id": uid}, "klein stil", strak=True)
+             if actief and uid != ikzelf else ""),
+        ])
+    nieuwe = """
+    <div class="kaart"><h2>Iemand toevoegen</h2>
+      <form method="post" action="/gebruikers" class="filters">
+        <input type="hidden" name="actie" value="nieuw">
+        <label>Naam<input name="naam" required placeholder="Kevin Timmermans">
+          </label>
+        <label>Gebruikersnaam<input name="gebruikersnaam" required
+          placeholder="kevin" autocomplete="off"></label>
+        <label>Rol<select name="rol">""" + "".join(
+        '<option value="' + k + '">' + v + "</option>" for k, v in ROLKEUZE
+    ) + """</select></label>
+        <label>Wachtwoord <span class="hint">(mag leeg bij alleen een badge)
+          </span><input name="wachtwoord" type="password"
+          autocomplete="new-password"></label>
+        <label>Badge<input name="badge" placeholder="BADGE-1003"
+          autocomplete="off"></label>
+        <button>Toevoegen</button>
+      </form>
+      <p class="hint">Zonder wachtwoord komt iemand alleen met zijn badge de
+      scanmodus in — precies genoeg voor wie de hele dag op de vloer staat.</p>
+    </div>"""
+    return ("<h1>Gebruikers</h1>"
+            '<p class="lead">Drie rollen met een rang, geen lijst met vinkjes. '
+            "Wie welk scherm mag zien volgt daaruit, en het wordt bij elke "
+            "aanvraag op de server getoetst — niet alleen in het menu.</p>"
+            + tabel(["Naam", "Gebruikersnaam", "Rol", "Badge", "Stand",
+                     "Sessies", "", ""], rijen, "Nog niemand.")
+            + nieuwe)
+
+
+def ikzelf(gebruiker, sessies: int = 0) -> str:
+    """Wie ben ik, en hoe kom ik hier weer uit."""
+    return ("<h1>" + esc(gebruiker.naam) + "</h1>"
+            '<p class="lead">' + esc(gebruiker.rolnaam) + " — rang "
+            + esc(gebruiker.rang) + "</p>"
+            '<div class="kaart"><h2>Wat je mag</h2>'
+            + tabel(["Scherm", "Toegang"],
+                    [[esc(naam),
+                      pil("g", "ja") if gebruiker.mag(p) else pil("n", "nee")]
+                     for p, naam, _g, _b in MENU])
+            + "</div>"
+            + knop("Uitloggen", "/uitloggen", soort="stil"))

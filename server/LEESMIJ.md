@@ -1,19 +1,15 @@
-# Vakto — serverversie, stap 1 tot en met 8
+# Vakto — serverversie, alle negen stappen
 
-Dit is de echte versie. Wat erin zit: het **databaseschema**, de
-**rekenkern**, het **boeken** met een echte transactie en
-rijvergrendeling, de **metingen** als tijdlijn, de hele **uitgaande
-stroom** — reserveren, picken, manco, inpakken, verzenden — de
-**zelfcontrole** die zijn eigen werk aanmaakt en zijn eigen meldingen
+Dit is de echte versie, en hij is af. Wat erin zit: het
+**databaseschema**, de **rekenkern**, het **boeken** met een echte
+transactie en rijvergrendeling, de **metingen** als tijdlijn, de hele
+**uitgaande stroom** — reserveren, picken, manco, inpakken, verzenden —
+de **zelfcontrole** die zijn eigen werk aanmaakt en zijn eigen meldingen
 sluit, de **import** die de rommelige bestanden van een klant inleest,
-en sinds stap 8 de **schermen** en de **scanmodus**. Met de testgevallen
-uit de specificatie erbij.
+de **schermen** met de **scanmodus**, en sinds stap 9 **inloggen,
+rollen en back-up**. Met de testgevallen uit de specificatie erbij.
 
-Wat er nog niet in zit: inloggen en rollen. Dat is stap 9, en tot dan
-draait de webserver alleen op je eigen machine (`127.0.0.1`).
-
-De rest van de stappen staat in hoofdstuk 15 van *De rekenkern,
-uitgeschreven*.
+Op een echte server zetten: zie [DRAAIEN.md](DRAAIEN.md).
 
 ---
 
@@ -24,13 +20,28 @@ pip install -r requirements.txt      # eenmalig: de databasedriver
 python3 -m vakto.web
 ```
 
-Open daarna <http://127.0.0.1:8000/>. Dat is dezelfde stijl als de
-browserversie, met echte gegevens uit PostgreSQL. Staat de database nog
-leeg, lees dan eerst de oefenbestanden in — zie *Een klantbestand
-inlezen* verderop.
+Open daarna <http://127.0.0.1:8000/>. De eerste keer vraagt hij om een
+beheerder aan te maken; daarna is die weg dicht. Verder is het dezelfde
+stijl als de browserversie, met echte gegevens uit PostgreSQL.
 
-**Zet dit nog niet op het internet.** Er zit geen inlog omheen; dat is
-stap 9. Wie het adres kent, kan boeken.
+Staat de database nog leeg, lees dan eerst een klantbestand in:
+
+```bash
+python3 -m vakto.inlezen \
+  "../verkoop/voorbeeldbestanden/Rommelig - locaties (in cm).csv" \
+  "../verkoop/voorbeeldbestanden/Rommelig - artikelen (Engels, xlsx).xlsx" \
+  "../verkoop/voorbeeldbestanden/Rommelig - voorraad.csv"
+```
+
+Zonder `--overnemen` laat hij alleen het rapport zien en verandert er
+niets. Dat is met opzet: bij een klant aan tafel wil je eerst laten zien
+wat eruit komt.
+
+En om er wat leven in te krijgen:
+
+```bash
+python3 -m vakto.werkdag       # een dag van 07:00 tot 17:00 naspelen
+```
 
 ---
 
@@ -94,7 +105,7 @@ En dan:
 |---|---|
 | `\dt` | alle tabellen |
 | `\d stock` | hoe de voorraadtabel eruitziet |
-| `SELECT * FROM setting;` | alle instellingen uit hoofdstuk 13 |
+| `SELECT * FROM setting;` | alle instellingen uit hoofdstuk 14 |
 | `SELECT * FROM v_location_size;` | de maatklasse per locatie, berekend |
 | `\q` | stoppen |
 
@@ -122,14 +133,17 @@ Je hoort dit te zien:
 
 ```
 ..............................
-Ran 30 tests in 0.003s
+Ran 370 tests in 19s
 
 OK
 ```
 
-Dertig groene tests betekent: de rekenkern in Python geeft **exact
-dezelfde antwoorden** als de browserversie die je aan klanten laat zien.
-Dat is de hele bedoeling van deze stap.
+Groen betekent: de rekenkern in Python geeft **exact dezelfde
+antwoorden** als de browserversie die je aan klanten laat zien. Dat is
+de hele bedoeling.
+
+Zonder database draaien er een stuk minder — de tests die een PostgreSQL
+nodig hebben slaan zichzelf dan over en zeggen dat ook.
 
 Wil je zien wat er getest wordt, zet er `-v` achter.
 
@@ -152,6 +166,10 @@ db/                 alles wat de database zelf doet
                     tellen (R-ZC, R-OPT). Plus v_werklijst en v_ordervraag.
   import.sql        Een gecontroleerd rapport overnemen (R-IMP), in één
                     transactie. Plus vakto_zone en vakto_artikelgroep.
+  gebruikers.sql    Gebruikers, sessies en het slot op mislukte pogingen
+                    (R-GEB). Plus de view v_gebruikers, zonder wachtwoorden.
+  backup.sh         Een back-up maken, en met --proef meteen terugzetten
+                    om te bewijzen dat het kan.
 
 vakto/
   getallen.py       Afronden zoals JavaScript het doet. Lees de uitleg.
@@ -167,6 +185,8 @@ vakto/
   optimalisatie.py  Samenvoegen, aanvullen, telplan, adviezen (R-OPT).
   scannen.py        De scanner als stappenmachine (R-SCAN). Raakt niets aan:
                     hij zegt alleen wat er geboekt moet worden.
+  gebruikers.py     Rollen, rechten en wachtwoorden (R-GEB). Geen database:
+                    wie er ingelogd is weet gebruikers.sql.
   werkdag.py        Een hele werkdag naspelen, van 07:00 tot 17:00 (T-18).
   schermen.py       HTML tekenen. Kent geen database en geen webserver.
   web.py            De webserver: haalt op, boekt, en plakt het aan elkaar.
@@ -203,9 +223,10 @@ elf uur 's avonds.
 
 ## PostgreSQL op je eigen laptop
 
-**Je hebt hier geen VPS voor nodig.** Een server komt pas bij stap 9, als
-er een echte klant op zit. Voor stap 3 tot en met 8 draait alles op je
-eigen machine, en dat kost niets.
+**Je hebt hier geen VPS voor nodig zolang je de enige gebruiker bent.**
+Alles draait op je eigen machine, en dat kost niets. Komt er een klant
+op, dan staat in [DRAAIEN.md](DRAAIEN.md) wat erbij hoort: https,
+systemd, een back-up in een cron en een firewall.
 
 **Windows.** Ga naar <https://www.postgresql.org/download/windows/> en
 download de installer van EDB. Klik door de installatie heen en
@@ -234,9 +255,10 @@ psql -d vakto -f db/meten.sql
 psql -d vakto -f db/uitgaand.sql
 psql -d vakto -f db/zelfcontrole.sql
 psql -d vakto -f db/import.sql
+psql -d vakto -f db/gebruikers.sql
 ```
 
-Op Windows draai je die zeven regels in de SQL Shell (staat in je
+Op Windows draai je die acht regels in de SQL Shell (staat in je
 startmenu onder PostgreSQL), of in PowerShell als je PostgreSQL aan je
 PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 
@@ -251,10 +273,11 @@ psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_meten.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_import.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_gebruikers.sql
 python -m unittest tests.test_opslag -v
 ```
 
-Je hoort in totaal honderdachtennegentig keer `OK` te zien. Daarnaast zijn er twee
+Je hoort in totaal tweehonderdvierendertig keer `OK` te zien. Daarnaast zijn er twee
 tests met twee sessies tegelijk (`tests-sql/test_gelijktijdig.sh` en
 `tests-sql/test_gelijktijdig_reserveren.sh`); die draaien alleen op Mac
 en Linux, en `opzetten.sh` doet ze allebei vanzelf. Precies één van de
@@ -286,6 +309,8 @@ Wat de database onthoudt, hoeft de programmeur niet te onthouden:
 | R-UIT-01 | `CHECK (res <= qty)` — je kunt geen gereserveerde voorraad wegboeken zonder de reservering vrij te geven |
 | R-ZC-04 | Unieke index: nooit twee open aanvultaken voor hetzelfde artikel en vak |
 | R-AFG-01..04 | Afgeleide waarden zijn views, geen kolommen |
+| R-GEB-04 | `CHECK (wachtwoord LIKE 'scrypt$%')` — een leesbaar wachtwoord komt er niet in |
+| R-GEB-01 | `CHECK (rol IN (...))` en: geen gebruiker zonder wachtwoord én zonder badge |
 
 ---
 
@@ -525,18 +550,79 @@ database is bijgetrokken.
 
 ---
 
-## De volgende stap
+## Stap 9: inloggen, rollen en back-up
 
-Stap 9 uit hoofdstuk 15: inloggen, rollen, back-up en een echte server.
-Reken op vier avonden. Drie dingen die daar als eerste bij horen:
+Tot hier kon iedereen alles. Dat kan zolang er één persoon naar het
+scherm kijkt; zodra er een tweede bij komt gaat het op twee manieren
+mis. Iemand ziet een scherm waar hij niets te zoeken heeft, en — erger —
+bij een telverschil van veertig stuks weet niemand meer wie het geboekt
+heeft.
 
-* **Een sessie per medewerker.** De scanstand in `web.py` is er nu één,
-  gedeeld. Dat kan zolang jij de enige bent die kijkt.
-* **Rollen.** De browserversie kent ze al (`mag()` in `gebruikers.js`);
-  hier bepaalt de rol straks welke schermen in het menu staan.
-* **Back-up.** `pg_dump` in een cron, en één keer terugzetten om te
-  bewijzen dat het werkt. Een back-up die nooit is teruggezet is geen
-  back-up.
+**Drie rollen met een rang**, precies zoals de browserversie ze al kent:
 
-Begin nergens aan voordat de tests van deze stap groen zijn. Als de kern
-niet klopt, bouw je er alleen maar bovenop.
+| Rol | Rang | Doet |
+|---|---|---|
+| Magazijnmedewerker | 1 | picken, tellen, inslaan, opmeten |
+| Teamleider | 2 | daarnaast orders, dashboard |
+| Beheerder | 3 | daarnaast instellingen, import, gebruikers |
+
+Een rang en geen lijst met vinkjes. Vijf rollen met elk vijftien vinkjes
+zijn vijfenzeventig keuzes die niemand bijhoudt; drie rangen zijn er
+drie.
+
+Vier keuzes die het uitleggen waard zijn:
+
+1. **Rechten worden op de server getoetst, niet in het menu.** Een
+   scherm weglaten is opmaak; wie het adres typt komt er anders alsnog.
+   Elke aanvraag toetst zelf, en een POST net zo goed als een GET —
+   anders is de knop weg maar het formulier nog te versturen. Dat is
+   T-40.
+2. **Een badge is geen wachtwoord.** Hij ligt op tafel en iedereen kan
+   hem lezen. Daarom geeft een badge alleen toegang tot de scanmodus,
+   ook als de rol erachter beheerder is. Wie bij de orders wil, logt in.
+3. **Een sessie is een rij in de database, geen variabele in het
+   geheugen.** Dat kost een query per aanvraag en levert drie dingen op
+   die je anders niet hebt: een herstart logt niemand uit, twee mensen
+   kunnen tegelijk werken zonder elkaars stand te zien, en een sessie is
+   in te trekken — iemand die uit dienst gaat is er ook echt uit.
+4. **Wachtwoorden staan er als scrypt-afdruk in**, met de parameters
+   erbij. Worden die over vijf jaar te licht, dan kun je ze verhogen
+   zonder dat de bestaande rijen onleesbaar worden: die dragen hun eigen
+   instelling bij zich. Een gestolen back-up levert dan geen
+   wachtwoorden op — en een back-up staat per definitie ergens anders
+   dan de database.
+
+T-39 is waar deze stap op afgerekend werd: twee mensen tegelijk
+ingelogd, allebei in de scanmodus op dezelfde picklijst. Ieder ziet zijn
+eigen stand, de een die overslaat schuift bij de ander niets op, en
+precies één van de twee krijgt de laatste stuks. Dat staat in
+`tests/test_toegang.py` en loopt door dezelfde router als een browser.
+
+### De back-up
+
+```bash
+bash db/backup.sh              # een dump wegschrijven
+bash db/backup.sh --proef      # én meteen toetsen of hij terug kan
+```
+
+Die tweede is het punt. **Een back-up die nooit is teruggezet is geen
+back-up**, en dit is het enige moment waarop je erachter kunt komen dat
+het níét werkt. `--proef` zet de verse dump terug in een
+wegwerpdatabase en telt na of de rijen en de `vakto_`-functies er nog
+zijn. Eén keer per maand in een cron, en je weet het in plaats van dat
+je het hoopt.
+
+---
+
+## Hierna
+
+De negen stappen uit hoofdstuk 16 zijn af. Wat er nog niet in zit staat
+onderaan [DRAAIEN.md](DRAAIEN.md), met de reden erbij — tweefactor­
+authenticatie, wachtwoordherstel per e-mail en een verbindingspoel. Geen
+van drieën is nodig voor één magazijn binnen een bedrijfsnetwerk; alle
+drie worden ze het zodra dat verandert.
+
+Wat wél de volgende stap is: **een echte klant**. De browserversie
+verkoopt, de serverversie levert. Zodra de eerste klant draait, gaat de
+browserversie uit de lucht als product en blijft hij alleen demo — twee
+codebases onderhouden naast een baan gaat niet.

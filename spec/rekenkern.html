@@ -172,11 +172,11 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.7</span>
+    <span><b>Versie</b> 1.8</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
-    <span><b>Regels</b> 56</span>
-    <span><b>Testgevallen</b> 26</span>
+    <span><b>Regels</b> 64</span>
+    <span><b>Testgevallen</b> 30</span>
   </div>
 </header>
 
@@ -194,9 +194,10 @@ html{scroll-behavior:smooth}
   <a href="#opt"><i>10</i>Optimalisatie</a>
   <a href="#imp"><i>11</i>Import</a>
   <a href="#scan"><i>12</i>Scanmodus</a>
-  <a href="#inst"><i>13</i>Instellingen</a>
-  <a href="#test"><i>14</i>Testgevallen</a>
-  <a href="#volgorde"><i>15</i>Volgorde</a>
+  <a href="#gebruikers"><i>13</i>Gebruikers en rollen</a>
+  <a href="#inst"><i>14</i>Instellingen</a>
+  <a href="#test"><i>15</i>Testgevallen</a>
+  <a href="#volgorde"><i>16</i>Volgorde</a>
 </nav>
 
 <main>
@@ -295,7 +296,7 @@ html{scroll-behavior:smooth}
             een tekort bij reserveren (R-UIT-02), een melding die vanzelf sluit (R-ZC-01).</td></tr>
       <tr><td class="mono"><strong>setting</strong></td>
         <td>sleutel, waarde, groep, uitleg</td>
-        <td>Alles uit hoofdstuk 13 staat hier. Waarde altijd als tekst opslaan, bij lezen omzetten.</td></tr>
+        <td>Alles uit hoofdstuk 14 staat hier. Waarde altijd als tekst opslaan, bij lezen omzetten.</td></tr>
     </tbody>
   </table></div>
 
@@ -1038,8 +1039,118 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
 </section>
 
 <!-- ============================================================ -->
+<section id="gebruikers">
+  <h2><span class="nr">13</span> Gebruikers en rollen</h2>
+  <p class="inleiding">Tot hier kon iedereen alles. Dat kan zolang er &eacute;&eacute;n
+  persoon naar het scherm kijkt; zodra er een tweede bij komt gaat het mis op twee
+  manieren. Iemand ziet een scherm waar hij niets te zoeken heeft, en &mdash; erger
+  &mdash; bij een telverschil van veertig stuks weet niemand meer wie het geboekt heeft.
+  Dat laatste is geen controledrang. Als er iets misgaat wil je kunnen navragen w&aacute;t
+  er gebeurde, niet iemand straffen.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-01</span>
+    <span class="rtitel">Drie rollen, met een rang</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Rol</th><th>Heet</th><th class="num">Rang</th><th>Doet</th></tr></thead>
+      <tbody>
+      <tr><td class="mono"><strong>OPERATOR</strong></td><td>Magazijnmedewerker</td>
+          <td class="num">1</td><td>picken, tellen, inslaan, opmeten &mdash; het werk op de vloer</td></tr>
+      <tr><td class="mono"><strong>SUPERVISOR</strong></td><td>Teamleider</td>
+          <td class="num">2</td><td>daarnaast orders, dashboard, optimalisatie</td></tr>
+      <tr><td class="mono"><strong>ADMIN</strong></td><td>Beheerder</td>
+          <td class="num">3</td><td>daarnaast instellingen, import, gebruikers</td></tr>
+      </tbody>
+    </table></div>
+    <p>Een rang en geen lijst met vinkjes. Vijf rollen met elk vijftien vinkjes is
+    vijfenzeventig keuzes die niemand bijhoudt; drie rangen zijn er drie. Elk scherm heeft
+    een minimumrang, en je mag erin als jouw rang groter of gelijk is. Staat een scherm er
+    niet bij, dan is de minimumrang 1 &mdash; nieuwe schermen zijn dus zichtbaar voor
+    iedereen tot iemand er iets anders van vindt, en niet onzichtbaar voor iedereen tot
+    iemand het merkt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-02</span>
+    <span class="rtitel">Rechten worden op de server getoetst, niet in het menu</span></div>
+    <p>Een scherm weglaten uit het menu is opmaak, geen beveiliging. Wie het adres typt komt
+    er alsnog. Elke aanvraag toetst daarom zelf of de rang genoeg is, en een POST net zo
+    goed als een GET &mdash; anders is de knop weg maar het formulier nog te versturen.</p>
+    <p>Weigeren doet het systeem met <b>403</b> en een zin die zegt wat er nodig is
+    (&ldquo;hier heb je teamleider voor nodig&rdquo;), niet met een lege pagina. Iemand die
+    niet weet waarom hij niet mag, belt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-03</span>
+    <span class="rtitel">Twee manieren om binnen te komen</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Waar</th><th>Waarmee</th><th>Waarom</th></tr></thead>
+      <tbody>
+      <tr><td>op kantoor, achter een scherm</td><td>gebruikersnaam en wachtwoord</td>
+          <td>het scherm staat open en er loopt iedereen langs</td></tr>
+      <tr><td>op de vloer, met een scanner</td><td>badge</td>
+          <td>met handschoenen aan typ je geen wachtwoord van twaalf tekens</td></tr>
+      </tbody>
+    </table></div>
+    <p>Een badge is dus g&eacute;&eacute;n wachtwoord: hij ligt op tafel en iedereen kan hem
+    lezen. Daarom geeft een badge alleen toegang tot de scanmodus en tot niets anders, en
+    kan hij nooit een hogere rang meebrengen dan de rol van die gebruiker. Een teamleider
+    die zich met zijn badge aanmeldt, staat op de vloer als medewerker &mdash; wil hij bij
+    de orders, dan logt hij in.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-04</span>
+    <span class="rtitel">Wachtwoorden worden nooit bewaard</span></div>
+<pre>opslaan     hash = scrypt(wachtwoord, zout)   zout = 16 willekeurige bytes
+toetsen     vergelijk in constante tijd, nooit met ==
+kolom       "scrypt$n$r$p$&lt;zout&gt;$&lt;hash&gt;", zodat de parameters meeverhuizen</pre>
+    <p>Wat er in de kolom staat is een afdruk waar het wachtwoord niet uit terug te rekenen
+    is. Een gestolen back-up levert dan geen wachtwoorden op &mdash; en dat is geen
+    theoretisch geval, want een back-up staat per definitie ergens anders dan de database.</p>
+    <p>De parameters staan in de kolom zelf en niet in de code. Worden ze over vijf jaar te
+    licht, dan kun je ze verhogen zonder dat de bestaande rijen onleesbaar worden: die
+    dragen hun eigen instelling bij zich.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-05</span>
+    <span class="rtitel">Een sessie is een rij, geen variabele in het geheugen</span></div>
+    <p>De browser krijgt een willekeurig getal van 32 bytes in een koekje; de database houdt
+    bij van wie dat is en tot wanneer. Dat kost een query per aanvraag en levert drie dingen
+    op die je anders niet hebt: een herstart van de server logt niemand uit, twee mensen
+    kunnen tegelijk werken zonder elkaars stand te zien, en een sessie is in te trekken
+    &mdash; iemand die uit dienst gaat is er ook echt uit.</p>
+    <p>Een sessie verloopt na <code>sessie.duur_uren</code> (standaard 12, precies een
+    lange dienst). Uitloggen wist de rij; het koekje alleen wissen is niet genoeg, want dan
+    werkt hij nog bij wie hem heeft opgeschreven.</p>
+    <p>Het koekje is <code>HttpOnly</code> en <code>SameSite=Lax</code>. Draait het systeem
+    achter https &mdash; en dat hoort &mdash; dan ook <code>Secure</code>.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-06</span>
+    <span class="rtitel">Wie het boekte staat erbij</span></div>
+    <p>Elke boeking, elke telling en elke afgemelde taak draagt de gebruiker mee tot in
+    <code>journal.gebruiker</code>. Niet de sessie en niet het IP-adres: de naam waar iemand
+    op aanspreekbaar is. Dat is het enige wat een journaal na drie maanden nog bruikbaar
+    maakt.</p>
+    <p>Inloggen, uitloggen en een geweigerde poging komen in <code>event_log</code>. Een
+    reeks geweigerde pogingen is het enige signaal dat je hebt dat er iemand aan het
+    proberen is.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-07</span>
+    <span class="rtitel">Een verkeerd wachtwoord zegt niet wat er verkeerd was</span></div>
+    <p>&ldquo;Onbekende gebruiker&rdquo; vertelt wie er w&eacute;l bestaat. Een onbekende
+    naam en een verkeerd wachtwoord geven daarom hetzelfde antwoord en kosten evenveel tijd
+    &mdash; ook een onbekende naam laat een hash uitrekenen, anders verraadt de snelheid het
+    alsnog.</p>
+    <p>Na <code>inlog.max_pogingen</code> mislukte pogingen (standaard 10) binnen een
+    kwartier gaat de deur vijftien minuten op slot voor die gebruikersnaam. Niet langer:
+    een slot dat een dag duurt is zelf een storing, en de teamleider die om half zes zijn
+    wachtwoord vergeet moet de dag nog kunnen afmaken.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-08</span>
+    <span class="rtitel">De eerste beheerder maakt zichzelf aan, precies &eacute;&eacute;n keer</span></div>
+    <p>Een schema met een standaardwachtwoord erin is een schema met een achterdeur, want
+    dat wachtwoord staat in de installatiehandleiding en die staat op internet. Is de
+    gebruikerstabel leeg, dan &mdash; en alleen dan &mdash; vraagt het eerste scherm om een
+    beheerder aan te maken. Staat er &eacute;&eacute;n rij in, dan is die weg dicht.</p></div>
+</section>
+
+<!-- ============================================================ -->
 <section id="inst">
-  <h2><span class="nr">13</span> Instellingen</h2>
+  <h2><span class="nr">14</span> Instellingen</h2>
   <p class="inleiding">Alles wat per klant verschilt. Deze tabel is het antwoord op "ja
   maar bij ons gaat dat anders" &mdash; en de reden dat dat antwoord geen programmeerwerk is.</p>
 
@@ -1074,13 +1185,22 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
             25 kg is wat een pakketvervoerder aanneemt; bij eigen vervoer mag het hoger.</td></tr>
       <tr><td class="mono">ui.rows_per_page</td><td class="num mono">60</td>
         <td>Maximaal aantal rijen per scherm. Nooit onbeperkt.</td></tr>
+      <tr><td class="mono">sessie.duur_uren</td><td class="num mono">12</td>
+        <td>Hoe lang een inlog geldig blijft (R-GEB-05). Twaalf uur is precies een lange
+            dienst; wie in ploegen werkt zet hem korter.</td></tr>
+      <tr><td class="mono">inlog.max_pogingen</td><td class="num mono">10</td>
+        <td>Mislukte pogingen binnen een kwartier voordat de gebruikersnaam vijftien
+            minuten op slot gaat (R-GEB-07).</td></tr>
+      <tr><td class="mono">inlog.badge_voor_scanner</td><td class="num mono">true</td>
+        <td>Mag iemand zich met alleen een badge aanmelden voor de scanmodus (R-GEB-03)?
+            Uit betekent: overal een wachtwoord, ook op de vloer.</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <!-- ============================================================ -->
 <section id="test">
-  <h2><span class="nr">14</span> Testgevallen</h2>
+  <h2><span class="nr">15</span> Testgevallen</h2>
   <p class="inleiding">Dit is het belangrijkste hoofdstuk. Alle waarden hieronder komen uit
   de draaiende browserversie. Geeft je Python-versie dezelfde antwoorden, dan is de kern
   correct overgezet &mdash; en dat weet je dan zeker in plaats van dat je het hoopt.</p>
@@ -1296,11 +1416,40 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
   <p class="let"><b>T-37 is het testgeval dat de verkoop draagt.</b> Een klant die zijn
   eigen artikelnummers op zijn eigen locaties terugziet, met de eerste week meetwerk er al
   bij opgeschreven, hoeft niets meer voorgesteld te krijgen.</p>
+
+  <h3>Gebruikers en rollen (R-GEB)</h3>
+  <p>Deze vier zijn niet uit de browserversie afgelezen &mdash; die kent geen wachtwoorden
+  en geen sessies. Ze staan hier omdat ze net zo goed vast horen te liggen, en omdat het
+  precies de gevallen zijn waarin een fout niemand opvalt tot het te laat is.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Situatie</th><th>Verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-39</td>
+        <td>Twee mensen tegelijk ingelogd, allebei in de scanmodus op dezelfde picklijst</td>
+        <td>Ieder ziet zijn eigen stand; de een die overslaat schuift bij de ander niets op;
+            precies &eacute;&eacute;n van de twee krijgt de laatste stuks en de voorraad
+            loopt niet scheef. <b>Dit is waar stap 9 op afgerekend wordt.</b></td></tr>
+      <tr><td class="mono">T-40</td>
+        <td>Een magazijnmedewerker vraagt <code>/orders</code> op, en post er daarna
+            rechtstreeks naartoe</td>
+        <td>Allebei <b>403</b> met een leesbare reden (R-GEB-02). Het menu weglaten is
+            niet genoeg.</td></tr>
+      <tr><td class="mono">T-41</td>
+        <td>Elf keer een verkeerd wachtwoord binnen een kwartier</td>
+        <td>Vanaf de eleventh poging op slot voor een kwartier; een onbekende
+            gebruikersnaam geeft exact dezelfde melding als een verkeerd wachtwoord
+            (R-GEB-07)</td></tr>
+      <tr><td class="mono">T-42</td>
+        <td>Een pick, een telling en een afgemelde taak door een ingelogde gebruiker</td>
+        <td>Alle drie dragen zijn naam tot in <code>journal.gebruiker</code>; inloggen en
+            uitloggen staan in <code>event_log</code> (R-GEB-06)</td></tr>
+    </tbody>
+  </table></div>
 </section>
 
 <!-- ============================================================ -->
 <section id="volgorde">
-  <h2><span class="nr">15</span> Volgorde van overzetten</h2>
+  <h2><span class="nr">16</span> Volgorde van overzetten</h2>
   <p class="inleiding">Deze volgorde is niet willekeurig: elke stap is testbaar voordat de
   volgende begint. Wie halverwege aan schermen begint, kan niets meer bewijzen.</p>
 
@@ -1327,7 +1476,8 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
         <td>Een werkdag is van begin tot eind na te spelen: T-18
         <span class="pil g">gedaan</span></td><td class="num">6 avonden</td></tr>
       <tr><td class="num mono">9</td><td>Inloggen, rollen, back-up, server</td>
-        <td>Een tweede persoon kan tegelijk werken zonder dat de voorraad scheef loopt</td><td class="num">4 avonden</td></tr>
+        <td>Een tweede persoon kan tegelijk werken zonder dat de voorraad scheef loopt: T-39
+        <span class="pil g">gedaan</span></td><td class="num">4 avonden</td></tr>
     </tbody>
   </table></div>
 
@@ -1342,6 +1492,16 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.8</strong> &mdash; stap 9 gebouwd en getest, en daarmee is de lijst uit
+  hoofdstuk 16 rond. Er is een hoofdstuk 13 bij: <b>Gebruikers en rollen</b> (R-GEB-01 t/m
+  R-GEB-08); Instellingen, Testgevallen en Volgorde zijn 14, 15 en 16 geworden. Drie rollen
+  met een rang in plaats van een lijst met vinkjes, rechten die op de server getoetst worden
+  en niet in het menu, wachtwoorden die als scrypt-afdruk in de kolom staan met hun eigen
+  parameters erbij, en een sessie die een rij in de database is &mdash; want alleen dan
+  overleeft hij een herstart, kunnen twee mensen tegelijk werken zonder elkaars stand te
+  zien, en is hij in te trekken. Een badge geeft alleen toegang tot de scanmodus: hij ligt
+  op tafel en iedereen kan hem lezen. T-39 t/m T-42 zijn nieuw, en T-39 is waar deze stap
+  op afgerekend werd.<br><br>
   <strong>Versie 1.7</strong> &mdash; stap 8 gebouwd en getest. De schermen draaien nu
   ook op de server, met dezelfde stijl als de browserversie &mdash; zo is een verschil in
   beeld een verschil in gegevens en niet in opmaak. Drie lagen die alleen van elkaar weten
@@ -1397,8 +1557,8 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
   eigen voorraad niet af van de stapelcapaciteit (R-INS-02, T-19), en aanvultaken keken
   helemaal niet of het paste (R-ZC-04). Allebei gerepareerd in beide versies.<br><br>
   Geschreven op basis van de werkende browserversie van augustus 2026. Alle getallen in
-  hoofdstuk 14 zijn uit die versie afgelezen, niet uit het hoofd opgeschreven. Schattingen in
-  hoofdstuk 15 gaan uit van avonden van twee à drie uur naast een volledige baan, met de
+  hoofdstuk 15 zijn uit die versie afgelezen, niet uit het hoofd opgeschreven. Schattingen in
+  hoofdstuk 16 gaan uit van avonden van twee à drie uur naast een volledige baan, met de
   leercurve erin verwerkt.
 </footer>
 

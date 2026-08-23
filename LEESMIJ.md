@@ -14,6 +14,7 @@ januari, als je er drie weken niet naar gekeken hebt.
 |---|---|
 | weten waar het project staat en wat de afspraken zijn | [`OVERDRACHT.md`](OVERDRACHT.md) |
 | aan de serverversie werken | [`server/LEESMIJ.md`](server/LEESMIJ.md) |
+| hem op een echte server zetten | [`server/DRAAIEN.md`](server/DRAAIEN.md) |
 | weten hoe een rekenregel hoort te werken | `spec/rekenkern.html` |
 | de demo laten zien aan een klant | `demo/vakto-demo.html` openen in een browser |
 | de serverschermen bekijken | `cd server && python3 -m vakto.web` |
@@ -38,10 +39,11 @@ Vakto/
 │
 ├── server/         het product — Python + PostgreSQL
 │   ├── vakto/      de rekenkern (passen, meten, uitgaand, optimaliseren,
-│   │               inlezen, scannen) plus de schermen en de webserver
-│   ├── db/         het schema en alles wat de database zelf doet
+│   │               inlezen, scannen, gebruikers) plus schermen en webserver
+│   ├── db/         het schema, alles wat de database zelf doet, en backup.sh
 │   ├── tests/      Python-tests, de meeste draaien zonder database
 │   ├── tests-sql/  tests die een echte PostgreSQL nodig hebben
+│   ├── DRAAIEN.md  op een echte server zetten: https, systemd, back-up
 │   └── opzetten.sh database opzetten en alles testen, in één opdracht
 │
 ├── demo/           de browserversie — één HTML-bestand, opent zonder installatie
@@ -78,6 +80,7 @@ langzaam uit elkaar lopen.
 cd server && bash opzetten.sh
 
 # en daarna de schermen bekijken op http://127.0.0.1:8000/
+# (de eerste keer vraagt hij om een beheerder aan te maken)
 cd server && pip install -r requirements.txt && python3 -m vakto.web
 
 # browserversie:
@@ -103,3 +106,11 @@ Twee ideeën waar alles op staat, en waar je bij elke keuze op terug kunt vallen
 Verder maakt het systeem zijn eigen werk aan en sluit het zijn eigen meldingen. De enige
 menselijke keuzes die overblijven zijn "meld dit artikel niet meer" en "deze aanvuldrempel
 is akkoord".
+
+---
+
+## Waar het staat
+
+De serverversie is af: alle negen stappen uit hoofdstuk 16 van de specificatie. Schema,
+rekenkern, boeken, meten, uitgaand, zelfcontrole, import, schermen, scanmodus, inloggen
+en back-up — met 370 Python-tests en 234 SQL-controles eronder.

@@ -19,13 +19,23 @@ verandert.
 
 Elke handeling is een POST met daarna een omleiding (303). Dat is geen
 mode maar zelfbehoud: wie na een pick op F5 drukt, boekt anders nog een
-keer af. Na de omleiding staat de melding in de URL — er is geen
-sessiekoekje nodig om te kunnen zeggen dat het gelukt is.
+keer af. Na de omleiding staat de melding in de URL — daar is geen
+koekje voor nodig.
+
+Sinds stap 9 zit er een inlog omheen (R-GEB). Elke aanvraag zoekt eerst
+op wie er aan de knoppen zit en of zijn rang genoeg is voor dit pad —
+een GET net zo goed als een POST, want een knop weglaten is opmaak en
+geen beveiliging. De scanstand hangt aan de sessie van die ene persoon,
+zodat twee mensen tegelijk op dezelfde picklijst kunnen werken zonder
+elkaars stand te zien.
 
 Starten:
 
     python3 -m vakto.web                 # localhost:8000, database vakto
     python3 -m vakto.web --poort 8080 --db "dbname=vakto user=jan"
+
+De eerste keer is de gebruikerstabel leeg en vraagt het eerste scherm om
+een beheerder aan te maken (R-GEB-08). Daarna is die weg dicht.
 """
 
 from __future__ import annotations
@@ -40,7 +50,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
-from . import opslag, schermen
+from . import gebruikers, opslag, schermen
 from .opslag import Boekfout
 from .scannen import Inslagopdracht, Pickopdracht, Scanner, Telopdracht
 from .maten import maatklasse_van_locatie
@@ -63,6 +73,9 @@ class Reactie:
     status: int = 200
     soort: str = "text/html; charset=utf-8"
     naar: str | None = None          # gevuld bij een omleiding
+    # (naam, waarde, maximale leeftijd in seconden). Een lege waarde met
+    # leeftijd 0 wist het koekje.
+    koekje: tuple[str, str, int] | None = None
 
 
 def omleiding(pad: str, tekst: str = "", soort: str = "") -> Reactie:
@@ -79,13 +92,19 @@ def omleiding(pad: str, tekst: str = "", soort: str = "") -> Reactie:
 
 
 # ---------------------------------------------------------------------
-#  De sessie
+#  De scanstand
 #
-#  Eén gedeelde scanstand voor de hele server. Dat is genoeg voor stap 8
-#  — er staat nog geen inlog omheen. Bij stap 9 komen gebruikers en
-#  rollen, en dan wordt dit een sessie per medewerker; de scanner zelf
-#  hoeft daar niets voor te veranderen, want die houdt zijn stand al in
-#  één object bij.
+#  Eén per ingelogde gebruiker (R-GEB-05). Twee mensen op dezelfde
+#  picklijst moeten allebei hun eigen halve handeling kunnen hebben; wie
+#  dat deelt, ziet de ander midden in zijn scan de stap veranderen.
+#
+#  Wat hier staat is bewust alleen de stánd van de handeling — welke
+#  taak, welke stap, wat er al gescand is. Voorraad en picklijst komen
+#  bij elke aanvraag opnieuw uit de database, want die zijn van iedereen.
+#  Dit mag daarom in het geheugen staan: raakt het kwijt bij een
+#  herstart, dan begint iemand opnieuw bij de eerste stap en is er niets
+#  verloren. De inlog zelf staat wél in de database, juist omdát die een
+#  herstart moet overleven.
 # ---------------------------------------------------------------------
 @dataclass
 class Sessie:
@@ -150,17 +169,202 @@ def _bewaar(sessie: Sessie, scanner: Scanner) -> None:
     sessie.aantal = scanner.aantal
 
 
+class Standen:
+    """De scanstanden, één per ingelogde gebruiker.
+
+    Meer houdt de webserver niet bij. Wie er ingelogd is staat in de
+    database (R-GEB-05); dit is alleen waar iemand in zijn handeling was
+    toen hij de vorige knop indrukte.
+    """
+
+    def __init__(self, klant: str = "Vakto"):
+        self.klant = klant
+        self._per_gebruiker: dict[int, Sessie] = {}
+        # Zodra er één gebruiker is, kan het er nooit weer nul worden:
+        # iemand gaat uit dienst, hij verdwijnt niet. Daarom hoeft die
+        # telling maar één keer (R-GEB-08).
+        self._opgezet = False
+
+    def van(self, gebruiker) -> Sessie:
+        stand = self._per_gebruiker.get(gebruiker.id)
+        if stand is None:
+            stand = Sessie(klant=self.klant)
+            self._per_gebruiker[gebruiker.id] = stand
+        # R-GEB-06. Wie het boekt staat erbij, tot in journal.gebruiker.
+        stand.gebruiker = gebruiker.naam
+        return stand
+
+    def vergeet(self, gebruiker_id: int) -> None:
+        self._per_gebruiker.pop(gebruiker_id, None)
+
+    def opgezet(self, verbinding) -> bool:
+        if not self._opgezet:
+            self._opgezet = opslag.aantal_gebruikers(verbinding) > 0
+        return self._opgezet
+
+
 # ---------------------------------------------------------------------
 #  De router
 #
 #  Los van de webserver, zodat een test een heel scherm kan opvragen
 #  zonder dat er een socket aan te pas komt (tests/test_schermen.py).
 # ---------------------------------------------------------------------
-def behandel(verbinding, sessie: Sessie, methode: str, pad: str,
-             vraag: dict, formulier: dict) -> Reactie:
+def behandel(verbinding, standen: Standen, methode: str, pad: str,
+             vraag: dict, formulier: dict, token: str | None = None,
+             vanaf: str | None = None) -> Reactie:
+    """Eén aanvraag, van koekje tot bladzijde.
+
+    De volgorde is de volgorde van R-GEB: eerst kijken of er überhaupt
+    een beheerder is, dan wie er aan de knoppen zit, dan of hij hier mag
+    komen, en pas dan het scherm zelf. Elke aanvraag opnieuw — een GET
+    net zo goed als een POST, want een knop weglaten is opmaak en geen
+    beveiliging (R-GEB-02).
+    """
+    # R-GEB-08. Een leeg systeem laat je één keer een beheerder maken.
+    if not standen.opgezet(verbinding):
+        if pad == "/opzetten":
+            return (_opzetten_post(verbinding, standen, formulier, vanaf)
+                    if methode == "POST"
+                    else Reactie(schermen.kaal("Eerste beheerder",
+                                               schermen.eerste_beheerder())))
+        return omleiding("/opzetten")
+
+    gebruiker = opslag.wie_is(verbinding, token)
+
+    if gebruiker is None:
+        if pad == "/inloggen":
+            if methode == "POST":
+                return _inloggen_post(verbinding, formulier, vanaf)
+            return Reactie(schermen.kaal(
+                "Inloggen",
+                schermen.inloggen(
+                    terug=_een(vraag, "terug"),
+                    badge_mag=opslag.laad_instellingen(verbinding).aan(
+                        "inlog.badge_voor_scanner")),
+                melding=_melding(vraag)))
+        # Waar iemand heen wilde onthouden we, zodat hij na het inloggen
+        # niet nog een keer hoeft te zoeken.
+        terug = pad if methode == "GET" and pad != "/" else ""
+        return omleiding("/inloggen"
+                         + (("?terug=" + quote(terug, safe=""))
+                            if terug else ""))
+
+    if pad == "/uitloggen":
+        opslag.meld_af(verbinding, token)
+        verbinding.commit()
+        standen.vergeet(gebruiker.id)
+        return Reactie(status=303, naar="/inloggen?m=" + quote("Uitgelogd."),
+                       koekje=(gebruikers.KOEKJE, "", 0))
+
+    if pad == "/inloggen":
+        return omleiding(gebruikers.startpad(gebruiker.rol))
+
+    if not gebruiker.mag(pad):
+        # Op je eigen beginscherm hoor je geen weigering te krijgen; je
+        # hoort daar gewoon niet te beginnen. Een magazijnmedewerker die
+        # "/" opvraagt gaat naar het pickscherm.
+        if pad == "/":
+            return omleiding(gebruikers.startpad(gebruiker.rol))
+        nodig = _rolnaam_voor(pad)
+        return Reactie(schermen.bladzijde(
+            "Geen toegang", schermen.geweigerd(gebruiker, pad, nodig),
+            pad=gebruikers.startpad(gebruiker.rol), klant=standen.klant,
+            gebruiker=gebruiker), status=403)
+
+    sessie = standen.van(gebruiker)
     if methode == "POST":
-        return _post(verbinding, sessie, pad, formulier)
-    return _get(verbinding, sessie, pad, vraag)
+        return _post(verbinding, sessie, pad, formulier, gebruiker)
+    return _get(verbinding, sessie, pad, vraag, gebruiker)
+
+
+def _rolnaam_voor(pad: str) -> str:
+    """Welke rol heb je hier minimaal voor nodig?"""
+    nodig = gebruikers.RECHTEN.get(gebruikers.hoofdpad(pad), 1)
+    for rol, (naam, _kort, rang) in gebruikers.ROLLEN.items():
+        if rang == nodig:
+            return naam
+    return "een hogere rol"
+
+
+def _melding(vraag: dict) -> tuple[str, str] | None:
+    tekst = _een(vraag, "m")
+    return (_een(vraag, "s"), tekst) if tekst else None
+
+
+# ---------------------------------------------------------------------
+#  Binnenkomen (R-GEB-03, R-GEB-07, R-GEB-08)
+# ---------------------------------------------------------------------
+def _aangemeld(aanmelding, terug: str = "") -> Reactie:
+    """Het koekje zetten en doorsturen naar waar iemand heen wilde."""
+    duur = 12 * 3600
+    wie = aanmelding.gebruiker
+    # Twee dingen moeten kloppen aan waar we hem heen sturen:
+    #
+    #   1. Het moet een pad binnen dit systeem zijn. Zonder die controle
+    #      kun je iemand met een gepreparerde link na het inloggen op een
+    #      andere site laten uitkomen.
+    #   2. Hij moet er ook mógen komen. Iemand die net is ingelogd hoort
+    #      niet meteen tegen "hier mag je niet bij" aan te lopen; dat
+    #      leest als "het inloggen is mislukt".
+    heen = terug if terug.startswith("/") and not terug.startswith("//") else ""
+    if heen and not wie.mag(heen):
+        heen = ""
+    if not heen:
+        heen = "/scan" if wie.alleen_scanner else gebruikers.startpad(wie.rol)
+    return Reactie(status=303, naar=heen,
+                   koekje=(gebruikers.KOEKJE, aanmelding.token, duur))
+
+
+def _inloggen_post(verbinding, form: dict, vanaf: str | None) -> Reactie:
+    terug = _een(form, "terug")
+    if _een(form, "soort") == "badge":
+        aanmelding = opslag.meld_aan_met_badge(
+            verbinding, _een(form, "badge"), vanaf=vanaf)
+    else:
+        aanmelding = opslag.meld_aan(
+            verbinding, _een(form, "gebruikersnaam"),
+            _een(form, "wachtwoord"), vanaf=vanaf)
+    # Ook een mislukte poging wordt vastgelegd, dus committen hoort ook
+    # dan (R-GEB-07). Zonder dat telt het slot niets.
+    verbinding.commit()
+    if not aanmelding.gelukt:
+        return Reactie(schermen.kaal(
+            "Inloggen",
+            schermen.inloggen(fout=aanmelding.fout,
+                              naam=_een(form, "gebruikersnaam"),
+                              terug=terug)), status=401)
+    return _aangemeld(aanmelding, terug)
+
+
+def _opzetten_post(verbinding, standen: Standen, form: dict,
+                   vanaf: str | None) -> Reactie:
+    """R-GEB-08. De eerste beheerder maakt zichzelf aan, één keer."""
+    naam = _een(form, "naam").strip()
+    gnaam = _een(form, "gebruikersnaam").strip()
+    ww = _een(form, "wachtwoord")
+
+    def terug(fout: str) -> Reactie:
+        return Reactie(schermen.kaal(
+            "Eerste beheerder",
+            schermen.eerste_beheerder(fout, naam, gnaam)), status=400)
+
+    if not naam or not gnaam:
+        return terug("Vul je naam en een gebruikersnaam in.")
+    if ww != _een(form, "nogmaals"):
+        return terug("De twee wachtwoorden zijn niet gelijk.")
+    klacht = gebruikers.zwak(ww)
+    if klacht:
+        return terug(klacht)
+    try:
+        opslag.bewaar_gebruiker(verbinding, gnaam, naam, "ADMIN", ww,
+                                _een(form, "badge") or None)
+        aanmelding = opslag.meld_aan(verbinding, gnaam, ww, vanaf=vanaf)
+        verbinding.commit()
+    except Boekfout as e:
+        verbinding.rollback()
+        return terug(str(e))
+    standen._opgezet = True
+    return _aangemeld(aanmelding)
 
 
 def _een(waarden: dict, naam: str, standaard: str = "") -> str:
@@ -183,18 +387,15 @@ def _tellers(cijfers: dict) -> dict:
 
 
 # ------------------------------------------------------------------ GET
-def _get(verbinding, sessie: Sessie, pad: str, vraag: dict) -> Reactie:
-    melding = None
-    tekst = _een(vraag, "m")
-    if tekst:
-        melding = (_een(vraag, "s"), tekst)
-
+def _get(verbinding, sessie: Sessie, pad: str, vraag: dict,
+         gebruiker=None) -> Reactie:
+    melding = _melding(vraag)
     cijfers = opslag.cijfers(verbinding)
 
     def blad(titel: str, inhoud: str, aan: str = pad, **rest) -> Reactie:
         return Reactie(schermen.bladzijde(
             titel, inhoud, pad=aan, melding=melding, klant=sessie.klant,
-            tellers=_tellers(cijfers), **rest))
+            tellers=_tellers(cijfers), gebruiker=gebruiker, **rest))
 
     if pad == "/":
         return blad("Dashboard", schermen.dashboard(
@@ -217,7 +418,8 @@ def _get(verbinding, sessie: Sessie, pad: str, vraag: dict) -> Reactie:
                 '<p class="lead">Misschien is hij verwijderd, of klopt het '
                 'nummer in de adresbalk niet.</p><p><a href="/orders">Terug '
                 "naar de orders</a></p>", pad="/orders",
-                klant=sessie.klant, tellers=_tellers(cijfers)), status=404)
+                klant=sessie.klant, tellers=_tellers(cijfers),
+                gebruiker=gebruiker), status=404)
         kop = (order.id, order.nummer, order.klant, order.status, order.prio,
                order.colli, order.gewicht_g)
         return blad(order.nummer, schermen.order(
@@ -233,7 +435,8 @@ def _get(verbinding, sessie: Sessie, pad: str, vraag: dict) -> Reactie:
         scanner = _scanner(verbinding, sessie)
         return Reactie(schermen.bladzijde(
             "Scanmodus", schermen.scanscherm(scanner), pad="/scan",
-            melding=melding, klant=sessie.klant, lichaam="scanmodus"))
+            melding=melding, klant=sessie.klant, lichaam="scanmodus",
+            gebruiker=gebruiker))
 
     if pad == "/inslag":
         return blad("Inslag", _inslagscherm(verbinding, vraag))
@@ -249,10 +452,22 @@ def _get(verbinding, sessie: Sessie, pad: str, vraag: dict) -> Reactie:
         return blad("Artikelen", schermen.artikelen(
             opslag.artikellijst(verbinding, LIMIET)))
 
+    if pad == "/gebruikers":
+        return blad("Gebruikers", schermen.gebruikers(
+            opslag.gebruikerslijst(verbinding, LIMIET),
+            gebruiker.id if gebruiker else None))
+
+    if pad == "/ik":
+        return blad("Wie ben ik", schermen.ikzelf(gebruiker),
+                    aan=gebruikers.startpad(gebruiker.rol),
+                    kruimel=gebruiker.naam)
+
     return Reactie(schermen.bladzijde(
         "Niet gevonden", "<h1>Dit scherm bestaat niet</h1>"
         '<p class="lead">Kijk het adres na, of kies links een scherm.</p>',
-        pad="/", klant=sessie.klant, tellers=_tellers(cijfers)), status=404)
+        pad=gebruikers.startpad(gebruiker.rol) if gebruiker else "/",
+        klant=sessie.klant, tellers=_tellers(cijfers),
+        gebruiker=gebruiker), status=404)
 
 
 def _naar_getal(tekst: str) -> int | None:
@@ -279,7 +494,8 @@ def _inslagscherm(verbinding, vraag: dict) -> str:
 
 
 # ----------------------------------------------------------------- POST
-def _post(verbinding, sessie: Sessie, pad: str, form: dict) -> Reactie:
+def _post(verbinding, sessie: Sessie, pad: str, form: dict,
+          gebruiker=None) -> Reactie:
     """Elke handeling. Boekt, doet de zelfcontrole, en leidt om.
 
     De zelfcontrole draait na elke mutatie (R-ZC). Dat mag: hij trekt
@@ -298,6 +514,8 @@ def _post(verbinding, sessie: Sessie, pad: str, form: dict) -> Reactie:
             return _scanactie(verbinding, sessie, form)
         if pad == "/meten":
             return _meting(verbinding, sessie, form)
+        if pad == "/gebruikers":
+            return _gebruikersactie(verbinding, form, gebruiker)
     except Boekfout as e:
         # De database weigerde. Dat is geen storing maar een antwoord:
         # laat de tekst zien die eruit kwam, want die is voor een mens
@@ -391,6 +609,68 @@ def _meting(verbinding, sessie: Sessie, form: dict) -> Reactie:
     return omleiding("/meten", "Maat vastgelegd.")
 
 
+def _gebruikersactie(verbinding, form: dict, ikzelf) -> Reactie:
+    """R-GEB-01. Iemand toevoegen, een rol wijzigen, uit dienst zetten.
+
+    Alleen rang 3 komt hier; dat is al getoetst in `behandel()`. Wat hier
+    wél nog moet: je kunt jezelf niet uit dienst zetten. Anders sluit de
+    enige beheerder zichzelf buiten en is er geen weg meer terug behalve
+    met psql.
+    """
+    actie = _een(form, "actie")
+
+    if actie == "nieuw":
+        naam = _een(form, "naam").strip()
+        gnaam = _een(form, "gebruikersnaam").strip()
+        ww = _een(form, "wachtwoord")
+        badge = _een(form, "badge").strip() or None
+        if not naam or not gnaam:
+            return omleiding("/gebruikers", "Vul een naam en een "
+                             "gebruikersnaam in.", "fout")
+        if not ww and not badge:
+            return omleiding("/gebruikers", "Geef een wachtwoord of een "
+                             "badge — zonder allebei kan hij nergens in.",
+                             "fout")
+        opslag.bewaar_gebruiker(verbinding, gnaam, naam,
+                                _een(form, "rol", "OPERATOR"), ww or None,
+                                badge)
+        verbinding.commit()
+        return omleiding("/gebruikers", f"{naam} toegevoegd.")
+
+    uid = _nummer(form, "id")
+
+    if actie == "rol":
+        rol = _een(form, "rol")
+        if rol not in gebruikers.ROLLEN:
+            return omleiding("/gebruikers", "Onbekende rol.", "fout")
+        if ikzelf is not None and uid == ikzelf.id and rol != ikzelf.rol:
+            return omleiding("/gebruikers", "Je eigen rol verlagen kan niet: "
+                             "dan sluit je jezelf buiten.", "waarschuw")
+        rijen = opslag.gebruikerslijst(verbinding, LIMIET)
+        wie = next((r for r in rijen if r[0] == uid), None)
+        if wie is None:
+            return omleiding("/gebruikers", "Die gebruiker bestaat niet.",
+                             "fout")
+        opslag.bewaar_gebruiker(verbinding, wie[2], wie[1], rol)
+        verbinding.commit()
+        return omleiding("/gebruikers",
+                         f"{wie[1]} is nu {gebruikers.rolnaam(rol).lower()}.")
+
+    if actie == "uit":
+        if ikzelf is not None and uid == ikzelf.id:
+            return omleiding("/gebruikers", "Jezelf uit dienst zetten kan "
+                             "niet.", "waarschuw")
+        naam = opslag.zet_gebruiker_uit(verbinding, uid)
+        verbinding.commit()
+        if naam is None:
+            return omleiding("/gebruikers", "Die gebruiker bestaat niet.",
+                             "fout")
+        return omleiding("/gebruikers", f"{naam} staat uit dienst; zijn "
+                         "sessies zijn ingetrokken.")
+
+    return omleiding("/gebruikers", "Onbekende handeling.", "fout")
+
+
 def _scanactie(verbinding, sessie: Sessie, form: dict) -> Reactie:
     """R-SCAN. De scanner rekent, deze functie boekt wat eruit komt."""
     actie = _een(form, "actie")
@@ -463,6 +743,9 @@ class Afhandelaar(BaseHTTPRequestHandler):
     # -- het saaie deel ----------------------------------------------
     def do_GET(self) -> None:                       # noqa: N802
         deel = urlparse(self.path)
+        # Het stijlbestand valt buiten de inlog. Het staat toch al in elke
+        # browsercache, en een inlogscherm zonder opmaak is een inlogscherm
+        # waar niemand doorheen komt.
         if deel.path == "/stijl.css":
             return self._stijl()
         self._draai("GET", deel.path, parse_qs(deel.query), {})
@@ -480,29 +763,61 @@ class Afhandelaar(BaseHTTPRequestHandler):
         pass                                        # de toegangslog hoeft niet
 
     # -- het werk ----------------------------------------------------
+    def _koekje(self) -> str | None:
+        """Het sessietoken uit de Cookie-kop, of None."""
+        ruw = self.headers.get("Cookie") or ""
+        for stuk in ruw.split(";"):
+            naam, _, waarde = stuk.strip().partition("=")
+            if naam == gebruikers.KOEKJE:
+                return waarde or None
+        return None
+
     def _draai(self, methode: str, pad: str, vraag: dict, form: dict) -> None:
         server = self.server
         try:
             with server.verbinding() as verbinding:
-                reactie = behandel(verbinding, server.sessie, methode, pad,
-                                   vraag, form)
+                reactie = behandel(verbinding, server.standen, methode, pad,
+                                   vraag, form, token=self._koekje(),
+                                   vanaf=self.client_address[0])
         except Exception:                           # pragma: no cover
             # Nooit een kale stacktrace naar de browser: daar staan
             # tabelnamen en paden in die niemand hoeft te weten. In de
             # terminal komt hij wel, want daar zit de beheerder.
             traceback.print_exc()
-            reactie = Reactie(schermen.bladzijde(
+            reactie = Reactie(schermen.kaal(
                 "Er ging iets mis",
                 "<h1>Er ging iets mis</h1>"
                 '<p class="lead">De handeling is niet uitgevoerd. In het '
-                "venster waar de server draait staat wat er misging.</p>",
-                pad="/"), status=500)
+                "venster waar de server draait staat wat er misging.</p>"),
+                status=500)
         self._stuur(reactie)
+
+    def _zet_koekje(self, reactie: Reactie) -> None:
+        """R-GEB-05. HttpOnly en SameSite, en Secure achter https.
+
+        HttpOnly houdt het koekje uit handen van JavaScript op de
+        pagina. SameSite=Lax zorgt dat een formulier op een andere site
+        niet namens jou kan posten. Secure zet de browser erop dat hij
+        het nooit over een onversleutelde verbinding stuurt — dat kan
+        alleen aan als er ook echt https voor staat, anders komt het
+        koekje nooit aan.
+        """
+        if reactie.koekje is None:
+            return
+        naam, waarde, leeftijd = reactie.koekje
+        stukken = [f"{naam}={waarde}", "Path=/", f"Max-Age={leeftijd}",
+                   "HttpOnly", "SameSite=Lax"]
+        if getattr(self.server, "https", False):
+            stukken.append("Secure")
+        if leeftijd == 0:
+            stukken.append("Expires=Thu, 01 Jan 1970 00:00:00 GMT")
+        self.send_header("Set-Cookie", "; ".join(stukken))
 
     def _stuur(self, reactie: Reactie) -> None:
         if reactie.naar:
             self.send_response(303)
             self.send_header("Location", reactie.naar)
+            self._zet_koekje(reactie)
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
@@ -510,6 +825,10 @@ class Afhandelaar(BaseHTTPRequestHandler):
                 else str(reactie.lijf).encode("utf-8"))
         self.send_response(reactie.status)
         self.send_header("Content-Type", reactie.soort)
+        self._zet_koekje(reactie)
+        # Een scherm met voorraadcijfers hoort niet in de cache van een
+        # gedeelde tablet te blijven staan nadat iemand is uitgelogd.
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(lijf)))
         self.end_headers()
         self.wfile.write(lijf)
@@ -525,14 +844,16 @@ class Afhandelaar(BaseHTTPRequestHandler):
 
 
 class Vaktoserver(ThreadingHTTPServer):
-    """Draagt de databaseverbinding en de scanstand."""
+    """Draagt de databaseverbinding en de scanstanden."""
 
     daemon_threads = True
 
-    def __init__(self, adres, dsn: str, klant: str = "Vakto"):
+    def __init__(self, adres, dsn: str, klant: str = "Vakto",
+                 https: bool = False):
         super().__init__(adres, Afhandelaar)
         self.dsn = dsn
-        self.sessie = Sessie(klant=klant)
+        self.standen = Standen(klant=klant)
+        self.https = https
         self._slot = threading.Lock()
 
     def verbinding(self):
@@ -558,9 +879,15 @@ class Vaktoserver(ThreadingHTTPServer):
 
 
 def bedien(dsn: str = "dbname=vakto", poort: int = 8000,
-           adres: str = "127.0.0.1", klant: str = "Vakto") -> None:
-    server = Vaktoserver((adres, poort), dsn, klant)
+           adres: str = "127.0.0.1", klant: str = "Vakto",
+           https: bool = False) -> None:
+    server = Vaktoserver((adres, poort), dsn, klant, https)
     print(f"Vakto draait op http://{adres}:{poort}/  (Ctrl+C stopt hem)")
+    if adres not in ("127.0.0.1", "localhost", "::1") and not https:
+        print("  Let op: dit adres is bereikbaar buiten deze machine, en er "
+              "staat\n  geen https voor. Wachtwoorden gaan dan leesbaar over "
+              "de lijn.\n  Zie DRAAIEN.md — met nginx ervoor is het tien "
+              "minuten werk.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -577,9 +904,11 @@ def hoofd(argumenten=None) -> int:
     p.add_argument("--poort", type=int, default=8000)
     p.add_argument("--adres", default="127.0.0.1",
                    help="127.0.0.1 is alleen deze machine; 0.0.0.0 is het "
-                        "hele netwerk — doe dat pas na stap 9, want er zit "
-                        "nog geen inlog omheen")
+                        "hele netwerk — zet daar https voor, zie DRAAIEN.md")
     p.add_argument("--klant", default="Vakto")
+    p.add_argument("--https", action="store_true",
+                   help="er staat een https-proxy voor deze server; het "
+                        "sessiekoekje krijgt dan de vlag Secure")
     a = p.parse_args(argumenten)
     try:
         import psycopg                              # noqa: F401
@@ -588,7 +917,7 @@ def hoofd(argumenten=None) -> int:
               "    pip install 'psycopg[binary]'\n\n"
               "De rekenkern en de tests werken er zonder.", file=sys.stderr)
         return 1
-    bedien(a.db, a.poort, a.adres, a.klant)
+    bedien(a.db, a.poort, a.adres, a.klant, a.https)
     return 0
 
 
