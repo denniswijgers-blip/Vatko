@@ -125,6 +125,25 @@ class Sessie:
     locatie_id: int | None = None
     product_id: int | None = None
     aantal: int = 0
+    # De stand van het importscherm (R-IMP). Hier omdat het moet: de
+    # bestanden staan tussen "kiezen" en "overnemen" nergens anders, en
+    # je wilt ze niet bij elke correctie opnieuw laten uploaden. Ze gaan
+    # weg zodra de import gedaan is of iemand uitlogt.
+    imp: "Import | None" = None
+
+
+@dataclass
+class Import:
+    """Wat er tussen kiezen en overnemen in de lucht hangt."""
+    bestanden: dict = field(default_factory=dict)     # soort -> Bestand
+    kolommen: dict = field(default_factory=dict)      # soort -> {veld: index}
+    eenheden: object = None
+    standaard: object = None
+
+    def __post_init__(self):
+        from .inlezen import Eenheden, Standaard
+        self.eenheden = self.eenheden or Eenheden()
+        self.standaard = self.standaard or Standaard()
 
 
 def _scanner(verbinding, sessie: Sessie) -> Scanner:
@@ -457,6 +476,21 @@ def _get(verbinding, sessie: Sessie, pad: str, vraag: dict,
             opslag.gebruikerslijst(verbinding, LIMIET),
             gebruiker.id if gebruiker else None))
 
+    if pad == "/instellingen":
+        # De klachten reizen mee in de URL, zodat ze na de omleiding bij
+        # de juiste regel komen te staan in plaats van als één zin
+        # bovenaan (R-INST-01).
+        klachten = {}
+        for regel in (_een(vraag, "fout") or "").split("|"):
+            sleutel, _, tekst = regel.partition(": ")
+            if sleutel and tekst:
+                klachten[sleutel] = tekst
+        return blad("Instellingen", schermen.instellingen(
+            opslag.instellingen_beheer(verbinding), klachten))
+
+    if pad == "/eigen":
+        return blad("Eigen gegevens", _importscherm(verbinding, sessie))
+
     if pad == "/ik":
         return blad("Wie ben ik", schermen.ikzelf(gebruiker),
                     aan=gebruikers.startpad(gebruiker.rol),
@@ -516,6 +550,10 @@ def _post(verbinding, sessie: Sessie, pad: str, form: dict,
             return _meting(verbinding, sessie, form)
         if pad == "/gebruikers":
             return _gebruikersactie(verbinding, form, gebruiker)
+        if pad == "/instellingen":
+            return _instellingen(verbinding, form, gebruiker)
+        if pad == "/eigen":
+            return _importactie(verbinding, sessie, form, gebruiker)
     except Boekfout as e:
         # De database weigerde. Dat is geen storing maar een antwoord:
         # laat de tekst zien die eruit kwam, want die is voor een mens
@@ -607,6 +645,148 @@ def _meting(verbinding, sessie: Sessie, form: dict) -> Reactie:
     if melding is not None:
         return omleiding("/meten", melding.gevolg, "waarschuw")
     return omleiding("/meten", "Maat vastgelegd.")
+
+
+# ---------------------------------------------------------------------
+#  Instellingen (R-INST-01)
+# ---------------------------------------------------------------------
+def _instellingen(verbinding, form: dict, gebruiker) -> Reactie:
+    """Het hele formulier in één keer.
+
+    Alles-of-niets zou hier averechts werken: wie één veld verkeerd
+    invult, wil niet dat de andere veertien ook terugvallen. De klachten
+    komen mee terug in de URL, zodat ze bij de juiste regel komen te
+    staan.
+    """
+    from .instellingen import SOORT
+
+    waarden = {s: _een(form, s) for s in SOORT if s in form}
+    naam = gebruiker.naam if gebruiker else None
+    gewijzigd, klachten = opslag.zet_instellingen(verbinding, waarden, naam)
+    verbinding.commit()
+
+    if klachten:
+        return omleiding("/instellingen?fout=" + quote("|".join(klachten)),
+                         "Niet alles kon worden opgeslagen; kijk de rode "
+                         "regels na.", "fout")
+    if not gewijzigd:
+        return omleiding("/instellingen", "Er was niets veranderd.")
+    return omleiding("/instellingen",
+                     f"{gewijzigd} instelling(en) opgeslagen.")
+
+
+# ---------------------------------------------------------------------
+#  Eigen gegevens (R-IMP)
+#
+#  Vier dingen kunnen er in één POST binnenkomen: een bestand, een
+#  kolomkeuze, een eenheid en een standaardmaat. Ze worden alle vier
+#  toegepast en daarna wordt er opnieuw gecontroleerd — dat is goedkoop
+#  (er wordt niets weggeschreven) en het scheelt de gebruiker een knop.
+# ---------------------------------------------------------------------
+SOORTEN = ("locaties", "artikelen", "voorraad")
+
+
+def _importstand(sessie: Sessie) -> Import:
+    if sessie.imp is None:
+        sessie.imp = Import()
+    return sessie.imp
+
+
+def _rapport(imp: Import):
+    from .inlezen import controleer
+    return controleer(
+        imp.bestanden.get("locaties"), imp.kolommen.get("locaties"),
+        imp.bestanden.get("artikelen"), imp.kolommen.get("artikelen"),
+        imp.bestanden.get("voorraad"), imp.kolommen.get("voorraad"),
+        eenheden=imp.eenheden, standaard=imp.standaard)
+
+
+def _importscherm(verbinding, sessie: Sessie) -> str:
+    from .inlezen import voorbeeldmaat
+    imp = _importstand(sessie)
+    rapport = _rapport(imp) if imp.bestanden else None
+    voorbeelden = {
+        s: voorbeeldmaat(imp.bestanden.get(s), imp.kolommen.get(s, {}), s,
+                         imp.eenheden)
+        for s in ("locaties", "artikelen")}
+    return schermen.eigen(imp.bestanden, imp.kolommen, imp.eenheden,
+                          imp.standaard, rapport, voorbeelden,
+                          al_geboekt=opslag.al_geboekt(verbinding))
+
+
+def _importactie(verbinding, sessie: Sessie, form: dict, gebruiker) -> Reactie:
+    from .inlezen import Leesfout, herken_kolommen, lees_inhoud, raad_eenheden
+
+    imp = _importstand(sessie)
+    nieuw_bestand = False
+
+    # 1. Bestanden. `form` draagt ze als (naam, inhoud) onder dezelfde
+    #    sleutel als het soort.
+    for soort in SOORTEN:
+        opgestuurd = form.get("bestand." + soort)
+        if not opgestuurd:
+            continue
+        naam, inhoud = opgestuurd[0]
+        if not inhoud:
+            continue
+        try:
+            imp.bestanden[soort] = lees_inhoud(inhoud, naam)
+        except Leesfout as e:
+            return omleiding("/eigen", str(e), "fout")
+        imp.kolommen[soort] = herken_kolommen(soort, imp.bestanden[soort].kop)
+        nieuw_bestand = True
+
+    # 2. Eenheden opnieuw raden zodra er een bestand bij komt, maar niet
+    #    daarna: wie hem met de hand omzet, wil niet dat de volgende
+    #    handeling hem terugdraait (R-IMP-03).
+    if nieuw_bestand:
+        imp.eenheden = raad_eenheden(
+            imp.bestanden.get("locaties"), imp.kolommen.get("locaties"),
+            imp.bestanden.get("artikelen"), imp.kolommen.get("artikelen"))
+    else:
+        for veld in ("loc_maat", "art_maat", "loc_gew", "art_gew"):
+            waarde = _een(form, "eenheid." + veld)
+            if waarde:
+                setattr(imp.eenheden, veld, waarde)
+
+    # 3. Kolomkeuzes met de hand. R-IMP-02: de uitkomst is altijd te
+    #    corrigeren, anders is "we raden het" een loze belofte.
+    if not nieuw_bestand:
+        for soort in SOORTEN:
+            if soort not in imp.bestanden:
+                continue
+            gekozen = {}
+            for sleutel, waarden in form.items():
+                begin = "kolom." + soort + "."
+                if not sleutel.startswith(begin) or not waarden:
+                    continue
+                if waarden[0] != "":
+                    gekozen[sleutel[len(begin):]] = int(waarden[0])
+            if gekozen or any(k.startswith("kolom." + soort + ".")
+                              for k in form):
+                imp.kolommen[soort] = gekozen
+
+    # 4. De standaardmaat voor locaties zonder afmeting (R-IMP-05).
+    for veld in ("l_mm", "w_mm", "h_mm", "max_g"):
+        waarde = _nummer(form, "std." + veld)
+        if waarde > 0:
+            setattr(imp.standaard, veld, waarde)
+
+    if _een(form, "actie") != "overnemen":
+        return omleiding("/eigen")
+
+    # 5. Overnemen. Pas hier raakt de database iets.
+    rapport = _rapport(imp)
+    if not rapport.klaar:
+        return omleiding("/eigen", "Er zijn geen bruikbare locaties. Zonder "
+                         "locaties kan er niets.", "fout")
+    uit = opslag.neem_over(verbinding, rapport,
+                           gebruiker=gebruiker.naam if gebruiker else None)
+    opslag.draai_zelfcontrole(verbinding)
+    verbinding.commit()
+    sessie.imp = None
+    samen = ", ".join(f"{k} {w}" for k, w in uit.items())
+    return omleiding("/", "Overgenomen: " + samen + ".")
 
 
 def _gebruikersactie(verbinding, form: dict, ikzelf) -> Reactie:
@@ -734,6 +914,68 @@ def _kleur(antwoord) -> str:
 
 
 # ---------------------------------------------------------------------
+#  Een formulier met bestanden erin
+#
+#  Zelf ontleden en niet met `cgi.FieldStorage`: die module is in 3.11
+#  afgekeurd en in 3.13 weg, en dan valt dit bestand om op een machine
+#  waar iemand net Python heeft bijgewerkt. Het formaat is niet
+#  ingewikkeld — het staat in RFC 7578 en past hieronder.
+# ---------------------------------------------------------------------
+MAX_FORM = 1_000_000            # een gewoon formulier
+MAX_UPLOAD = 25_000_000         # drie klantbestanden, ruim genomen
+
+
+def _kopwaarde(kop: str, naam: str) -> str:
+    """Haalt `naam="..."` uit een Content-Disposition-regel."""
+    merk = naam + '="'
+    begin = kop.find(merk)
+    if begin < 0:
+        return ""
+    begin += len(merk)
+    eind = kop.find('"', begin)
+    return kop[begin:eind] if eind > 0 else ""
+
+
+def ontleed_multipart(ruw: bytes, soort: str) -> dict:
+    """Geeft dezelfde vorm terug als `parse_qs`, met bestanden erbij.
+
+    Gewone velden komen als {naam: [tekst]}; een bestand komt als
+    {"bestand.<naam>": [(bestandsnaam, bytes)]}. Dat onderscheid staat in
+    de sleutel en niet in het soort van de waarde, zodat een aanroeper
+    nooit per ongeluk bytes voor tekst aanziet.
+    """
+    merk = "boundary="
+    if merk not in soort:
+        raise ValueError("geen boundary")
+    grens = soort.split(merk, 1)[1].strip().strip('"')
+    scheiding = b"--" + grens.encode("ascii")
+
+    uit: dict[str, list] = {}
+    for stuk in ruw.split(scheiding):
+        stuk = stuk.strip(b"\r\n")
+        if not stuk or stuk == b"--":
+            continue
+        kop, _, lijf = stuk.partition(b"\r\n\r\n")
+        koptekst = kop.decode("utf-8", "replace")
+        naam = _kopwaarde(koptekst, "name")
+        if not naam:
+            continue
+        # Op de aanwezigheid van `filename`, niet op de inhoud ervan:
+        # een leeg bestandsveld stuurt `filename=""` mee, en dat is nog
+        # steeds een bestandsveld — geen tekstveld met een lege waarde.
+        if 'filename="' in koptekst:
+            bestandsnaam = _kopwaarde(koptekst, "filename")
+            # Alleen de naam, nooit het pad. Een browser stuurt soms
+            # "C:\\Users\\dennis\\locaties.csv" mee, en daar heeft de
+            # server niets aan — behalve last.
+            kaal = bestandsnaam.replace("\\", "/").rsplit("/", 1)[-1]
+            uit.setdefault("bestand." + naam, []).append((kaal, lijf))
+        else:
+            uit.setdefault(naam, []).append(lijf.decode("utf-8", "replace"))
+    return uit
+
+
+# ---------------------------------------------------------------------
 #  De webserver eromheen
 # ---------------------------------------------------------------------
 class Afhandelaar(BaseHTTPRequestHandler):
@@ -751,13 +993,27 @@ class Afhandelaar(BaseHTTPRequestHandler):
         self._draai("GET", deel.path, parse_qs(deel.query), {})
 
     def do_POST(self) -> None:                      # noqa: N802
+        soort = self.headers.get("Content-Type") or ""
         lengte = int(self.headers.get("Content-Length") or 0)
-        if lengte > 1_000_000:                      # R-BASIS-07, ook hier
-            return self._stuur(Reactie("Te veel gegevens", status=413,
-                                       soort="text/plain; charset=utf-8"))
-        ruw = self.rfile.read(lengte).decode("utf-8", "replace")
+        grens = MAX_UPLOAD if soort.startswith("multipart/") else MAX_FORM
+        if lengte > grens:                          # R-BASIS-07, ook hier
+            return self._stuur(Reactie(
+                "Dat bestand is te groot. De grens ligt op "
+                f"{grens // 1_000_000} MB.", status=413,
+                soort="text/plain; charset=utf-8"))
+        ruw = self.rfile.read(lengte)
         deel = urlparse(self.path)
-        self._draai("POST", deel.path, parse_qs(deel.query), parse_qs(ruw))
+
+        if soort.startswith("multipart/form-data"):
+            try:
+                form = ontleed_multipart(ruw, soort)
+            except ValueError:
+                return self._stuur(Reactie("Onleesbaar formulier", status=400,
+                                           soort="text/plain; charset=utf-8"))
+        else:
+            form = parse_qs(ruw.decode("utf-8", "replace"))
+
+        self._draai("POST", deel.path, parse_qs(deel.query), form)
 
     def log_message(self, formaat, *args) -> None:  # noqa: A002
         pass                                        # de toegangslog hoeft niet

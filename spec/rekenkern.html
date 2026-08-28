@@ -172,10 +172,10 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.8</span>
+    <span><b>Versie</b> 1.9</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
-    <span><b>Regels</b> 64</span>
+    <span><b>Regels</b> 65</span>
     <span><b>Testgevallen</b> 30</span>
   </div>
 </header>
@@ -1154,6 +1154,21 @@ kolom       "scrypt$n$r$p$&lt;zout&gt;$&lt;hash&gt;", zodat de parameters meever
   <p class="inleiding">Alles wat per klant verschilt. Deze tabel is het antwoord op "ja
   maar bij ons gaat dat anders" &mdash; en de reden dat dat antwoord geen programmeerwerk is.</p>
 
+  <div class="regel"><div class="regelkop"><span class="rid">R-INST-01</span>
+    <span class="rtitel">Aanpassen mag, verzinnen niet</span></div>
+    <p>Instellingen wijzigen is rang 3 (R-GEB-01), en elke wijziging gaat met de oude
+    waarde, de nieuwe waarde en de naam van wie het deed naar <code>event_log</code>. Een
+    magazijn waar de vulfactor ineens op 0,4 staat en niemand weet sinds wanneer, is een
+    magazijn waar niemand de voorstellen meer gelooft.</p>
+    <p><b>Alleen sleutels die al bestaan.</b> Een nieuwe rij toevoegen kan niet via het
+    scherm: een sleutel die de code niet kent doet niets, en dan zit iemand een middag te
+    zoeken waarom zijn instelling geen effect heeft. Nieuwe instellingen komen bij een
+    nieuwe versie mee.</p>
+    <p><b>De waarde wordt getoetst voordat hij erin gaat.</b> Een getal moet een getal
+    zijn, een ja-of-nee moet <code>true</code> of <code>false</code> zijn, en wat een
+    ondergrens heeft krijgt die ook &mdash; een vulfactor van 3 bestaat niet. Bewaren en
+    dan bij de eerstvolgende berekening omvallen is het slechtste van twee werelden.</p></div>
+
   <div class="tabelwrap"><table>
     <thead><tr><th>Sleutel</th><th class="num">Standaard</th><th>Wat het doet</th></tr></thead>
     <tbody>
@@ -1492,6 +1507,14 @@ kolom       "scrypt$n$r$p$&lt;zout&gt;$&lt;hash&gt;", zodat de parameters meever
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.9</strong> &mdash; de twee beheerschermen die alleen de browserversie
+  nog had, staan nu ook op de server: <b>eigen gegevens</b> (R-IMP, het importscherm) en
+  <b>instellingen</b> (hoofdstuk 14). Daarbij hoort &eacute;&eacute;n nieuwe regel,
+  <b>R-INST-01</b>: instellingen wijzigen is rang 3, elke wijziging gaat met de oude
+  waarde en de naam van wie het deed naar <code>event_log</code>, alleen bestaande
+  sleutels mogen, en de waarde wordt getoetst v&oacute;&oacute;rdat hij erin gaat.
+  Bewaren en dan bij de eerstvolgende berekening omvallen is het slechtste van twee
+  werelden.<br><br>
   <strong>Versie 1.8</strong> &mdash; stap 9 gebouwd en getest, en daarmee is de lijst uit
   hoofdstuk 16 rond. Er is een hoofdstuk 13 bij: <b>Gebruikers en rollen</b> (R-GEB-01 t/m
   R-GEB-08); Instellingen, Testgevallen en Volgorde zijn 14, 15 en 16 geworden. Drie rollen

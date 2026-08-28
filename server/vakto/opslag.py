@@ -430,6 +430,28 @@ QUERIES: dict[str, str] = {
     "gebruiker_uitzetten": """
         SELECT vakto_gebruiker_uit(%s) AS naam
     """,
+
+    # ---------------------------------------------------------------
+    #  Instellingen wijzigen (R-INST-01)
+    #
+    #  Lezen doet "instellingen" hierboven; dit is de beheerkant, met de
+    #  uitleg en de groep erbij zodat het scherm ze kan ordenen.
+    # ---------------------------------------------------------------
+    "instellingen_beheer": """
+        SELECT sleutel, waarde, groep, uitleg
+          FROM setting
+         ORDER BY groep, sleutel
+    """,
+
+    "instelling_zetten": """
+        SELECT vakto_instelling(%s, %s, %s) AS gewijzigd
+    """,
+
+    # R-IMP-07. Een import is een nulmeting; staat er al een journaal,
+    # dan weigert hij. Het scherm wil dat weten vóór de knop, niet erna.
+    "al_geboekt": """
+        SELECT EXISTS (SELECT 1 FROM journal) AS ja
+    """,
 }
 
 
@@ -1094,6 +1116,81 @@ def gebruikerslijst(verbinding: Verbinding, limiet: int = 200) -> list[tuple]:
 def aantal_gebruikers(verbinding: Verbinding) -> int:
     """R-GEB-08. Nul betekent: er moet nog een eerste beheerder komen."""
     return int(_rijen(verbinding, "aantal_gebruikers")[0][0])
+
+
+# ---------------------------------------------------------------------
+#  Instellingen wijzigen (R-INST-01)
+#
+#  Toetsen doet instellingen.py — dat is rekenwerk en hoort zonder
+#  database te kunnen. Hier wordt alleen weggeschreven, en alleen wat
+#  door die toets heen komt.
+# ---------------------------------------------------------------------
+def al_geboekt(verbinding: Verbinding) -> bool:
+    """R-IMP-07. Draait dit magazijn al? Dan overschrijft een import niets."""
+    return bool(_rijen(verbinding, "al_geboekt")[0][0])
+
+
+def instellingen_beheer(verbinding: Verbinding) -> list[tuple]:
+    """Alle instellingen met hun groep en uitleg, op groep gesorteerd."""
+    return _rijen(verbinding, "instellingen_beheer")
+
+
+def zet_instelling(verbinding: Verbinding, sleutel: str, waarde: str,
+                   gebruiker: str | None = None) -> bool:
+    """R-INST-01. Geeft False als de waarde al zo stond.
+
+    Gooit `Boekfout` met een leesbare tekst als de waarde nergens op
+    slaat of als de sleutel niet bestaat. Die tekst is bedoeld om te
+    tonen: iemand die "vul true of false in" leest, weet wat hij moet
+    doen.
+    """
+    from .instellingen import opgeschoond, toets
+    klacht = toets(sleutel, waarde)
+    if klacht:
+        raise Boekfout(klacht)
+    try:
+        with verbinding.cursor() as cur:
+            cur.execute(QUERIES["instelling_zetten"],
+                        (sleutel, opgeschoond(sleutel, waarde), gebruiker))
+            return bool(cur.fetchone()[0])
+    except Boekfout:
+        raise
+    except Exception as e:
+        tekst = str(e).strip().splitlines()[0] if str(e).strip() else str(e)
+        raise Boekfout(tekst) from e
+
+
+def zet_instellingen(verbinding: Verbinding, waarden: dict,
+                     gebruiker: str | None = None) -> tuple[int, list[str]]:
+    """Een heel formulier in één keer. Geeft (gewijzigd, klachten) terug.
+
+    Alles of niets zou hier averechts werken: wie één veld verkeerd
+    invult, wil niet dat de andere veertien ook terugvallen. De klachten
+    komen terug zodat het scherm ze bij de juiste regel kan zetten.
+
+    Wat er níét doorheen komt is een waarde die alleen ánders geschreven
+    staat. `0.20` en `0.2` zijn hetzelfde getal; wie dat als wijziging
+    wegschrijft, krijgt bij elke keer opslaan een regel in het log voor
+    velden die niemand heeft aangeraakt — en dan is het log niets meer
+    waard (R-INST-01).
+    """
+    from .instellingen import opgeschoond, toets
+
+    huidig = {r[0]: r[1] for r in _rijen(verbinding, "instellingen_beheer")}
+    klachten = []
+    gewijzigd = 0
+    for sleutel, waarde in waarden.items():
+        klacht = toets(sleutel, waarde)
+        if klacht:
+            klachten.append(f"{sleutel}: {klacht}")
+            continue
+        was = huidig.get(sleutel)
+        if was is not None and toets(sleutel, was) is None \
+                and opgeschoond(sleutel, waarde) == opgeschoond(sleutel, was):
+            continue
+        if zet_instelling(verbinding, sleutel, waarde, gebruiker):
+            gewijzigd += 1
+    return gewijzigd, klachten
 
 
 # ---------------------------------------------------------------------

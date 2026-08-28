@@ -113,4 +113,4 @@ is akkoord".
 
 De serverversie is af: alle negen stappen uit hoofdstuk 16 van de specificatie. Schema,
 rekenkern, boeken, meten, uitgaand, zelfcontrole, import, schermen, scanmodus, inloggen
-en back-up — met 370 Python-tests en 234 SQL-controles eronder.
+en back-up — met 407 Python-tests en 244 SQL-controles eronder.

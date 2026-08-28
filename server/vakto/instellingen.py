@@ -30,6 +30,93 @@ STANDAARD: dict[str, str] = {
     "inlog.badge_voor_scanner":     "true",
 }
 
+# R-INST-01. Wat voor soort waarde er in mag, en tussen welke grenzen.
+#
+# Dit staat hier en niet in de database, om dezelfde reden als de rest van
+# de rekenkern: een waarde toetsen is rekenwerk en moet zonder PostgreSQL
+# na te testen zijn. De database bewaakt dat de sleutel bestaat; Python
+# bewaakt dat de waarde ergens op slaat.
+#
+# De ondergrenzen zijn geen willekeur. Een vulfactor boven 1 zegt dat er
+# meer in een vak gaat dan erin past; een telinterval van nul dagen zet
+# elke locatie elke dag op de lijst. Zulke waarden vallen niet meteen om
+# — ze geven maandenlang stilletjes onzin, en dat is erger.
+SOORT: dict[str, tuple[str, float | None, float | None]] = {
+    #  sleutel                      soort     min      max
+    "putaway.fill_factor":         ("komma",  0.1,     1.0),
+    "putaway.prefer_smallest_fit": ("janee",  None,    None),
+    "putaway.te_ruim_onder":       ("komma",  0.0,     1.0),
+    "drift.alert_threshold_pct":   ("komma",  1,       100),
+    "drift.remeasure_after_days":  ("geheel", 1,       3650),
+    "opt.samenvoegen":             ("janee",  None,    None),
+    "opt.dekking_dagen":           ("komma",  0.5,     90),
+    "opt.hardloper_per_dag":       ("komma",  0.1,     10000),
+    "opt.venster_dagen":           ("geheel", 1,       365),
+    "opt.max_open_teltaken":       ("geheel", 1,       500),
+    "opt.drempel_afwijking_pct":   ("komma",  1,       500),
+    "opstart.onbekend_aanmaken":   ("janee",  None,    None),
+    "uit.max_colli_gewicht_g":     ("geheel", 100,     2_000_000),
+    "ui.rows_per_page":            ("geheel", 5,       5000),
+    "sessie.duur_uren":            ("geheel", 1,       168),
+    "inlog.max_pogingen":          ("geheel", 3,       1000),
+    "inlog.badge_voor_scanner":    ("janee",  None,    None),
+}
+
+SOORTNAAM = {"komma": "een getal", "geheel": "een heel getal",
+             "janee": "ja of nee"}
+
+
+def toets(sleutel: str, waarde: str) -> str | None:
+    """R-INST-01. Geeft terug wat er mis is, of None als het goed is.
+
+    Bewaren en dan bij de eerstvolgende berekening omvallen is het
+    slechtste van twee werelden: de fout komt dan boven water op een
+    moment dat niemand nog weet dat er iets is gewijzigd.
+    """
+    if sleutel not in SOORT:
+        return (f"{sleutel} is geen bestaande instelling. Een sleutel die de "
+                f"code niet kent doet niets.")
+    soort, laag, hoog = SOORT[sleutel]
+    tekst = (waarde or "").strip()
+
+    if soort == "janee":
+        if tekst.lower() not in ("true", "false"):
+            return "Vul true of false in."
+        return None
+
+    try:
+        getal = float(tekst.replace(",", "."))
+    except ValueError:
+        return f"Vul {SOORTNAAM[soort]} in."
+    if soort == "geheel" and getal != int(getal):
+        return "Vul een heel getal in, zonder komma."
+    if laag is not None and getal < laag:
+        return f"Dit moet {_net(laag)} of hoger zijn."
+    if hoog is not None and getal > hoog:
+        return f"Dit moet {_net(hoog)} of lager zijn."
+    return None
+
+
+def _net(n) -> str:
+    return str(int(n)) if float(n) == int(n) else str(n)
+
+
+def opgeschoond(sleutel: str, waarde: str) -> str:
+    """De waarde zoals hij in de kolom hoort te staan.
+
+    Een komma wordt een punt, en `TRUE` wordt `true`. Anders staat er na
+    één keer opslaan `0,85` in de tabel en valt `float()` erover.
+    """
+    tekst = (waarde or "").strip()
+    soort, _laag, _hoog = SOORT.get(sleutel, ("tekst", None, None))
+    if soort == "janee":
+        return tekst.lower()
+    if soort in ("komma", "geheel"):
+        getal = float(tekst.replace(",", "."))
+        return str(int(getal)) if soort == "geheel" else _net(getal)
+    return tekst
+
+
 # De punten van het inslagvoorstel (R-INS-04).
 WEGING: dict[str, int] = {
     "benutting":            500,

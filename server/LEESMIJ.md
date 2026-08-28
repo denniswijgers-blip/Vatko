@@ -24,7 +24,13 @@ Open daarna <http://127.0.0.1:8000/>. De eerste keer vraagt hij om een
 beheerder aan te maken; daarna is die weg dicht. Verder is het dezelfde
 stijl als de browserversie, met echte gegevens uit PostgreSQL.
 
-Staat de database nog leeg, lees dan eerst een klantbestand in:
+Staat de database nog leeg, dan lees je een klantbestand in via
+**Eigen gegevens** in het menu: je kiest de drie bestanden, kijkt na wat
+Vakto van de kolommen en de eenheid gemaakt heeft, en drukt pas daarna
+op *Neem deze gegevens over*. Dat is het scherm dat je bij een klant aan
+tafel gebruikt.
+
+Vanaf de opdrachtregel kan het ook:
 
 ```bash
 python3 -m vakto.inlezen \
@@ -133,7 +139,7 @@ Je hoort dit te zien:
 
 ```
 ..............................
-Ran 370 tests in 19s
+Ran 407 tests in 26s
 
 OK
 ```
@@ -168,6 +174,8 @@ db/                 alles wat de database zelf doet
                     transactie. Plus vakto_zone en vakto_artikelgroep.
   gebruikers.sql    Gebruikers, sessies en het slot op mislukte pogingen
                     (R-GEB). Plus de view v_gebruikers, zonder wachtwoorden.
+  beheer.sql        vakto_instelling(): alleen bestaande sleutels, en elke
+                    wijziging met de oude waarde in het log (R-INST-01).
   backup.sh         Een back-up maken, en met --proef meteen terugzetten
                     om te bewijzen dat het kan.
 
@@ -187,6 +195,8 @@ vakto/
                     hij zegt alleen wat er geboekt moet worden.
   gebruikers.py     Rollen, rechten en wachtwoorden (R-GEB). Geen database:
                     wie er ingelogd is weet gebruikers.sql.
+  instellingen.py   Alles wat per klant verschilt, met de toets erbij die
+                    een onmogelijke waarde tegenhoudt (R-BASIS-04, R-INST-01).
   werkdag.py        Een hele werkdag naspelen, van 07:00 tot 17:00 (T-18).
   schermen.py       HTML tekenen. Kent geen database en geen webserver.
   web.py            De webserver: haalt op, boekt, en plakt het aan elkaar.
@@ -256,9 +266,10 @@ psql -d vakto -f db/uitgaand.sql
 psql -d vakto -f db/zelfcontrole.sql
 psql -d vakto -f db/import.sql
 psql -d vakto -f db/gebruikers.sql
+psql -d vakto -f db/beheer.sql
 ```
 
-Op Windows draai je die acht regels in de SQL Shell (staat in je
+Op Windows draai je die negen regels in de SQL Shell (staat in je
 startmenu onder PostgreSQL), of in PowerShell als je PostgreSQL aan je
 PATH hebt laten toevoegen. `opzetten.sh` werkt alleen op Mac en Linux.
 
@@ -274,10 +285,11 @@ psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_uitgaand.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_zelfcontrole.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_import.sql
 psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_gebruikers.sql
+psql -d vakto -v ON_ERROR_STOP=1 -f tests-sql/test_beheer.sql
 python -m unittest tests.test_opslag -v
 ```
 
-Je hoort in totaal tweehonderdvierendertig keer `OK` te zien. Daarnaast zijn er twee
+Je hoort in totaal tweehonderdvierenveertig keer `OK` te zien. Daarnaast zijn er twee
 tests met twee sessies tegelijk (`tests-sql/test_gelijktijdig.sh` en
 `tests-sql/test_gelijktijdig_reserveren.sh`); die draaien alleen op Mac
 en Linux, en `opzetten.sh` doet ze allebei vanzelf. Precies één van de
@@ -311,6 +323,7 @@ Wat de database onthoudt, hoeft de programmeur niet te onthouden:
 | R-AFG-01..04 | Afgeleide waarden zijn views, geen kolommen |
 | R-GEB-04 | `CHECK (wachtwoord LIKE 'scrypt$%')` — een leesbaar wachtwoord komt er niet in |
 | R-GEB-01 | `CHECK (rol IN (...))` en: geen gebruiker zonder wachtwoord én zonder badge |
+| R-INST-01 | `vakto_instelling()` weigert een sleutel die niet bestaat, en logt de oude waarde |
 
 ---
 
@@ -614,6 +627,65 @@ je het hoopt.
 
 ---
 
+## De twee beheerschermen
+
+Deze zaten wel in de browserversie en nog niet op de server. Ze horen bij
+het gesprek dat je met een klant voert, en daarom kwamen ze als eerste na
+stap 9.
+
+### Eigen gegevens (R-IMP)
+
+Het verschil tussen "kijk eens wat een mooie demo" en "kijk, dit is jouw
+magazijn". Je kiest de drie bestanden en het scherm laat zien wát het
+geraden heeft:
+
+* **welke kolom op welk veld ligt**, met de eerste drie waarden ernaast —
+  en elk daarvan is met een keuzelijst te corrigeren. R-IMP-02 belooft
+  dat de uitkomst altijd te corrigeren is; zonder die lijst is dat een
+  loze belofte.
+* **in welke eenheid de klant werkt**, met één concreet voorbeeld eronder:
+  *"01-01-1 wordt 300 × 400 × 220 mm"*. Zet de eenheid verkeerd en er
+  staat *"30 × 40 × 22 mm — dat lijkt niet te kloppen voor een
+  stellingvak"*. Een keuzelijst laat iedereen twijfelen; dat zinnetje
+  niet.
+* **het rapport**: hoeveel rijen, hoeveel bruikbaar, en wat er opvalt met
+  een teller en drie voorbeelden per probleem.
+
+Pas op *Neem deze gegevens over* raakt de database iets. Dat is het punt
+van R-IMP-05: je wilt het rapport kunnen laten zien vóórdat je op de knop
+drukt.
+
+Draait het magazijn al, dan weigert hij (R-IMP-07) en zegt hij waarom.
+Anders overschrijf je een draaiend magazijn met een bestand van vorige
+week, en dat merk je pas als de picker voor een leeg vak staat.
+
+### Instellingen (hoofdstuk 14, R-INST-01)
+
+Het antwoord op "ja maar bij ons gaat dat anders", en de reden dat dat
+antwoord geen programmeerwerk is. Zet `putaway.fill_factor` op 0,60 en
+doe dezelfde inslag opnieuw: alle voorstellen veranderen, zonder dat er
+één regel code is aangepast.
+
+Drie dingen die het uitleggen waard zijn:
+
+1. **De waarde wordt getoetst vóórdat hij erin gaat.** Een vulfactor van
+   3 zegt dat er meer in een vak gaat dan erin past. Zulke waarden vallen
+   niet meteen om — ze geven maandenlang stilletjes onzin, en dat is
+   erger.
+2. **Een kommagetal is géén `type="number"`.** Dat veld weigert de komma
+   die een Nederlander typt, zonder uit te leggen waarom; in een browser
+   met een Engelse taalinstelling verdwijnt de toetsaanslag gewoon. De
+   toets op de server begrijpt `0,60` wél.
+3. **Alleen wat echt wijzigt komt in het log**, met de oude waarde erbij.
+   `0.20` en `0.2` zijn hetzelfde getal; wie dat als wijziging
+   wegschrijft, krijgt bij elke keer opslaan regels voor velden die
+   niemand heeft aangeraakt — en dan is het log niets meer waard.
+
+Allebei de schermen zijn rang 3 (R-GEB-01), en dat wordt bij elke
+aanvraag op de server getoetst — een GET net zo goed als een POST.
+
+---
+
 ## Hierna
 
 De negen stappen uit hoofdstuk 16 zijn af. Wat er nog niet in zit staat
@@ -621,6 +693,13 @@ onderaan [DRAAIEN.md](DRAAIEN.md), met de reden erbij — tweefactor­
 authenticatie, wachtwoordherstel per e-mail en een verbindingspoel. Geen
 van drieën is nodig voor één magazijn binnen een bedrijfsnetwerk; alle
 drie worden ze het zodra dat verandert.
+
+De twee beheerschermen die de browserversie nog voor had, staan er nu
+ook op — zie hierboven. Wat er dan nog uit de demo ontbreekt, is
+bewust: **etiketten** (locatielabels met streepjescode afdrukken) en het
+**optimalisatiescherm** (drempeladvies, samenvoegen). Het eerste heb je
+pas nodig als een klant zijn stellingen gaat labelen; het tweede toont
+alleen wat de zelfcontrole toch al doet.
 
 Wat wél de volgende stap is: **een echte klant**. De browserversie
 verkoopt, de serverversie levert. Zodra de eerste klant draait, gaat de

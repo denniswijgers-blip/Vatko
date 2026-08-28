@@ -35,6 +35,8 @@ MENU = (
     ("/scan",      "Scanmodus", "Op de vloer", "scherm voor de scanner"),
     ("/locaties",  "Locaties",  "Magazijn",    "de vakken en stellingen"),
     ("/artikelen", "Artikelen", "Magazijn",    "de producten zelf"),
+    ("/eigen",     "Eigen gegevens", "Beheer", "bestanden inlezen"),
+    ("/instellingen", "Instellingen", "Beheer", "regels per klant"),
     ("/gebruikers", "Gebruikers", "Beheer",    "wie er mag werken"),
 )
 
@@ -765,3 +767,327 @@ def ikzelf(gebruiker, sessies: int = 0) -> str:
                      for p, naam, _g, _b in MENU])
             + "</div>"
             + knop("Uitloggen", "/uitloggen", soort="stil"))
+
+
+# ---------------------------------------------------------------------
+#  Instellingen (hoofdstuk 14, R-INST-01)
+# ---------------------------------------------------------------------
+def instellingen(rijen_in: list[tuple], klachten: dict | None = None) -> str:
+    """Alles wat per klant kan verschillen, op groep geordend.
+
+    Dit scherm is het antwoord op "ja maar bij ons gaat dat anders", en
+    de reden dat dat antwoord geen programmeerwerk is. Eén formulier voor
+    alles: wie drie dingen wil wijzigen, wil niet drie keer opslaan.
+    """
+    from .instellingen import SOORT
+
+    klachten = klachten or {}
+    groepen: list[tuple[str, list]] = []
+    for sleutel, waarde, groep, uitleg in rijen_in:
+        if not groepen or groepen[-1][0] != groep:
+            groepen.append((groep, []))
+        groepen[-1][1].append((sleutel, waarde, uitleg))
+
+    kaarten = []
+    for groep, regels in groepen:
+        rijen = []
+        for sleutel, waarde, uitleg in regels:
+            soort, laag, hoog = SOORT.get(sleutel, ("tekst", None, None))
+            klacht = klachten.get(sleutel)
+            if soort == "janee":
+                invoer = ('<select name="' + esc(sleutel) + '">'
+                          + "".join(
+                              '<option value="' + w + '"'
+                              + (" selected" if str(waarde).lower() == w else "")
+                              + ">" + n + "</option>"
+                              for w, n in (("true", "ja"), ("false", "nee")))
+                          + "</select>")
+            elif soort == "komma":
+                # Met opzet geen type="number". Een Nederlander typt
+                # 0,60, en een getalveld weigert die komma zonder uit te
+                # leggen waarom — in een browser met een Engelse taal
+                # instelling verdwijnt de toetsaanslag gewoon. De toets
+                # op de server begrijpt de komma wél (R-INST-01), en de
+                # zin die daar uitkomt is duidelijker dan een tooltip
+                # van de browser.
+                invoer = ('<input name="' + esc(sleutel) + '" value="'
+                          + esc(waarde) + '" inputmode="decimal">'
+                          '<div class="hint">tussen ' + esc(_kort(laag))
+                          + " en " + esc(_kort(hoog)) + "</div>")
+            else:
+                grens = ""
+                if laag is not None:
+                    grens = (' min="' + esc(_kort(laag)) + '" max="'
+                             + esc(_kort(hoog)) + '"')
+                invoer = ('<input type="number" step="1" name="'
+                          + esc(sleutel) + '" value="' + esc(waarde) + '"'
+                          + grens + ">")
+                if laag is not None:
+                    # Ook hier het bereik erbij. De browser houdt het
+                    # tegen, maar zonder een tooltip te openen weet
+                    # niemand waarom een 3 wél mag en een 2 niet.
+                    invoer += ('<div class="hint">tussen ' + esc(_kort(laag))
+                               + " en " + esc(_kort(hoog)) + "</div>")
+            rijen.append([
+                '<span class="mono">' + esc(sleutel) + "</span>",
+                invoer + ('<div class="fout hint">' + esc(klacht) + "</div>"
+                          if klacht else ""),
+                '<span class="hint">' + esc(uitleg) + "</span>"])
+        kaarten.append('<div class="kaart"><h2>' + esc(groep) + "</h2>"
+                       + tabel(["Sleutel", "Waarde", "Wat het doet"], rijen)
+                       + "</div>")
+
+    return ("<h1>Instellingen</h1>"
+            '<p class="lead">Alles wat per klant kan verschillen staat hier, '
+            "en niet in de code. Dát is wat \"een algemeen systeem dat je per "
+            "klant inricht\" in de praktijk betekent.</p>"
+            '<div class="uitleg"><b>Probeer dit eens.</b> Zet '
+            '<span class="mono">putaway.fill_factor</span> op 0,60 en doe '
+            "daarna dezelfde inslag opnieuw. Alle voorstellen veranderen, "
+            "zonder dat er ook maar één regel code is aangepast. Dat is het "
+            "antwoord op \"ja, maar bij ons stapelen we anders\".</div>"
+            '<form method="post" action="/instellingen">'
+            + "".join(kaarten)
+            + '<div class="knoprij"><button>Opslaan</button></div></form>'
+            '<p class="hint">Elke wijziging komt met de oude waarde en jouw '
+            "naam in het systeemlog. Een magazijn waar de vulfactor ineens op "
+            "0,4 staat en niemand weet sinds wanneer, is een magazijn waar "
+            "niemand de voorstellen meer gelooft.</p>")
+
+
+def _kort(n) -> str:
+    if n is None:
+        return ""
+    return str(int(n)) if float(n) == int(n) else str(n)
+
+
+# ---------------------------------------------------------------------
+#  Eigen gegevens (R-IMP)
+#
+#  Het scherm dat het verschil maakt tussen "kijk eens wat een mooie
+#  demo" en "kijk, dit is jouw magazijn". De volgorde is met opzet:
+#  kiezen, kolommen bevestigen, eenheid nakijken, rapport lezen, en pas
+#  daarna de knop. Raden zonder tonen is precies hoe imports stilletjes
+#  fout gaan (R-IMP-02).
+# ---------------------------------------------------------------------
+SOORTNAAM = {"locaties": "Locatiebestand", "artikelen": "Artikelbestand",
+             "voorraad": "Voorraadbestand"}
+
+SOORTUITLEG = {
+    "locaties": "Elke stellingplaats één regel. Minimaal de code; "
+                "afmetingen als je ze hebt.",
+    "artikelen": "Elk artikel één regel. Zonder maten kan het ook — die "
+                 "komen dan op de meetlijst.",
+    "voorraad": "Wat er nu waar ligt. Heb je dit niet, sla het over en "
+                "begin met een nulmeting.",
+}
+
+
+def _bestandsblok(soort: str, bestand, kolommen: dict) -> str:
+    from .inlezen import VELDEN
+
+    verplicht = soort == "locaties"
+    kop = ('<div class="impkop"><div><b>' + SOORTNAAM[soort] + "</b> "
+           + (pil("a", "nodig") if verplicht else pil("n", "mag ontbreken"))
+           + '<div class="hint">' + esc(SOORTUITLEG[soort]) + "</div></div>"
+           '<label class="impknop"><span>'
+           + ("Ander bestand" if bestand else "Kies bestand") + "</span>"
+           '<input type="file" name="' + soort + '" '
+           'accept=".csv,.txt,.xlsx,.xlsm" hidden onchange="this.form.submit()">'
+           "</label></div>")
+
+    if bestand is None:
+        return '<div class="impvak">' + kop + "</div>"
+
+    rijen = []
+    for veld in VELDEN[soort]:
+        gekozen = kolommen.get(veld.k)
+        keuze = ('<option value="">— niet aanwezig —</option>'
+                 + "".join(
+                     '<option value="' + str(i) + '"'
+                     + (" selected" if gekozen == i else "") + ">"
+                     + esc(h) + "</option>"
+                     for i, h in enumerate(bestand.kop)))
+        proef = ""
+        if gekozen is not None:
+            waarden = [r[gekozen] for r in bestand.rijen[:3]
+                       if gekozen < len(r) and r[gekozen]]
+            proef = esc(" · ".join(waarden))
+        mist = gekozen is None and veld.eis
+        rijen.append([
+            esc(veld.naam) + (' <span class="fout">*</span>' if veld.eis else "")
+            + ('<div class="fout hint">niet gevonden — kies zelf</div>'
+               if mist else ""),
+            '<select name="kolom.' + soort + "." + veld.k + '">' + keuze
+            + "</select>",
+            '<span class="mono hint">' + (proef or "—") + "</span>"])
+
+    return ('<div class="impvak geladen">' + kop
+            + '<div class="impgelezen"><span class="mono">'
+            + esc(bestand.naam) + "</span>"
+            '<span class="hint">' + getal(len(bestand.rijen)) + " regels, "
+            + getal(len(bestand.kop)) + " kolommen</span></div>"
+            + tabel(["Vakto verwacht", "Jouw kolom", "Eerste waarden"], rijen)
+            + "</div>")
+
+
+def _eenheidsblok(bestanden: dict, kolommen: dict, eenheden,
+                  voorbeelden: dict) -> str:
+    if not bestanden:
+        return ""
+
+    def kies(sleutel: str, opties) -> str:
+        nu = getattr(eenheden, sleutel)
+        return ('<select name="eenheid.' + sleutel + '">'
+                + "".join('<option value="' + w + '"'
+                          + (" selected" if nu == w else "") + ">" + n
+                          + "</option>" for w, n in opties) + "</select>")
+
+    velden = []
+    if bestanden.get("locaties"):
+        velden.append('<label class="inlijn">Locatiematen in '
+                      + kies("loc_maat", (("mm", "millimeter"),
+                                          ("cm", "centimeter"),
+                                          ("m", "meter"))) + "</label>")
+        velden.append('<label class="inlijn">Draagvermogen in '
+                      + kies("loc_gew", (("kg", "kilo"), ("g", "gram")))
+                      + "</label>")
+    if bestanden.get("artikelen"):
+        velden.append('<label class="inlijn">Artikelmaten in '
+                      + kies("art_maat", (("mm", "millimeter"),
+                                          ("cm", "centimeter"),
+                                          ("m", "meter"))) + "</label>")
+        velden.append('<label class="inlijn">Artikelgewicht in '
+                      + kies("art_gew", (("g", "gram"), ("kg", "kilo")))
+                      + "</label>")
+
+    proeven = ""
+    for soort in ("locaties", "artikelen"):
+        v = voorbeelden.get(soort)
+        if v is None:
+            continue
+        gewicht = ""
+        if v.g:
+            gewicht = (", " + (f"{v.g / 1000:.1f} kg" if v.g >= 1000
+                               else getal(v.g) + " gram"))
+        proeven += ('<div class="melding ' + ("waarschuw" if v.raar else "")
+                    + '"><span class="mono">' + esc(v.naam) + "</span> wordt "
+                    "<b>" + getal(v.l_mm) + " × " + getal(v.w_mm) + " × "
+                    + getal(v.h_mm) + " mm</b>" + gewicht + "."
+                    + ('<span class="hint"> Dat lijkt niet te kloppen voor '
+                       + ("een stellingvak" if soort == "locaties"
+                          else "een artikel")
+                       + ". Zet de eenheid om.</span>" if v.raar else "")
+                    + "</div>")
+
+    return ('<div class="kaart"><h2>In welke eenheid staat het?</h2>'
+            '<div class="filters">' + "".join(velden) + "</div>"
+            '<p class="hint">Vakto raadt dit uit de getallen zelf. Klopt het '
+            "niet, zet het hier om. Kijk vooral naar de regel hieronder: dáár "
+            "zie je meteen of het klopt.</p>" + proeven + "</div>")
+
+
+def _rapportblok(rapport, standaard) -> str:
+    def deel(d, titel: str) -> list | None:
+        if not d.rijen:
+            return None
+        problemen = "".join(
+            '<div class="impprobleem ' + esc(p.ernst) + '">'
+            + pil("r" if p.ernst == "fout" else "o", getal(p.n) + "×") + " "
+            + esc(p.tekst) + ' <span class="hint mono">'
+            + esc(", ".join(p.voorbeeld)) + (" …" if p.n > 3 else "")
+            + "</span></div>" for p in d.problemen)
+        return ['<span class="sterk">' + titel + "</span>",
+                '<span class="num">' + getal(d.rijen) + "</span>",
+                '<span class="num' + (" fout" if d.goed < d.rijen else "")
+                + '">' + getal(d.goed) + "</span>",
+                problemen or '<span class="hint">Niets bijzonders.</span>']
+
+    rijen = [r for r in (deel(rapport.locaties, "Locaties"),
+                         deel(rapport.artikelen, "Artikelen"),
+                         deel(rapport.voorraad, "Voorraad")) if r]
+
+    geen_maat = next((p for p in rapport.locaties.problemen
+                      if p.sleutel == "geenmaat"), None)
+    niet_gemeten = next((p for p in rapport.artikelen.problemen
+                         if p.sleutel == "nietgemeten"), None)
+
+    standaardvak = ""
+    if geen_maat:
+        standaardvak = (
+            '<div class="uitleg"><b>' + getal(geen_maat.n) + " locaties zonder "
+            "afmeting.</b> Dat is normaal: bijna geen enkel systeem legt dit "
+            "vast — en precies daarom kan zo'n systeem ook niet uitrekenen wat "
+            "waar past. Geef hieronder één standaardmaat op, en meet daarna "
+            "per zone één stellingvak op. Eén middag werk, en het klopt voor "
+            "duizend locaties tegelijk."
+            '<div class="filters">'
+            '<label class="inlijn">Diepte <input type="number" '
+            'name="std.l_mm" value="' + esc(standaard.l_mm) + '" min="1"> mm</label>'
+            '<label class="inlijn">Breedte <input type="number" '
+            'name="std.w_mm" value="' + esc(standaard.w_mm) + '" min="1"> mm</label>'
+            '<label class="inlijn">Hoogte <input type="number" '
+            'name="std.h_mm" value="' + esc(standaard.h_mm) + '" min="1"> mm</label>'
+            '<label class="inlijn">Max <input type="number" '
+            'name="std.max_g" value="' + esc(standaard.max_g) + '" min="1"> g</label>'
+            "</div></div>")
+
+    meetvak = ""
+    if niet_gemeten:
+        meetvak = ('<div class="uitleg"><b>' + getal(niet_gemeten.n)
+                   + " artikelen zonder complete maat.</b> Die komen op de "
+                   'lijst <a href="/meten">Opmeten</a>. Ze doen gewoon mee, '
+                   "alleen kan Vakto er nog geen plek voor uitrekenen. Meet ze "
+                   "bij de eerstvolgende ontvangst: dan heb je ze toch in je "
+                   "handen en kost het niets.</div>")
+
+    return ('<div class="kaart"><h2>Wat er in de bestanden staat</h2>'
+            + tabel(["Bestand", "Regels", "Bruikbaar", "Wat opvalt"], rijen,
+                    "Nog geen bestand gekozen.")
+            + standaardvak + meetvak + "</div>")
+
+
+def eigen(bestanden: dict, kolommen: dict, eenheden, standaard,
+          rapport=None, voorbeelden: dict | None = None,
+          al_geboekt: bool = False) -> str:
+    """R-IMP. Het hele scherm: kiezen, bevestigen, lezen, overnemen."""
+    blokken = "".join(_bestandsblok(s, bestanden.get(s), kolommen.get(s, {}))
+                      for s in ("locaties", "artikelen", "voorraad"))
+
+    overnemen = ""
+    if rapport is not None and bestanden:
+        klaar = rapport.klaar and not al_geboekt
+        waarschuwing = ""
+        if al_geboekt:
+            waarschuwing = ('<p class="fout">Er staat al een journaal: dit '
+                            "magazijn draait. Een import is een nulmeting "
+                            "(R-IMP-07) en overschrijft niets. Wil je "
+                            "opnieuw beginnen, gooi dan eerst de database "
+                            "leeg — dat is een besluit dat iemand met zijn "
+                            "handen moet nemen.</p>")
+        elif not rapport.klaar:
+            waarschuwing = ('<p class="fout">Er zijn geen bruikbare locaties. '
+                            "Zonder locaties kan er niets.</p>")
+        overnemen = (
+            '<div class="knoprij">'
+            '<button name="actie" value="overnemen"'
+            + ("" if klaar else " disabled") + ">Neem deze gegevens over"
+            "</button>"
+            '<button class="stil" name="actie" value="controleer">Opnieuw '
+            "controleren</button></div>" + waarschuwing
+            + ('<p class="hint">Hierna draait alles op deze gegevens: '
+               "dashboard, inslag, picken, scannen.</p>" if klaar else ""))
+
+    return ("<h1>Eigen gegevens</h1>"
+            '<p class="lead">Zet Vakto om naar de locaties en artikelen van '
+            "een echte klant. Niemand levert een bestand aan met de kolomnamen "
+            "die jij wilt, in de eenheid die jij wilt, zonder gaten — dus "
+            "raadt Vakto het, en laat het zien wát het geraden heeft.</p>"
+            '<form method="post" action="/eigen" enctype="multipart/form-data">'
+            + blokken
+            + _eenheidsblok(bestanden, kolommen, eenheden, voorbeelden or {})
+            + (_rapportblok(rapport, standaard) if rapport is not None else "")
+            + overnemen
+            + '<noscript><div class="knoprij"><button name="actie" '
+            'value="controleer">Bestanden inlezen</button></div></noscript>'
+            "</form>")

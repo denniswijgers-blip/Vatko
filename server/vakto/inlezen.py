@@ -24,6 +24,8 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import dataclass, field
+
+from .getallen import rond
 from io import BytesIO
 from pathlib import Path
 
@@ -205,24 +207,28 @@ def _xlsx_rijen(inhoud: bytes) -> list[list[str]]:
 
 
 def lees_bestand(pad, naam: str | None = None) -> Bestand:
-    """Leest een CSV of xlsx en geeft kopregel plus rijen terug.
+    """Leest een CSV of xlsx van schijf."""
+    pad = Path(pad)
+    return lees_inhoud(pad.read_bytes(), naam or pad.name)
+
+
+def lees_inhoud(inhoud: bytes, naam: str) -> Bestand:
+    """Hetzelfde, maar uit bytes — voor een bestand uit een webformulier.
 
     Het oude .xls kan niet: dat is een heel ander formaat en het is in
     Excel met twee klikken op te lossen. Beter een duidelijke zin dan een
     half werkend bestand.
     """
-    pad = Path(pad)
-    naam = naam or pad.name
-    laag = naam.lower()
+    laag = (naam or "").lower()
 
     if laag.endswith(".xls"):
         raise Leesfout(
             "Het oude .xls-formaat kan ik niet lezen. Open het in Excel en "
             "sla het op als .xlsx of .csv.")
     if laag.endswith((".xlsx", ".xlsm")):
-        rijen = _xlsx_rijen(pad.read_bytes())
+        rijen = _xlsx_rijen(inhoud)
     else:
-        rijen = _csv_rijen(pad.read_text(encoding="utf-8-sig", errors="replace"))
+        rijen = _csv_rijen(inhoud.decode("utf-8-sig", errors="replace"))
 
     if len(rijen) < 2:
         raise Leesfout("Dit bestand heeft geen gegevensregels onder de kopregel.")
@@ -443,6 +449,50 @@ def raad_eenheden(locaties: Bestand | None, kolom_loc: dict[str, int] | None,
 # ---------------------------------------------------------------------
 #  R-IMP-05  Controleren — het rapport is belangrijker dan de import
 # ---------------------------------------------------------------------
+@dataclass(frozen=True)
+class Voorbeeldmaat:
+    """Eén regel uit het bestand, omgerekend naar mm en gram.
+
+    Waarom dit bestaat: een keuzelijst met "millimeter / centimeter /
+    meter" laat iedereen twijfelen, maar "01-01-1 wordt 300 × 400 × 220
+    mm" laat een magazijnman in één blik zien of de eenheid klopt. En
+    `raar` zegt of het onzin is — een stellingvak van 40 mm diep bestaat
+    niet, en een artikel van 3 meter lang meestal ook niet.
+    """
+    naam: str
+    l_mm: int
+    w_mm: int
+    h_mm: int
+    g: int
+    raar: bool
+
+
+def voorbeeldmaat(bestand, kolommen: dict[str, int], soort: str,
+                  eenheden) -> Voorbeeldmaat | None:
+    """De eerste regel met drie maten, omgerekend. None als die er niet is."""
+    if bestand is None or not kolommen:
+        return None
+    f_maat = NAAR_MM[eenheden.loc_maat if soort == "locaties"
+                     else eenheden.art_maat]
+    f_gew = NAAR_G[eenheden.loc_gew if soort == "locaties"
+                   else eenheden.art_gew]
+    gewichtsveld = "maxG" if soort == "locaties" else "G"
+    naamveld = "code" if soort == "locaties" else "sku"
+
+    for rij in bestand.rijen:
+        maten = [getal(_cel(rij, kolommen.get(k))) for k in ("L", "W", "H")]
+        if not all(m and m > 0 for m in maten):
+            continue
+        l, w, h = (int(rond(m * f_maat)) for m in maten)
+        g = getal(_cel(rij, kolommen.get(gewichtsveld))) or 0
+        # Dezelfde grenzen als de browserversie: onder 15 cm of boven 6 m
+        # is geen stellingvak, en boven 2 m is geen artikel.
+        raar = (l < 150 or l > 6000) if soort == "locaties" else l > 2000
+        return Voorbeeldmaat(_cel(rij, kolommen.get(naamveld)) or "?",
+                             l, w, h, int(rond(g * f_gew)), raar)
+    return None
+
+
 @dataclass
 class Probleem:
     sleutel: str

@@ -83,7 +83,7 @@ fi
 kop "4. Schema en configuratie"
 for bestand in db/schema.sql db/seed_config.sql db/boeken.sql db/meten.sql \
                 db/uitgaand.sql db/zelfcontrole.sql db/import.sql \
-                db/gebruikers.sql; do
+                db/gebruikers.sql db/beheer.sql; do
   [ -f "$bestand" ] || stop "Bestand $bestand ontbreekt. Zit je wel in de juiste map?"
   if P -d "$DB" -v ON_ERROR_STOP=1 -q -f "$bestand" >/tmp/vakto_sql.log 2>&1; then
     ok "$bestand geladen"
@@ -114,7 +114,8 @@ kop "6. Tests tegen de database"
 : > /tmp/vakto_db.log
 for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql \
          tests-sql/test_uitgaand.sql tests-sql/test_zelfcontrole.sql \
-         tests-sql/test_import.sql tests-sql/test_gebruikers.sql; do
+         tests-sql/test_import.sql tests-sql/test_gebruikers.sql \
+         tests-sql/test_beheer.sql; do
   if P -d "$DB" -v ON_ERROR_STOP=1 -f "$t" >>/tmp/vakto_db.log 2>&1; then
     :
   else
@@ -122,7 +123,7 @@ for t in tests-sql/test_boeken.sql tests-sql/test_meten.sql \
   fi
 done
 GOED=$(grep -c 'OK ' /tmp/vakto_db.log)
-ok "$GOED controles geslaagd (boeken, meten, uitgaand, zelfcontrole, import, toegang, views)"
+ok "$GOED controles geslaagd (boeken, meten, uitgaand, zelfcontrole, import, toegang, beheer, views)"
 
 kop "7. Twee mensen tegelijk"
 if PSQL="$PSQL -U $GEBRUIKER" PGDATABASE="$DB" bash tests-sql/test_gelijktijdig.sh >/tmp/vakto_glt.log 2>&1; then
@@ -191,6 +192,10 @@ cat <<KLAAR
       als de browserversie
     - inloggen met wachtwoord of badge, drie rollen, en rechten die
       bij elke aanvraag op de server getoetst worden
+    - een importscherm waar je de bestanden van een klant inleest,
+      nakijkt en pas daarna overneemt
+    - een instellingenscherm: alles wat per klant verschilt, zonder
+      dat er een regel code aan te pas komt
     - een back-up die zichzelf terugzet om te bewijzen dat het kan
 
   Rondkijken in de database:

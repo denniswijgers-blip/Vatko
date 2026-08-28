@@ -56,9 +56,35 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 | 8 | Schermen en scanmodus | ✅ |
 | 9 | Inloggen, rollen, back-up, server | ✅ |
 
-Alles groen: **370 Python-tests** en **234 SQL-controles**, plus twee tests met
+Alles groen: **407 Python-tests** en **244 SQL-controles**, plus twee tests met
 twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren),
 en een back-up die zichzelf terugzet om te bewijzen dat het kan.
+
+**Na stap 9: de twee beheerschermen.** De serverversie had tien schermen, de
+browserversie dertien. Twee van dat verschil zijn nu weg, en het waren de twee die er
+voor de verkoop toe doen:
+
+* **Eigen gegevens** (R-IMP) — het importscherm. Je kiest de drie bestanden van een
+  klant en het scherm laat zien wát het geraden heeft: welke kolom op welk veld ligt
+  (met de eerste drie waarden ernaast, en een keuzelijst om het te corrigeren), en in
+  welke eenheid de klant werkt — met één concreet voorbeeld eronder: *"01-01-1 wordt
+  300 × 400 × 220 mm"*. Zet de eenheid verkeerd en er staat *"30 × 40 × 22 mm — dat
+  lijkt niet te kloppen voor een stellingvak"*. Pas op *Neem deze gegevens over* raakt
+  de database iets.
+* **Instellingen** (hoofdstuk 14) — alles wat per klant verschilt, met een toets erop.
+  Nieuwe regel **R-INST-01**: rang 3, alleen bestaande sleutels, elke wijziging met de
+  oude waarde en de naam van wie het deed in `event_log`, en de waarde wordt getoetst
+  vóórdat hij erin gaat. Een vulfactor van 3 valt niet meteen om — die geeft
+  maandenlang stilletjes onzin, en dat is erger.
+
+Twee dingen die het bouwen aan het licht bracht: een `type="number"` weigert de komma
+die een Nederlander typt (dus zijn kommagetallen nu een tekstveld met `inputmode`), en
+het formulier meldde "2 instellingen opgeslagen" terwijl er één was aangepast — `0.20`
+werd `0.2` en dat telde als wijziging. Allebei rechtgezet, met een test eronder.
+
+Wat er nu nog uit de demo ontbreekt is bewust: **etiketten** (locatielabels met
+streepjescode) en het **optimalisatiescherm**. Het eerste heb je pas nodig als een klant
+zijn stellingen gaat labelen; het tweede toont alleen wat de zelfcontrole toch al doet.
 
 **Wat stap 9 opleverde.** Er zit een inlog omheen. Drie rollen met een rang —
 magazijnmedewerker, teamleider, beheerder — precies zoals de browserversie ze al kende.
@@ -278,7 +304,7 @@ codebases onderhouden naast een baan gaat niet.
 
 ## Links
 
-- Specificatie (v1.8): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.9): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133
