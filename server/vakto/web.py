@@ -491,6 +491,23 @@ def _get(verbinding, sessie: Sessie, pad: str, vraag: dict,
     if pad == "/eigen":
         return blad("Eigen gegevens", _importscherm(verbinding, sessie))
 
+    if pad == "/etiketten":
+        inst = opslag.laad_instellingen(verbinding)
+        per_blad = int(inst.getal("ui.rows_per_page"))
+        vanaf = max(0, _nummer(vraag, "vanaf"))
+        return blad("Etiketten", schermen.etiketten(
+            opslag.etikettenlijst(verbinding, per_blad, vanaf), vanaf,
+            opslag.etikettenaantal(verbinding), per_blad))
+
+    if pad == "/optimalisatie":
+        mag = opslag.laad_magazijn(verbinding)
+        inst = opslag.laad_instellingen(verbinding)
+        adviezen, plekken, snel = opslag.laad_adviezen(verbinding, mag, inst)
+        return blad("Optimalisatie", schermen.optimalisatie(
+            opslag.laad_taken(verbinding), adviezen, plekken, snel,
+            {a.id: a for a in mag.artikelen},
+            {l.id: l for l in mag.locaties}, inst))
+
     if pad == "/ik":
         return blad("Wie ben ik", schermen.ikzelf(gebruiker),
                     aan=gebruikers.startpad(gebruiker.rol),
@@ -554,6 +571,8 @@ def _post(verbinding, sessie: Sessie, pad: str, form: dict,
             return _instellingen(verbinding, form, gebruiker)
         if pad == "/eigen":
             return _importactie(verbinding, sessie, form, gebruiker)
+        if pad == "/optimalisatie":
+            return _adviesactie(verbinding, form, gebruiker)
     except Boekfout as e:
         # De database weigerde. Dat is geen storing maar een antwoord:
         # laat de tekst zien die eruit kwam, want die is voor een mens
@@ -787,6 +806,52 @@ def _importactie(verbinding, sessie: Sessie, form: dict, gebruiker) -> Reactie:
     sessie.imp = None
     samen = ", ".join(f"{k} {w}" for k, w in uit.items())
     return omleiding("/", "Overgenomen: " + samen + ".")
+
+
+# ---------------------------------------------------------------------
+#  De twee adviezen (R-OPT-05 en R-OPT-06)
+#
+#  Dit zijn de enige twee knoppen in het hele systeem waar een mens iets
+#  beslist wat het systeem niet zelf doet. Hoeveel je op de vloer wilt
+#  hebben en welk vak je daarvoor vrijmaakt zijn besluiten over ruimte en
+#  werkkapitaal — die horen niet vanzelf te gaan.
+# ---------------------------------------------------------------------
+def _adviesactie(verbinding, form: dict, gebruiker) -> Reactie:
+    actie = _een(form, "actie")
+    pid = _nummer(form, "product")
+    naam = gebruiker.naam if gebruiker else None
+    mag = opslag.laad_magazijn(verbinding)
+    artikel = mag.artikel(pid)
+    if artikel is None:
+        return omleiding("/optimalisatie", "Dat artikel bestaat niet.", "fout")
+
+    if actie == "drempel":
+        opslag.zet_drempel(verbinding, pid, _nummer(form, "min"),
+                           _nummer(form, "max"), gebruiker=naam)
+        verbinding.commit()
+        return omleiding("/optimalisatie", f"De drempel van {artikel.sku} "
+                         f"staat nu op {_nummer(form, 'min')}.")
+
+    if actie == "negeer":
+        opslag.zet_drempel(verbinding, pid, akkoord=True, gebruiker=naam)
+        verbinding.commit()
+        return omleiding("/optimalisatie", f"{artikel.sku}: advies genegeerd, "
+                         "dit artikel wordt niet meer voorgesteld.")
+
+    if actie == "pickplek":
+        _, plekken, _ = opslag.laad_adviezen(verbinding, mag)
+        voorstel = next((v for v in plekken if v.product_id == pid), None)
+        if voorstel is None:
+            return omleiding("/optimalisatie", "Dit voorstel geldt niet meer; "
+                             "de voorraad is inmiddels veranderd.", "waarschuw")
+        opslag.maak_pickplektaak(verbinding, voorstel, artikel.sku, naam)
+        verbinding.commit()
+        naar = mag.locatie(voorstel.naar)
+        code = naar.code if naar else str(voorstel.naar)
+        return omleiding("/optimalisatie", f"Taak klaargezet: {voorstel.qty} "
+                         f"st naar {code}.")
+
+    return omleiding("/optimalisatie", "Onbekende handeling.", "fout")
 
 
 def _gebruikersactie(verbinding, form: dict, ikzelf) -> Reactie:

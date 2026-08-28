@@ -59,6 +59,8 @@ RECHTEN: dict[str, int] = {
     "/meten":      1,
     "/locaties":   1,
     "/artikelen":  1,
+    "/optimalisatie": 2,
+    "/etiketten":  2,
     "/eigen":      3,
     "/instellingen": 3,
     "/gebruikers": 3,

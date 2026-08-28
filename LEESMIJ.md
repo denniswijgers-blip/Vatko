@@ -39,7 +39,8 @@ Vakto/
 │
 ├── server/         het product — Python + PostgreSQL
 │   ├── vakto/      de rekenkern (passen, meten, uitgaand, optimaliseren,
-│   │               inlezen, scannen, gebruikers) plus schermen en webserver
+│   │               inlezen, scannen, gebruikers, etiketten) plus de
+│   │               schermen en de webserver
 │   ├── db/         het schema, alles wat de database zelf doet, en backup.sh
 │   ├── tests/      Python-tests, de meeste draaien zonder database
 │   ├── tests-sql/  tests die een echte PostgreSQL nodig hebben
@@ -113,4 +114,4 @@ is akkoord".
 
 De serverversie is af: alle negen stappen uit hoofdstuk 16 van de specificatie. Schema,
 rekenkern, boeken, meten, uitgaand, zelfcontrole, import, schermen, scanmodus, inloggen
-en back-up — met 407 Python-tests en 244 SQL-controles eronder.
+en back-up — met 434 Python-tests en 244 SQL-controles eronder.

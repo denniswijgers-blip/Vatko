@@ -172,10 +172,10 @@ html{scroll-behavior:smooth}
   van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
   systemen die langzaam uit elkaar lopen.</p>
   <div class="stempel">
-    <span><b>Versie</b> 1.9</span>
+    <span><b>Versie</b> 1.10</span>
     <span><b>Bron</b> browserversie, augustus 2026</span>
     <span><b>Doel</b> Python + PostgreSQL</span>
-    <span><b>Regels</b> 65</span>
+    <span><b>Regels</b> 66</span>
     <span><b>Testgevallen</b> 30</span>
   </div>
 </header>
@@ -1036,6 +1036,26 @@ VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
     <p>Op elk moment, in elke stap. Wisselen van gebruiker gaat op de vloer om de tien
     minuten en mag nooit betekenen dat je eerst uit een scherm moet klikken. De boeking
     krijgt de naam van wie er op dat moment ingelogd is.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-08</span>
+    <span class="rtitel">Locatie-etiketten</span></div>
+    <p>Een magazijn zonder labels op de stelling is een magazijn waar de scanmodus niet
+    werkt. Vakto drukt ze zelf af, in <b>Code&nbsp;39</b> &mdash; die leest elke handscanner
+    zonder dat je er iets voor hoeft in te stellen, en dat is bij een klant met onbekende
+    apparatuur meer waard dan de dichtheid van een modernere code.</p>
+<pre>tekenset   0-9  A-Z  spatie  -  .        alles daarbuiten wordt een -
+omhulling  een * aan het begin en aan het eind
+verhouding smal : breed = 1 : 3
+rustzone   10 eenheden wit aan weerskanten
+scheiding  1 eenheid tussen twee tekens</pre>
+    <p>Twee dingen die niet mogen verschuiven. De <b>verhouding</b>: wordt de code ergens
+    uitgerekt of samengedrukt, dan piept de scanner en denkt de klant dat het systeem niet
+    werkt &mdash; daarom een SVG met vaste verhoudingen en geen reeks blokjes. En de
+    <b>rustzone</b>: zonder wit eromheen vindt een scanner het begin niet, en dan lijkt het
+    etiket leeg.</p>
+    <p>Op het etiket staat naast de code ook de <b>maatklasse en de binnenmaat</b>. Wie een
+    label plakt ziet dan meteen of hij bij het goede vak staat, en een verkeerd geplakt
+    etiket is de duurste fout van de hele invoering.</p></div>
 </section>
 
 <!-- ============================================================ -->
@@ -1507,6 +1527,13 @@ kolom       "scrypt$n$r$p$&lt;zout&gt;$&lt;hash&gt;", zodat de parameters meever
 </main>
 
 <footer class="voet">
+  <strong>Versie 1.10</strong> &mdash; de laatste twee schermen die alleen de browserversie
+  nog had: <b>optimalisatie</b> (R-OPT) en <b>etiketten</b>. Daarbij hoort &eacute;&eacute;n
+  nieuwe regel, <b>R-SCAN-08</b>: locatielabels in Code&nbsp;39, met de verhouding 1 : 3 en
+  een rustzone van tien eenheden. Die twee mogen niet verschuiven &mdash; wordt de code
+  uitgerekt of ontbreekt het wit eromheen, dan piept de scanner en denkt de klant dat het
+  systeem niet werkt. De codering is streep voor streep vergeleken met de browserversie.
+  Daarmee kan de serverversie alles wat de browserversie kan.<br><br>
   <strong>Versie 1.9</strong> &mdash; de twee beheerschermen die alleen de browserversie
   nog had, staan nu ook op de server: <b>eigen gegevens</b> (R-IMP, het importscherm) en
   <b>instellingen</b> (hoofdstuk 14). Daarbij hoort &eacute;&eacute;n nieuwe regel,

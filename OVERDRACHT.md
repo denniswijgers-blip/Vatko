@@ -56,9 +56,27 @@ Hij is het bewijsstuk waar de serverversie tegenaan getest wordt.
 | 8 | Schermen en scanmodus | ✅ |
 | 9 | Inloggen, rollen, back-up, server | ✅ |
 
-Alles groen: **407 Python-tests** en **244 SQL-controles**, plus twee tests met
+Alles groen: **434 Python-tests** en **244 SQL-controles**, plus twee tests met
 twee sessies tegelijk (de laatste vijf stuks picken, en de laatste tien reserveren),
 en een back-up die zichzelf terugzet om te bewijzen dat het kan.
+
+**De serverversie kan nu alles wat de browserversie kan.** De laatste twee schermen zijn
+erbij gekomen:
+
+* **Optimalisatie** (R-OPT) — wat het systeem zelf gevonden heeft, plus de twee plekken
+  waar het een oordeel van een mens voor nodig heeft. Een **aanvuldrempel** die niet meer
+  klopt is een advies en geen taak (R-OPT-05): *Overnemen* of *Laten*, want hoeveel je op
+  de vloer wilt hebben is een besluit over werkkapitaal. En een **hardloper zonder
+  picklocatie** (R-OPT-06): Vakto rekent uit welk vak past, maar wélk vak je vrijmaakt
+  blijft een keuze — op *Vak inrichten* komt er een taak en verder niets.
+* **Etiketten** (nieuwe regel **R-SCAN-08**) — locatielabels met een Code 39-streepjescode,
+  klaar om af te drukken. Die code leest elke handscanner zonder instellen. De codering
+  staat in `vakto/etiketten.py` en is streep voor streep vergeleken met de browserversie:
+  dezelfde breedte en dezelfde posities voor vijf verschillende codes. Een etiket dat er
+  goed uitziet en niet scant, merk je pas als er duizend geplakt zijn.
+
+Wat er nog alleen in de demo zit, zit daar met opzet: de rondleiding en de dagsimulatie
+zijn verkoopgereedschap, geen product.
 
 **Na stap 9: de twee beheerschermen.** De serverversie had tien schermen, de
 browserversie dertien. Twee van dat verschil zijn nu weg, en het waren de twee die er
@@ -304,7 +322,7 @@ codebases onderhouden naast een baan gaat niet.
 
 ## Links
 
-- Specificatie (v1.9): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
+- Specificatie (v1.10): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
 - Herindelingsvoorstel: https://claude.ai/code/artifact/767b2b1c-f103-4a4b-9ee3-31d220c7e133

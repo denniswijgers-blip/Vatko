@@ -139,7 +139,7 @@ Je hoort dit te zien:
 
 ```
 ..............................
-Ran 407 tests in 26s
+Ran 434 tests in 28s
 
 OK
 ```
@@ -197,6 +197,8 @@ vakto/
                     wie er ingelogd is weet gebruikers.sql.
   instellingen.py   Alles wat per klant verschilt, met de toets erbij die
                     een onmogelijke waarde tegenhoudt (R-BASIS-04, R-INST-01).
+  etiketten.py      Code 39 voor de locatielabels (R-SCAN-08). Streep voor
+                    streep gelijk aan de browserversie.
   werkdag.py        Een hele werkdag naspelen, van 07:00 tot 17:00 (T-18).
   schermen.py       HTML tekenen. Kent geen database en geen webserver.
   web.py            De webserver: haalt op, boekt, en plakt het aan elkaar.
@@ -686,6 +688,66 @@ aanvraag op de server getoetst — een GET net zo goed als een POST.
 
 ---
 
+## En de laatste twee: optimalisatie en etiketten
+
+Daarmee kan de serverversie alles wat de browserversie kan.
+
+### Optimalisatie (R-OPT)
+
+Wat het systeem zelf gevonden heeft, op één scherm: locaties die vrij te
+spelen zijn, waarom er wordt aangevuld, welke artikelen hard gaan, en het
+telplan. Vier tegels bovenaan, en niemand vult hier iets in.
+
+Behalve op twee plekken, en dat is precies het punt:
+
+* **Aanvuldrempels die niet meer kloppen (R-OPT-05).** Vakto vergelijkt de
+  drempel met het werkelijke verbruik uit het journaal. Dat is een
+  *advies*, geen taak: hoeveel je op de vloer wilt hebben is een besluit
+  over werkkapitaal en ruimte. Twee knoppen — *Overnemen* zet de nieuwe
+  drempel, *Laten* haalt het artikel van de lijst. Een nieuwe drempel
+  overnemen zet dat "laten" weer uit, want vanaf dan mag het systeem er
+  opnieuw iets van vinden.
+* **Hardlopers zonder picklocatie (R-OPT-06).** Een artikel dat elke dag
+  twaalf keer gepakt wordt en alleen in de palletstelling ligt, laat je
+  picker elke keer een eind lopen. Vakto rekent uit welk vak past;
+  wélk vak je ervoor vrijmaakt blijft een keuze. Op *Vak inrichten* komt
+  er een taak, en verder niets — er moet iemand met een pallettruck
+  naartoe.
+
+### Etiketten (R-SCAN-08)
+
+Zonder labels op de stelling werkt de scanmodus niet. Code 39, want die
+leest elke handscanner zonder dat je er iets voor hoeft in te stellen —
+bij een klant met onbekende apparatuur is dat meer waard dan de dichtheid
+van een modernere code.
+
+Twee dingen die niet mogen verschuiven, en die daarom in de specificatie
+staan:
+
+1. **De verhouding smal : breed is 1 : 3.** Wordt de code ergens uitgerekt
+   of samengedrukt, dan piept de scanner en denkt de klant dat het
+   systeem niet werkt. Daarom een SVG met vaste verhoudingen, geen reeks
+   blokjes.
+2. **Tien eenheden wit aan weerskanten.** Zonder rustzone vindt een
+   scanner het begin niet, en dan lijkt het etiket leeg.
+
+De codering staat in `vakto/etiketten.py` en is **streep voor streep
+vergeleken** met `code39()` uit de browserversie: dezelfde breedte,
+dezelfde posities, voor vijf verschillende codes. Dat is geen
+overdreven zorgvuldigheid — een etiket dat er goed uitziet en niet scant,
+merk je pas als er duizend geplakt zijn.
+
+Naast de code staat de maatklasse en de binnenmaat op het label. Wie
+plakt ziet dan meteen of hij bij het goede vak staat, en een verkeerd
+geplakt etiket is de duurste fout van de hele invoering.
+
+```
+Print de pagina met Ctrl + P (Cmd + P op een Mac). Menu, uitleg en
+bladerknoppen vallen dan vanzelf weg.
+```
+
+---
+
 ## Hierna
 
 De negen stappen uit hoofdstuk 16 zijn af. Wat er nog niet in zit staat
@@ -694,12 +756,9 @@ authenticatie, wachtwoordherstel per e-mail en een verbindingspoel. Geen
 van drieën is nodig voor één magazijn binnen een bedrijfsnetwerk; alle
 drie worden ze het zodra dat verandert.
 
-De twee beheerschermen die de browserversie nog voor had, staan er nu
-ook op — zie hierboven. Wat er dan nog uit de demo ontbreekt, is
-bewust: **etiketten** (locatielabels met streepjescode afdrukken) en het
-**optimalisatiescherm** (drempeladvies, samenvoegen). Het eerste heb je
-pas nodig als een klant zijn stellingen gaat labelen; het tweede toont
-alleen wat de zelfcontrole toch al doet.
+**De serverversie kan nu alles wat de browserversie kan.** Wat er nog
+alleen in de demo zit, zit daar met opzet: de rondleiding en de
+dagsimulatie zijn verkoopgereedschap, geen product.
 
 Wat wél de volgende stap is: **een echte klant**. De browserversie
 verkoopt, de serverversie levert. Zodra de eerste klant draait, gaat de

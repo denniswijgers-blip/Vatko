@@ -28,6 +28,7 @@ from html import escape
 MENU = (
     ("/",          "Dashboard", "Overzicht",   "wat vraagt aandacht"),
     ("/taken",     "Taken",     "Overzicht",   "werk dat klaarstaat"),
+    ("/optimalisatie", "Optimalisatie", "Overzicht", "wat beter kan"),
     ("/inslag",    "Inslag",    "Inkomend",    "waar leg ik dit neer"),
     ("/meten",     "Opmeten",   "Inkomend",    "maten bijhouden"),
     ("/orders",    "Orders",    "Uitgaand",    "wat er uit moet"),
@@ -36,6 +37,7 @@ MENU = (
     ("/locaties",  "Locaties",  "Magazijn",    "de vakken en stellingen"),
     ("/artikelen", "Artikelen", "Magazijn",    "de producten zelf"),
     ("/eigen",     "Eigen gegevens", "Beheer", "bestanden inlezen"),
+    ("/etiketten", "Etiketten",  "Beheer",    "labels voor de stelling"),
     ("/instellingen", "Instellingen", "Beheer", "regels per klant"),
     ("/gebruikers", "Gebruikers", "Beheer",    "wie er mag werken"),
 )
@@ -526,7 +528,7 @@ def meetlijst(rijen_in: list[tuple]) -> str:
         rijen.append([
             '<span class="mono">' + esc(sku) + "</span>", esc(oms),
             pil(kleur, tekst), datum(gemeten_op),
-            '<form method="post" action="/meten" class="meetrij">'
+            '<form method="post" action="/meten" class="celrij">'
             '<input type="hidden" name="product" value="' + esc(pid) + '">'
             '<input type="number" name="l" placeholder="L" min="1" required>'
             '<input type="number" name="w" placeholder="B" min="1" required>'
@@ -716,7 +718,7 @@ def gebruikers(rijen_in: list[tuple], ikzelf: int | None = None) -> str:
             (pil("g", "actief") if actief else pil("r", "uit dienst")),
             (pil("g", str(sessies)) if sessies else
              '<span class="hint">—</span>'),
-            ('<form method="post" action="/gebruikers" class="meetrij">'
+            ('<form method="post" action="/gebruikers" class="celrij">'
              '<input type="hidden" name="actie" value="rol">'
              '<input type="hidden" name="id" value="' + esc(uid) + '">'
              '<select name="rol">' + rolkeuze + "</select>"
@@ -1091,3 +1093,278 @@ def eigen(bestanden: dict, kolommen: dict, eenheden, standaard,
             + '<noscript><div class="knoprij"><button name="actie" '
             'value="controleer">Bestanden inlezen</button></div></noscript>'
             "</form>")
+
+
+# ---------------------------------------------------------------------
+#  Etiketten (R-SCAN-08)
+# ---------------------------------------------------------------------
+def etiketten(rijen_in: list[tuple], vanaf: int = 0, totaal: int = 0,
+              per_blad: int = 60) -> str:
+    """Locatielabels om af te drukken. De code komt uit etiketten.py."""
+    from .etiketten import svg
+
+    vellen = "".join(
+        '<div class="etiket">'
+        '<div class="etiketcode mono">' + esc(code) + "</div>" + svg(code)
+        + '<div class="etiketmaat">' + esc(zone) + " · " + esc(maat) + " · "
+        + getal(l) + "×" + getal(w) + "×" + getal(h) + " mm · max "
+        + getal(round(max_g / 1000)) + " kg</div></div>"
+        for code, maat, l, w, h, max_g, zone in rijen_in)
+
+    tot = min(vanaf + len(rijen_in), totaal)
+    bladeren = ""
+    knoppen = []
+    if vanaf > 0:
+        knoppen.append('<a class="knop stil" href="/etiketten?vanaf='
+                       + str(max(0, vanaf - per_blad)) + '">Vorige</a>')
+    if tot < totaal:
+        knoppen.append('<a class="knop" href="/etiketten?vanaf='
+                       + str(vanaf + per_blad) + '">Volgende ' 
+                       + str(min(per_blad, totaal - tot)) + "</a>")
+    if knoppen:
+        bladeren = ('<div class="pagbalk nietprinten">'
+                    '<span class="hint">' + getal(vanaf + 1) + "–" + getal(tot)
+                    + " van " + getal(totaal) + " locaties</span>"
+                    '<div class="pagknoppen">' + "".join(knoppen) + "</div></div>")
+
+    return ("<h1>Locatie-etiketten</h1>"
+            '<p class="lead">Print deze bladzijde (Ctrl&#8239;+&#8239;P, of '
+            "Cmd&#8239;+&#8239;P op een Mac) op etiketvellen of gewoon op "
+            "papier. De streepjescode is Code&nbsp;39: die leest elke "
+            "handscanner zonder dat je iets hoeft in te stellen. Plak ze op "
+            "de stelling, links van het vak, altijd op dezelfde hoogte — "
+            "anders zoekt iedereen zich suf.</p>"
+            + bladeren
+            + '<div class="etiketvel">' + (vellen or
+              '<p class="leeg">Geen locaties om te labelen.</p>') + "</div>"
+            + bladeren
+            + '<p class="hint nietprinten">Op elk etiket staat naast de code '
+            "ook de maatklasse en de binnenmaat. Wie een label plakt ziet dan "
+            "meteen of hij bij het goede vak staat, en een verkeerd geplakt "
+            "etiket is de duurste fout van de hele invoering.</p>")
+
+
+# ---------------------------------------------------------------------
+#  Optimalisatie (R-OPT)
+# ---------------------------------------------------------------------
+def optimalisatie(taken: list, adviezen: list, pickplekken: list,
+                  snel: dict, artikelen: dict, locaties: dict,
+                  inst) -> str:
+    """Vier dingen waar een magazijn geld op verliest zonder het te merken.
+
+    Alles op dit scherm rekent de kern zelf uit; het enige wat een mens
+    hier doet is de twee dingen beslissen die geen systeem voor je kán
+    beslissen — hoeveel je op de vloer wilt hebben (R-OPT-05) en welk vak
+    je daarvoor vrijmaakt (R-OPT-06).
+    """
+    dekking = _kort(inst.getal("opt.dekking_dagen"))
+    venster = _kort(inst.getal("opt.venster_dagen"))
+    plafond = _kort(inst.getal("opt.max_open_teltaken"))
+    drempel_pct = _kort(inst.getal("opt.drempel_afwijking_pct"))
+
+    open_taken = [t for t in taken if t.status == "TODO"]
+    samen = [t for t in open_taken if t.soort == "SAMENVOEG"]
+    tel = [t for t in open_taken if t.soort == "CYCLE_COUNT"
+           and t.aanleiding == "telinterval"]
+    tel_manco = [t for t in open_taken if t.soort == "CYCLE_COUNT"
+                 and t.aanleiding != "telinterval"]
+    aanvul = [t for t in open_taken if t.soort == "REPLENISH"]
+    per_aanleiding = {"ordervraag": [], "hardloper": [], "drempel": []}
+    for t in aanvul:
+        per_aanleiding.setdefault(t.aanleiding or "drempel", []).append(t)
+    vrij = len({t.van for t in samen})
+
+    def sku(pid) -> str:
+        a = artikelen.get(pid)
+        return a.sku if a else "?"
+
+    def oms(pid) -> str:
+        a = artikelen.get(pid)
+        return a.oms if a else ""
+
+    def code(lid) -> str:
+        loc = locaties.get(lid)
+        return loc.code if loc else "?"
+
+    tegels = "".join(
+        '<a class="kaart tegel" href="' + pad + '">'
+        '<span class="label">' + esc(naam) + "</span>"
+        '<span class="cijfer' + (" slecht" if slecht else "") + '">'
+        + getal(waarde) + "</span>"
+        '<span class="hint">' + bij + "</span></a>"
+        for naam, waarde, bij, slecht, pad in (
+            ("Locaties vrij te spelen", vrij,
+             "door voorraad samen te voegen", False, "/taken"),
+            ("Aanvullen voor orders", len(per_aanleiding["ordervraag"]),
+             "er wacht werk op", bool(per_aanleiding["ordervraag"]), "/taken"),
+            ("Hardlopers bijvullen", len(per_aanleiding["hardloper"]),
+             "onder " + dekking + " dagen dekking", False, "/taken"),
+            ("Te tellen locaties", len(tel),
+             "over hun telinterval"
+             + (" · +" + getal(len(tel_manco)) + " na manco"
+                if tel_manco else ""), False, "/taken")))
+
+    # -- samenvoegen --------------------------------------------------
+    samenrijen = [
+        ['<span class="mono sterk">' + esc(sku(t.product_id)) + "</span>"
+         '<div class="hint">' + esc(oms(t.product_id)) + "</div>",
+         '<span class="mono">' + esc(code(t.van)) + "</span>",
+         '<span class="mono">' + esc(code(t.naar)) + "</span>",
+         '<span class="num sterk">' + getal(t.qty) + "</span>",
+         '<span class="hint">' + esc(code(t.van)) + " komt vrij</span>"]
+        for t in samen[:12]]
+
+    samenkaart = ('<div class="kaart"><h2>Voorraad samenvoegen</h2>'
+                  '<p class="hint">Hetzelfde artikel op meerdere plekken kost '
+                  "je locaties — en locaties zijn het duurste wat een magazijn "
+                  "heeft. Vakto zoekt de gevallen waar <b>alles</b> op één plek "
+                  "past, houdt de picklocatie altijd in stand, en blijft af van "
+                  "voorraad die al voor een order gereserveerd is.</p>"
+                  + tabel(["Artikel", "Van", "Naar", "Aantal",
+                           "Wat het oplevert"], samenrijen,
+                          "Niets samen te voegen. Elk artikel ligt op één "
+                          "plek, of het past niet op één plek.")
+                  + ('<p class="hint">Nog ' + getal(len(samen) - 12)
+                     + " meer in de takenlijst.</p>" if len(samen) > 12 else "")
+                  + "</div>")
+
+    # -- hardlopers ---------------------------------------------------
+    hard = sorted(((pid, per_dag) for pid, per_dag in snel.items()
+                   if per_dag >= inst.getal("opt.hardloper_per_dag")),
+                  key=lambda x: -x[1])[:10]
+    hardrijen = [
+        ['<span class="mono sterk">' + esc(sku(pid)) + "</span>",
+         '<span class="hint">' + esc(oms(pid)) + "</span>",
+         '<span class="num sterk">' + f"{per_dag:.1f}" + "</span>"]
+        for pid, per_dag in hard]
+
+    # -- aanleidingen -------------------------------------------------
+    aanleidingen = tabel(
+        ["Aanleiding", "Wat het betekent", "Prio", "Open"],
+        [[pil("r", "ordervraag"),
+          '<span class="hint">Er staan orders open die meer vragen dan er op '
+          "de picklocatie ligt.</span>", '<span class="num">10</span>',
+          '<span class="num sterk">'
+          + getal(len(per_aanleiding["ordervraag"])) + "</span>"],
+         [pil("o", "hardloper"),
+          '<span class="hint">Verbruik zegt dat het vak binnen ' + dekking
+          + " dagen leeg is.</span>", '<span class="num">20</span>',
+          '<span class="num sterk">'
+          + getal(len(per_aanleiding["hardloper"])) + "</span>"],
+         [pil("n", "drempel"),
+          '<span class="hint">Klassiek: onder de ingestelde minimum'
+          "voorraad.</span>", '<span class="num">25</span>',
+          '<span class="num sterk">'
+          + getal(len(per_aanleiding["drempel"])) + "</span>"]])
+
+    # -- pickplekken (R-OPT-06) ---------------------------------------
+    plekkaart = ""
+    if pickplekken:
+        rijen = [
+            ['<span class="mono sterk">' + esc(sku(v.product_id)) + "</span>"
+             '<div class="hint">' + esc(oms(v.product_id)) + "</div>",
+             '<span class="num sterk">' + f"{v.per_dag:.1f}" + "</span>",
+             '<span class="mono">' + esc(code(v.van)) + "</span>",
+             '<span class="mono sterk">' + esc(code(v.naar)) + "</span>",
+             '<span class="num">' + getal(v.qty) + "</span>",
+             knop("Vak inrichten", "/optimalisatie",
+                  {"actie": "pickplek", "product": v.product_id},
+                  "klein", strak=True)]
+            for v in pickplekken]
+        plekkaart = ('<div class="kaart"><h2>Hardlopers zonder picklocatie '
+                     + pil("r", len(pickplekken)) + "</h2>"
+                     '<p class="hint">Deze artikelen gaan hard, maar liggen '
+                     "alleen in bulk. Elke order laat een picker naar de "
+                     "palletstelling lopen, en dat kost per regel meer dan wat "
+                     "het artikel opbrengt. Vakto heeft een geschikt vak "
+                     "uitgerekend — <b>welk vak je vrijmaakt is een keuze</b>, "
+                     "dus dit gaat niet vanzelf.</p>"
+                     + tabel(["Artikel", "Per dag", "Nu in bulk",
+                              "Voorgesteld vak", "Startvoorraad", ""], rijen)
+                     + "</div>")
+
+    # -- drempeladvies (R-OPT-05) -------------------------------------
+    adviesrijen = [
+        ['<span class="mono sterk">' + esc(a.sku) + "</span>"
+         '<div class="hint">' + esc(oms(a.product_id)) + "</div>",
+         '<span class="num">' + f"{a.per_dag:.1f}" + "</span>",
+         '<span class="num">' + getal(a.nu) + "</span>",
+         '<span class="num sterk">' + getal(a.zou) + "</span>",
+         (pil("r", "te laag — misgrijpen") if a.zou > a.nu
+          else pil("o", "te hoog — onnodig voorraad")),
+         '<div class="celrij">'
+         + knop("Overnemen", "/optimalisatie",
+                {"actie": "drempel", "product": a.product_id,
+                 "min": a.zou, "max": a.max_zou}, "klein", strak=True)
+         + knop("Laten", "/optimalisatie",
+                {"actie": "negeer", "product": a.product_id},
+                "klein stil", strak=True) + "</div>"]
+        for a in adviezen[:10]]
+
+    advieskaart = ('<div class="kaart"><h2>Aanvuldrempels die niet meer '
+                   "kloppen " + (pil("o", len(adviezen)) if adviezen else "")
+                   + "</h2>"
+                   '<p class="hint">Een drempel die drie jaar geleden is '
+                   "ingetypt, is precies zo betrouwbaar als een artikelmaat die "
+                   "drie jaar geleden is ingetypt. Vakto vergelijkt hem met het "
+                   "werkelijke verbruik. <b>Dit is een advies, geen taak</b> — "
+                   "hoeveel je op de vloer wilt hebben is een besluit, en "
+                   "besluiten horen bij mensen.</p>"
+                   + tabel(["Artikel", "Per dag", "Drempel nu", "Zou moeten",
+                            "Richting", ""], adviesrijen,
+                           "Alle aanvuldrempels liggen binnen " + drempel_pct
+                           + "% van het werkelijke verbruik.")
+                   + ('<p class="hint">Nog ' + getal(len(adviezen) - 10)
+                      + " andere adviezen.</p>" if len(adviezen) > 10 else "")
+                   + "</div>")
+
+    # -- telplan ------------------------------------------------------
+    telrijen = [
+        ['<span class="mono sterk">' + esc(code(t.naar)) + "</span>",
+         '<span class="mono">' + esc(sku(t.product_id)) + "</span>",
+         '<span class="num">' + getal(t.qty) + "</span>",
+         '<span class="hint">' + esc(t.reden) + "</span>"]
+        for t in tel[:12]]
+
+    return ("<h1>Optimalisatie</h1>"
+            '<p class="lead">Vier dingen waar een magazijn geld op verliest '
+            "zonder het te merken. Vakto rekent ze door na elke boeking en zet "
+            "het werk klaar. <b>Niemand vult hier iets in</b> — en zodra de "
+            "aanleiding weg is, vervalt de taak vanzelf.</p>"
+            '<div class="tegels vier">' + tegels + "</div>"
+            + samenkaart
+            + '<div class="tweeluik">'
+            '<div class="kaart"><h2>Hardlopers</h2>'
+            '<p class="hint">Hoeveel stuks er per dag uitgaan, gemeten over de '
+            "laatste " + venster + " dagen uit het journaal. Niet uit een veld "
+            "dat iemand ooit heeft ingevuld.</p>"
+            + tabel(["Artikel", "Omschrijving", "Per dag"], hardrijen,
+                    "Nog te weinig picks om iets over verbruik te zeggen.")
+            + "</div>"
+            '<div class="kaart"><h2>Waarom er wordt aangevuld</h2>'
+            '<p class="hint">Drie aanleidingen, één takenlijst. De zwaarste '
+            "aanleiding wint: staat er een order op te wachten, dan schuift die "
+            "taak vooraan.</p>" + aanleidingen
+            + '<div class="uitleg"><b>Waarom dit uitmaakt.</b> De meeste '
+            "systemen kennen alleen de derde regel. Die reageert pas als het al "
+            "te laat is, en hij weet niets van wat er vandaag besteld is. De "
+            "eerste twee zorgen dat de picker het vak vol vindt zonder dat "
+            "iemand 's ochtends een lijstje heeft doorgelopen.</div></div>"
+            "</div>"
+            + plekkaart + advieskaart
+            + '<div class="kaart"><h2>Telplan</h2>'
+            '<p class="hint">Elke artikelgroep heeft een eigen telinterval — '
+            "bevestigingsmateriaal vaker dan pompen. Vakto zet de locaties klaar "
+            "die het verst over tijd zijn, met een plafond van " + plafond
+            + " open teltaken. Zonder plafond staan er duizend klaar en telt "
+            "niemand er één.</p>"
+            + tabel(["Locatie", "Artikel", "Systeem zegt", "Reden"], telrijen,
+                    "Geen locatie is over zijn telinterval.") + "</div>"
+            '<div class="kaart"><h2>Alle knoppen staan in de instellingen</h2>'
+            '<p class="hint">Dekking in dagen, wanneer iets een hardloper is, '
+            "over welke periode het verbruik wordt gemeten, hoeveel teltaken er "
+            "tegelijk open mogen staan. Bij elke klant staan die anders, en er "
+            "hoeft geen regel code voor aangepast te worden.</p>"
+            '<div class="knoprij"><a class="knop stil" href="/instellingen">'
+            'Naar de instellingen →</a><a class="knop stil" href="/taken">'
+            "Alle taken →</a></div></div>")

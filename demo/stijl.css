@@ -518,14 +518,17 @@ body.kaal main{max-width:none;padding:0;min-height:100vh;
 .aanmeldof::before,.aanmeldof::after{content:"";flex:1;height:1px;
   background:var(--hair)}
 
-/* ===================== OPMETEN ===================================== */
-/* Vier maten en een knop, op één regel in een tabelcel. Zonder deze
-   regel duwt de standaardmarge van een formulier de knop een regel naar
-   beneden en staat hij niet meer naast het artikel waar hij bij hoort. */
-.meetrij{display:flex;gap:6px;align-items:center;margin:0}
-.meetrij input{width:5.5em;margin-top:0;padding:6px 8px;font-size:13px;
+/* ===================== BEDIENING IN EEN TABELCEL ==================== */
+/* Een paar velden of knoppen op één regel, binnen een cel: vier maten en
+   een knop bij het opmeten, een rolkeuze bij de gebruikers, twee knoppen
+   bij een advies. Zonder deze regel duwt de standaardmarge van een
+   formulier de knop een regel naar beneden en staat hij niet meer naast
+   de rij waar hij bij hoort. */
+.celrij{display:flex;gap:6px;align-items:center;margin:0;flex-wrap:wrap}
+.celrij input{width:5.5em;margin-top:0;padding:6px 8px;font-size:13px;
   font-family:var(--code)}
-.meetrij button{padding:6px 13px;font-size:12px;white-space:nowrap}
+.celrij button,.celrij .knop{padding:6px 13px;font-size:12px;white-space:nowrap}
+.celrij form{margin:0}
 
 /* ===================== ETIKETTEN =================================== */
 .etiketvel{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(246px,1fr))}

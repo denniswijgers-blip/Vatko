@@ -447,6 +447,31 @@ QUERIES: dict[str, str] = {
         SELECT vakto_instelling(%s, %s, %s) AS gewijzigd
     """,
 
+    # R-OPT-05. Het advies overnemen of laten; allebei een keuze.
+    "drempel": """
+        SELECT vakto_drempel(%s, %s, %s, %s, %s) AS gelukt
+    """,
+
+    # De etiketten (R-SCAN-08). Alleen locaties waar iets mag liggen: een
+    # etiket op een doorloopplek zet mensen op het verkeerde been.
+    "etiketten": """
+        SELECT l.code, m.maatklasse, l.l_mm, l.w_mm, l.h_mm, l.max_g, z.naam
+          FROM location l
+          JOIN zone z ON z.id = l.zone_id
+          JOIN location_type t ON t.id = l.type_id
+          JOIN v_location_size m ON m.location_id = l.id
+         WHERE l.actief AND t.doel
+         ORDER BY l.seq, l.id
+         LIMIT %s OFFSET %s
+    """,
+
+    "etiketten_aantal": """
+        SELECT count(*) AS n
+          FROM location l
+          JOIN location_type t ON t.id = l.type_id
+         WHERE l.actief AND t.doel
+    """,
+
     # R-IMP-07. Een import is een nulmeting; staat er al een journaal,
     # dan weigert hij. Het scherm wil dat weten vóór de knop, niet erna.
     "al_geboekt": """
@@ -1128,6 +1153,81 @@ def aantal_gebruikers(verbinding: Verbinding) -> int:
 def al_geboekt(verbinding: Verbinding) -> bool:
     """R-IMP-07. Draait dit magazijn al? Dan overschrijft een import niets."""
     return bool(_rijen(verbinding, "al_geboekt")[0][0])
+
+
+# ---------------------------------------------------------------------
+#  De adviezen (R-OPT-05 en R-OPT-06)
+#
+#  Twee dingen die het systeem wél uitrekent maar niet zelf doet: een
+#  aanvuldrempel bijstellen en een picklocatie inrichten. Allebei zijn
+#  het besluiten over ruimte en werkkapitaal, en besluiten horen bij
+#  mensen. Het rekenwerk staat in optimalisatie.py.
+# ---------------------------------------------------------------------
+def laad_adviezen(verbinding: Verbinding, mag: Magazijn | None = None,
+                  inst=None) -> tuple[list, list, dict]:
+    """Geeft (drempeladviezen, pickplekvoorstellen, snelheden) terug."""
+    from . import optimalisatie as _opt
+    inst = inst or laad_instellingen(verbinding)
+    mag = laad_magazijn(verbinding) if mag is None else mag
+    snel = _opt.snelheden(laad_picks(verbinding, inst), inst)
+    taken = laad_taken(verbinding)
+    return (_opt.drempeladvies(mag, snel, inst),
+            _opt.pickplekvoorstellen(mag, taken, snel, inst),
+            snel)
+
+
+def zet_drempel(verbinding: Verbinding, product_id: int,
+                min_qty: int | None = None, max_qty: int | None = None,
+                akkoord: bool | None = None,
+                gebruiker: str | None = None) -> bool:
+    """R-OPT-05. Het advies overnemen (min/max) of laten (akkoord)."""
+    try:
+        with verbinding.cursor() as cur:
+            cur.execute(QUERIES["drempel"],
+                        (product_id, min_qty, max_qty, akkoord, gebruiker))
+            return bool(cur.fetchone()[0])
+    except Boekfout:
+        raise
+    except Exception as e:
+        tekst = str(e).strip().splitlines()[0] if str(e).strip() else str(e)
+        raise Boekfout(tekst) from e
+
+
+def maak_pickplektaak(verbinding: Verbinding, voorstel, sku: str,
+                      gebruiker: str | None = None) -> int:
+    """R-OPT-06. Het voorstel wordt een taak, en niets meer.
+
+    Niet zelf boeken: er moet iemand met een pallettruck naartoe. Wat het
+    systeem wél doet is de drempel alvast invullen als die er nog niet
+    was, zodat de aanvultaken vanaf morgen kloppen.
+    """
+    from .zelfcontrole import Uitkomst
+    from .optimalisatie import Taak
+
+    taak = Taak(soort="PICKPLEK", naam="Picklocatie inrichten", prio=18,
+                product_id=voorstel.product_id, van=voorstel.van,
+                naar=voorstel.naar, qty=voorstel.qty,
+                aanleiding="hardloper zonder vak",
+                reden=f"{sku} gaat {voorstel.per_dag:.1f} st per dag en lag "
+                      f"alleen in bulk",
+                automatisch=False)
+    uit = schrijf_uitkomst(verbinding, Uitkomst(nieuwe_taken=[taak]))
+    artikel = laad_magazijn(verbinding).artikel(voorstel.product_id)
+    if artikel is not None and not artikel.min_qty:
+        zet_drempel(verbinding, voorstel.product_id,
+                    max(1, round(voorstel.qty / 2)), voorstel.qty * 2,
+                    gebruiker=gebruiker)
+    return uit.nieuwe_taken[0].id if uit.nieuwe_taken else 0
+
+
+def etikettenlijst(verbinding: Verbinding, limiet: int = 60,
+                   vanaf: int = 0) -> list[tuple]:
+    """R-SCAN-08. Eén bladzijde etiketten, op looproute."""
+    return _rijen(verbinding, "etiketten", (limiet, vanaf))
+
+
+def etikettenaantal(verbinding: Verbinding) -> int:
+    return int(_rijen(verbinding, "etiketten_aantal")[0][0])
 
 
 def instellingen_beheer(verbinding: Verbinding) -> list[tuple]:

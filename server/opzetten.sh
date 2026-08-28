@@ -196,6 +196,9 @@ cat <<KLAAR
       nakijkt en pas daarna overneemt
     - een instellingenscherm: alles wat per klant verschilt, zonder
       dat er een regel code aan te pas komt
+    - een optimalisatiescherm met de twee dingen waar het systeem een
+      mens voor nodig heeft: een aanvuldrempel en een picklocatie
+    - locatie-etiketten met een streepjescode, klaar om af te drukken
     - een back-up die zichzelf terugzet om te bewijzen dat het kan
 
   Rondkijken in de database:
