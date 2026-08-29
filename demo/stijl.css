@@ -1,0 +1,787 @@
+/* =====================================================================
+   VAKTO - huisstijl "Maatvoering"
+
+   Uitgangspunt is de technische tekening: haarlijnen, maatstreepjes,
+   millimeters, cijfers die onder elkaar staan. Maar dan met lef -
+   diepte in de navigatie, beweging bij het openen van een scherm, en
+   een tekening die laat zien waarom iets wel of niet past.
+
+   Licht is de standaard, want niemand kijkt tien uur per dag prettig
+   naar een zwart scherm. De donkere stand is grafiet met een petrol-
+   ondertoon, niet pikzwart.
+
+   Rood, oranje en groen zijn bezet: die betekenen fout, let op en goed.
+   Het merkaccent mag daar nooit mee concurreren - vandaar petrol.
+   ===================================================================== */
+:root{
+  --ground:#E5EBED; --surface:#FAFCFD; --surface-2:#EFF4F6;
+  --line:#CFDADE; --hair:#E1E9EB; --grid:rgba(12,58,70,.055);
+  --ink:#0E1518; --ink-2:#4C5A61; --ink-3:#77868D;
+  --serie-1:#00889E; --serie-2:#7B3F91; --serie-stil:#B3C1C6;
+  --accent:#0A4552; --accent-2:#1B8FA6; --accent-ink:#FFFFFF; --accent-soft:#E1EFF2;
+  --accent-rand:rgba(10,69,82,.28);
+  --nav-1:#0C2B33; --nav-2:#07171B; --nav-ink:#9DB2B8; --nav-ink-2:#66797F;
+  --ok:#17724A; --ok-soft:#E4F1EA;
+  --warn:#9A5C0A; --warn-soft:#FBF0DF;
+  --bad:#A82A21; --bad-soft:#FAEAE8;
+  --schaduw:0 1px 2px rgba(10,40,50,.05), 0 2px 10px rgba(10,40,50,.045);
+  --schaduw-op:0 2px 4px rgba(10,40,50,.07), 0 10px 26px rgba(10,40,50,.09);
+  --r:10px; --r-klein:6px;
+  --ui:Archivo,"Segoe UI",system-ui,-apple-system,sans-serif;
+  --code:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#1C262B; --surface:#232F35; --surface-2:#2A373E;
+    --line:#38474F; --hair:#2F3D44; --grid:rgba(140,205,220,.04);
+    --ink:#E9EFF1; --ink-2:#A2B1B8; --ink-3:#7D8E95;
+    --serie-1:#00839B; --serie-2:#AE7AD8; --serie-stil:#4A5A62;
+    --accent:#58B8CB; --accent-2:#7ED4E3; --accent-ink:#04222A; --accent-soft:#16343D;
+    --accent-rand:rgba(88,184,203,.34);
+    --nav-1:#14282F; --nav-2:#0E1D22; --nav-ink:#93A8AF; --nav-ink-2:#5E7178;
+    --ok:#54BE8B; --ok-soft:#15291F;
+    --warn:#D2963F; --warn-soft:#2C2314;
+    --bad:#E0796F; --bad-soft:#2F1B19;
+    --schaduw:0 1px 2px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.28);
+    --schaduw-op:0 2px 6px rgba(0,0,0,.5), 0 14px 30px rgba(0,0,0,.42);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#1C262B; --surface:#232F35; --surface-2:#2A373E;
+  --line:#38474F; --hair:#2F3D44; --grid:rgba(140,205,220,.04);
+  --ink:#E9EFF1; --ink-2:#A2B1B8; --ink-3:#7D8E95;
+  --serie-1:#00839B; --serie-2:#AE7AD8; --serie-stil:#4A5A62;
+  --accent:#58B8CB; --accent-2:#7ED4E3; --accent-ink:#04222A; --accent-soft:#16343D;
+  --accent-rand:rgba(88,184,203,.34);
+  --nav-1:#14282F; --nav-2:#0E1D22; --nav-ink:#93A8AF; --nav-ink-2:#5E7178;
+  --ok:#54BE8B; --ok-soft:#15291F;
+  --warn:#D2963F; --warn-soft:#2C2314;
+  --bad:#E0796F; --bad-soft:#2F1B19;
+  --schaduw:0 1px 2px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.28);
+  --schaduw-op:0 2px 6px rgba(0,0,0,.5), 0 14px 30px rgba(0,0,0,.42);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground); color:var(--ink);
+  font:400 15px/1.55 var(--ui);
+  -webkit-font-smoothing:antialiased;
+  display:flex; min-height:100vh;
+}
+.mono,.mono *{font-family:var(--code);letter-spacing:-.01em}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* --- beweging -------------------------------------------------------
+   Alleen bij het wisselen van scherm, nooit tijdens de dagsimulatie:
+   een dashboard dat elke vijf seconden opnieuw invliegt is vermoeiend. */
+@keyframes opkomst{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes balkgroei{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes tekengroei{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+#inhoud.binnen > *{animation:opkomst .38s cubic-bezier(.22,.85,.3,1) both}
+#inhoud.binnen > *:nth-child(2){animation-delay:.045s}
+#inhoud.binnen > *:nth-child(3){animation-delay:.09s}
+#inhoud.binnen > *:nth-child(4){animation-delay:.13s}
+#inhoud.binnen > *:nth-child(5){animation-delay:.17s}
+#inhoud.binnen > *:nth-child(n+6){animation-delay:.2s}
+#inhoud.binnen .balk i,#inhoud.binnen .meterbalk i{transform-origin:left;
+  animation:balkgroei .6s cubic-bezier(.22,.85,.3,1) both .1s}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+
+/* --- navigatie ------------------------------------------------------ */
+#nav{width:250px;flex:0 0 250px;color:var(--nav-ink);
+     background:linear-gradient(168deg,var(--nav-1) 0%,var(--nav-2) 100%);
+     padding:18px 0 28px;position:sticky;top:0;height:100vh;overflow-y:auto;
+     border-right:1px solid rgba(255,255,255,.06)}
+#nav .merk{display:flex;align-items:center;gap:9px;color:#fff;padding:0 20px;
+  font-weight:600;font-size:21px;letter-spacing:-.035em;font-stretch:108%}
+#nav .merk svg{width:23px;height:23px;flex:0 0 23px;color:var(--accent-2)}
+#nav .ondertitel{padding:6px 20px 12px;margin:0 20px 2px 20px;
+  font-size:9px;color:var(--nav-ink-2);letter-spacing:.19em;text-transform:uppercase;
+  font-weight:600;border-bottom:1px solid rgba(255,255,255,.07);
+  padding-left:0;padding-right:0;white-space:nowrap}
+#nav .navgroep{padding:13px 20px 4px;font-size:9px;text-transform:uppercase;
+               letter-spacing:.19em;color:var(--nav-ink-2);font-weight:600}
+#nav a{display:flex;justify-content:space-between;align-items:center;gap:8px;
+       padding:5px 20px;color:var(--nav-ink);font-size:13.5px;position:relative;
+       transition:background .16s ease,color .16s ease}
+#nav a .lbl{display:flex;align-items:center;gap:11px;min-width:0}
+.lbltekst{display:flex;flex-direction:column;gap:0;min-width:0;line-height:1.3}
+.lbltitel{font-size:13.5px;white-space:nowrap}
+/* De ondertitel is er voor iemand die nooit met een magazijnsysteem heeft
+   gewerkt. Die leest "Inslag" en weet niet wat dat is; "waar leg ik dit
+   neer" heeft geen uitleg nodig. */
+.lblbij{font-size:10px;color:var(--nav-ink-2);letter-spacing:.005em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nav a:hover .lblbij,#nav a.actief .lblbij{color:var(--nav-ink)}
+#nav a::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:2px;
+  background:var(--accent-2);border-radius:0 2px 2px 0;transform:scaleY(0);
+  transform-origin:center;transition:transform .2s cubic-bezier(.22,.85,.3,1)}
+#nav a:hover{background:rgba(255,255,255,.05);color:#fff;text-decoration:none}
+#nav a.actief{background:linear-gradient(90deg,rgba(122,214,232,.14),rgba(122,214,232,.02));
+              color:#fff;font-weight:500}
+#nav a.actief::before{transform:scaleY(1)}
+#nav .badge{background:rgba(255,255,255,.12);color:#D6E4E8;border-radius:5px;
+            padding:1px 7px;font-size:10.5px;font-weight:600;font-family:var(--code)}
+#nav .badge.let{background:var(--warn);color:#FFF8ED}
+#nav a.wieben{font-weight:500;color:#fff}
+
+/* --- hoofdgebied ----------------------------------------------------
+   De rasterachtergrond is bijna niet te zien en dat is de bedoeling:
+   je merkt hem pas als hij weg is. */
+main{flex:1;min-width:0;padding:22px 28px 70px;max-width:1560px;position:relative}
+main::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:linear-gradient(180deg,#000 0,#000 42%,transparent 92%)}
+main > *{position:relative;z-index:1}
+.kop{display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+     margin-bottom:20px;flex-wrap:wrap;padding-bottom:11px;
+     border-bottom:1px solid var(--hair)}
+#klantnaam{font-size:12.5px;font-weight:600;color:var(--ink-2);letter-spacing:.005em}
+#omvang{font-size:11.5px;color:var(--ink-3);font-family:var(--code)}
+
+h1{font-size:clamp(24px,2.6vw,30px);margin:0 0 6px;font-weight:600;
+   letter-spacing:-.032em;font-stretch:107%;text-wrap:balance;line-height:1.1;
+   position:relative;padding-bottom:11px}
+h1::after{content:"";position:absolute;left:0;bottom:0;width:38px;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+h2{font-size:14.5px;margin:0 0 11px;font-weight:600;display:flex;align-items:center;
+   gap:9px;letter-spacing:-.012em}
+h2.verderop{margin-top:26px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:76ch;font-size:15px}
+.kruimel{font-size:12.5px;color:var(--ink-3);margin-bottom:8px}
+.hint{font-size:12.5px;color:var(--ink-2)}
+.leeg{color:var(--ink-3);font-size:14px;padding:14px 0;margin:0}
+.sterk{font-weight:600}
+.verhaal{color:var(--ink-2);margin:0 0 15px;max-width:74ch;font-size:15px;
+  border-left:2px solid var(--accent-rand);padding-left:15px;font-style:italic}
+
+.kaart{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+       padding:17px 19px;margin-bottom:16px;box-shadow:var(--schaduw);
+       transition:box-shadow .22s ease,border-color .22s ease}
+.kaart:hover{box-shadow:var(--schaduw-op)}
+.kaart.waarschuw{background:var(--warn-soft);
+  border-color:color-mix(in srgb,var(--warn) 32%,transparent)}
+.tweeluik{display:grid;gap:16px;align-items:start;
+  grid-template-columns:repeat(auto-fit,minmax(min(410px,100%),1fr))}
+.tweeluik > *{min-width:0}
+.tegels > *{min-width:0}
+.tegels{display:grid;gap:13px;margin-bottom:17px}
+.tegels.vier{grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))}
+.tegels.vijf{grid-template-columns:repeat(auto-fit,minmax(min(158px,100%),1fr))}
+.tegel{display:flex;flex-direction:column;gap:3px;margin:0;position:relative;
+  overflow:hidden;color:var(--ink)}
+a.tegel:hover{text-decoration:none;border-color:var(--accent-rand);
+  transform:translateY(-2px);box-shadow:var(--schaduw-op)}
+a.tegel{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.tegel::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  opacity:0;transition:opacity .22s ease}
+.tegel:hover::after{opacity:1}
+.label{font-size:9.5px;text-transform:uppercase;letter-spacing:.15em;
+       color:var(--ink-3);font-weight:600}
+.cijfer{font-size:30px;font-weight:600;line-height:1.1;letter-spacing:-.035em;
+  font-stretch:106%}
+.cijfer.klein{font-size:18px;letter-spacing:-.02em}
+.cijfer.slecht{color:var(--bad)}
+.stap{display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;
+      border-radius:var(--r-klein);
+      background:linear-gradient(150deg,var(--accent),var(--accent-2));
+      color:#fff;font-size:12px;font-weight:600;flex:0 0 23px;font-family:var(--code)}
+
+/* --- tabellen ------------------------------------------------------- */
+.tabelwrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:9.5px;
+   text-transform:uppercase;letter-spacing:.14em;padding:0 10px 9px;
+   border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--hair);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{transition:background .14s ease}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.beste{background:var(--accent-soft);box-shadow:inset 2px 0 0 var(--accent)}
+.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table,.gr-as,.badge,.bg-waarde,.bg-pct{font-variant-numeric:tabular-nums}
+.fout{color:var(--bad)}
+
+.pil{display:inline-block;padding:2px 9px;border-radius:5px;font-size:11px;
+     font-weight:600;white-space:nowrap;letter-spacing:.01em}
+.pil.g{background:var(--ok-soft);color:var(--ok)}
+.pil.o{background:var(--warn-soft);color:var(--warn)}
+.pil.r{background:var(--bad-soft);color:var(--bad)}
+.pil.n{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.pil.a{background:var(--accent-soft);color:var(--accent)}
+.maat{display:inline-block;min-width:30px;text-align:center;border-radius:4px;
+      font-size:10px;font-weight:600;padding:2px 6px;font-family:var(--code);
+      background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.maat.XS,.maat.S{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.maat.M{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.maat.L,.maat.XL{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+
+.balk{display:inline-block;height:5px;border-radius:3px;background:var(--line);
+      overflow:hidden;width:100%;min-width:60px;vertical-align:middle}
+.balk.mini{min-width:46px;width:46px}
+.balk i{display:block;height:100%;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.balk i.vol{background:var(--warn)}
+.balkcel{min-width:130px}
+
+/* --- formulieren ---------------------------------------------------- */
+label{display:block;font-size:9.5px;font-weight:600;color:var(--ink-3);
+      margin-bottom:13px;text-transform:uppercase;letter-spacing:.14em}
+input,select{display:block;width:100%;margin-top:5px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:var(--r-klein);background:var(--surface);
+  color:var(--ink);font:400 14px/1.4 var(--ui);
+  text-transform:none;letter-spacing:0;
+  transition:border-color .16s ease,box-shadow .16s ease}
+input:focus,select:focus{border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);outline:none}
+td input{margin-top:0;padding:6px 8px;font-size:13px;min-width:78px;
+         font-family:var(--code)}
+input.mono{font-family:var(--code)}
+.filters{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:15px}
+.filters label{margin-bottom:0;min-width:170px}
+/* Een toelichting in een label is een toelichting, geen kop: de
+   kapitalen en de letterafstand van het label horen er niet bij. */
+.filters label .hint,.aanmeldform label .hint{text-transform:none;
+  letter-spacing:0;font-weight:400}
+.filters label.breed{min-width:320px;flex:1}
+.filters .rechts{margin-left:auto;padding-bottom:9px}
+
+button,.knop{display:inline-block;border:1px solid transparent;
+  background:linear-gradient(140deg,var(--accent) 0%,var(--accent-2) 190%);
+  color:var(--accent-ink);padding:9px 17px;border-radius:var(--r-klein);cursor:pointer;
+  font:600 13.5px/1.3 var(--ui);letter-spacing:.005em;
+  transition:transform .14s ease,box-shadow .16s ease,filter .16s ease}
+button:hover,.knop:hover{filter:brightness(1.09);text-decoration:none;
+  box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 26%,transparent)}
+button:active,.knop:active{transform:translateY(1px)}
+button.stil,.knop.stil{background:var(--surface);color:var(--ink);
+  border-color:var(--line);box-shadow:none}
+button.stil:hover,.knop.stil:hover{border-color:var(--accent);color:var(--accent);
+  filter:none;box-shadow:var(--schaduw)}
+button.klein,.knop.klein{padding:5px 12px;font-size:12px}
+/* Een tabel met vijftien felle knoppen onder elkaar schreeuwt. In een cel
+   is de actie rustig, en pas bij aanwijzen wordt hij nadrukkelijk. */
+td button.klein{background:var(--accent-soft);color:var(--accent);
+  border-color:transparent;box-shadow:none;font-weight:600}
+td button.klein:hover{background:var(--accent);color:var(--accent-ink);filter:none}
+td button.klein.stil{background:transparent;border-color:var(--line);color:var(--ink-2)}
+button[disabled]{opacity:.45;cursor:not-allowed;filter:none;box-shadow:none}
+.knoprij{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.pagbalk{display:flex;justify-content:space-between;align-items:center;gap:12px;
+         margin-top:14px;flex-wrap:wrap}
+.pagknoppen{display:flex;gap:8px;align-items:center}
+
+/* --- meldingen ------------------------------------------------------ */
+.melding{padding:12px 15px;border-radius:var(--r-klein);font-size:13.5px;
+         border:1px solid;margin-top:12px}
+.melding.groot{margin:0 0 16px;font-size:14px}
+.melding.waarschuw{background:var(--warn-soft);color:var(--warn);
+  border-color:color-mix(in srgb,var(--warn) 32%,transparent)}
+.melding.fout{background:var(--bad-soft);color:var(--bad);
+  border-color:color-mix(in srgb,var(--bad) 32%,transparent)}
+.meldkop{display:flex;justify-content:space-between;gap:10px;align-items:baseline;
+         flex-wrap:wrap}
+.meldtekst{margin-top:6px;color:var(--ink)}
+.melding.waarschuw .hint,.melding.waarschuw a{color:inherit;opacity:.85}
+.uitleg{background:var(--surface-2);border-left:2px solid var(--accent);
+        padding:12px 15px;border-radius:0 var(--r-klein) var(--r-klein) 0;
+        font-size:13.5px;color:var(--ink-2);margin:15px 0 0;max-width:82ch}
+.gevonden{margin-top:15px;padding-top:14px;border-top:1px solid var(--hair)}
+
+.vlag{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:50;
+  background:linear-gradient(140deg,var(--accent),var(--accent-2) 210%);
+  color:var(--accent-ink);padding:12px 20px;border-radius:var(--r-klein);
+  font-size:13.5px;font-weight:500;max-width:min(680px,90vw);
+  box-shadow:0 10px 34px rgba(0,0,0,.3);
+  animation:opkomst .3s cubic-bezier(.22,.85,.3,1) both}
+.vlag.waarschuw{background:var(--warn);color:#FFF8ED}
+.vlag.fout{background:var(--bad);color:#fff}
+.vlag[hidden]{display:none}
+
+/* --- de pastekening -------------------------------------------------
+   Twee aanzichten zoals op een werktekening. Dit is het scherm waar
+   iemand "oh, zo" zegt: je ziet waarom er 23 in passen en geen 24. */
+.pasfiguur{background:var(--surface-2);border:1px solid var(--hair);
+  border-radius:var(--r-klein);padding:14px 16px 10px;margin-top:14px}
+.pasfiguur svg{width:100%;height:auto;display:block;max-width:660px}
+.pf-vak{fill:none;stroke:var(--ink-3);stroke-width:1.4}
+.pf-cel{fill:var(--surface);stroke:var(--ink-3);stroke-width:.7;opacity:.5}
+.pf-vol{fill:color-mix(in srgb,var(--accent) 34%,transparent);
+  stroke:var(--accent);stroke-width:1}
+.pf-maat{stroke:var(--ink-3);stroke-width:.7;opacity:.75}
+.pf-tekst{fill:var(--ink-3);font-family:var(--code);font-size:9px}
+.pf-titel{fill:var(--ink-2);font-family:var(--ui);font-size:9px;font-weight:600;
+  letter-spacing:.14em;text-transform:uppercase}
+.pf-uitleg{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;
+  font-size:12px;color:var(--ink-2)}
+.pf-uitleg b{color:var(--ink);font-family:var(--code);font-weight:500}
+
+/* --- visitekaartje onderaan de navigatie ---------------------------- */
+.visite{margin-top:20px;padding:12px 20px 0;border-top:1px solid rgba(255,255,255,.08);
+        font-size:11px;line-height:1.55;color:var(--nav-ink-2)}
+.visite-merk{color:var(--nav-ink);font-weight:600;font-size:12px;letter-spacing:.02em}
+.visite a{color:var(--nav-ink-2)}
+.visite a:hover{color:#fff}
+
+/* --- dagsimulatie --------------------------------------------------- */
+.dagbalk{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.dagbalk .knoprij{margin-top:0}
+.klok{display:flex;flex-direction:column;gap:1px}
+.klokcijfer{font-size:38px;font-weight:600;line-height:1;letter-spacing:-.045em;
+            font-family:var(--code)}
+label.inlijn{display:flex;align-items:center;gap:7px;margin:0;white-space:nowrap}
+label.inlijn select{width:auto;margin-top:0;padding:7px 9px}
+
+.grafiek{display:flex;align-items:flex-end;gap:5px;height:170px;padding-top:14px}
+.staafje{flex:1;display:flex;flex-direction:column;align-items:center;
+         justify-content:flex-end;height:100%;gap:4px;min-width:0}
+.staaf{width:100%;max-width:44px;border-radius:3px 3px 0 0;min-height:2px;
+       background:linear-gradient(180deg,var(--accent-2),var(--accent));
+       transition:height .3s cubic-bezier(.22,.85,.3,1)}
+.staafwaarde{font-size:11px;color:var(--ink-2);font-family:var(--code)}
+.staaflabel{font-size:10.5px;color:var(--ink-3);font-family:var(--code)}
+
+.logboek{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow-y:auto}
+.logregel{display:flex;gap:9px;align-items:baseline;font-size:12.5px;
+          padding:6px 0;border-bottom:1px solid var(--hair)}
+.logregel:last-child{border-bottom:0}
+.logregel .pil{flex:0 0 auto}
+
+.bord{display:grid;grid-template-columns:repeat(8,minmax(132px,1fr));gap:9px;
+      overflow-x:auto;padding-bottom:4px}
+.kolom{background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-klein);
+       padding:9px;display:flex;flex-direction:column;gap:6px;min-width:132px}
+.kolomkop{display:flex;justify-content:space-between;align-items:center;gap:6px;
+          font-size:10px;font-weight:600;color:var(--ink-2);margin-bottom:2px;
+          text-transform:uppercase;letter-spacing:.1em}
+.orderkaart{display:flex;flex-direction:column;gap:1px;background:var(--surface);
+            border:1px solid var(--line);border-radius:5px;padding:8px 9px;
+            font-size:12px;color:var(--ink);transition:border-color .16s ease,transform .16s ease}
+.orderkaart:hover{border-color:var(--accent);text-decoration:none;transform:translateY(-1px)}
+.orderkaart .hint{font-size:11px}
+.meer{font-size:11px;text-align:center;padding:3px 0}
+@media (max-width:1100px){ .bord{grid-template-columns:repeat(8,150px)} }
+
+/* --- pickscherm: grote knoppen, weinig tekst, handschoenen-proof ---- */
+.pickkaart{display:flex;flex-direction:column;gap:15px}
+.pickkop{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.picklocatie{font-size:44px;font-weight:600;letter-spacing:-.04em;line-height:1;
+             color:var(--accent);background:var(--accent-soft);border-radius:var(--r);
+             padding:18px;text-align:center;font-family:var(--code);
+             border:1px solid var(--accent-rand)}
+.pickartikel{font-size:16px}
+.pickaantal{display:flex;align-items:baseline;gap:12px}
+.pickcijfer{font-size:48px;font-weight:600;line-height:1;font-family:var(--code);
+  letter-spacing:-.04em}
+.pickkaart button{padding:15px 20px;font-size:15px}
+
+/* --- scanmodus: vol scherm, grote raakvlakken ----------------------- */
+body.scanmodus{display:block;background:var(--nav-2)}
+body.scanmodus #nav{display:none}
+body.scanmodus main{padding:0;max-width:none}
+body.scanmodus main::before{display:none}
+body.scanmodus .kop{display:none}
+.scanschil{max-width:560px;margin:0 auto;min-height:100vh;display:flex;
+           flex-direction:column;gap:12px;padding:12px 14px 22px;
+           background:var(--ground)}
+.scanbalk{display:flex;align-items:center;gap:10px}
+.scanuit{background:transparent;color:var(--ink-2);border:1px solid var(--line);
+         padding:8px 13px;font-size:17px;line-height:1;box-shadow:none}
+.scantaken{display:flex;gap:5px;flex:1;overflow-x:auto}
+.scantaak{background:var(--surface);color:var(--ink-2);border:1px solid var(--line);
+          padding:8px 13px;font-size:13px;white-space:nowrap;box-shadow:none}
+.scantaak.aan{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.scanwie{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+
+.scanbericht{padding:13px 15px;border-radius:var(--r-klein);font-size:15px;font-weight:500;
+             background:var(--accent-soft);color:var(--accent);
+             animation:opkomst .24s ease both}
+.scanbericht.fout{background:var(--bad);color:#fff}
+.scanbericht.klaar{background:var(--ok);color:#fff}
+
+.scaninhoud{display:flex;flex-direction:column;gap:11px;flex:1}
+.scanveld{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+          padding:15px 17px;display:flex;flex-direction:column;gap:3px;position:relative}
+.scanveld.vraag{border-color:var(--accent);border-width:2px;padding:14px 16px;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 12%,transparent)}
+.scanveld.gedaan{opacity:.7}
+.scanlabel{font-size:10px;text-transform:uppercase;letter-spacing:.16em;
+           color:var(--ink-3);font-weight:600}
+.scanwaarde{font-size:31px;font-weight:600;line-height:1.15;letter-spacing:-.035em}
+.scanhint{font-size:13px;color:var(--ink-2)}
+.scanvink{position:absolute;right:16px;top:14px;color:var(--ok);font-size:20px;font-weight:700}
+.groot2{font-size:22px;font-weight:600}
+
+.aantalrij{display:flex;gap:10px;align-items:center;margin:10px 0}
+.aantalrij input{flex:1;font-size:34px;font-weight:600;text-align:center;padding:10px;
+                 font-family:var(--code);margin-top:0}
+.ronde{width:56px;height:56px;border-radius:50%;font-size:26px;line-height:1;
+       flex:0 0 56px;background:var(--surface);color:var(--ink);
+       border:1px solid var(--line);box-shadow:none}
+button.groot{width:100%;padding:16px;font-size:16px;margin-top:8px}
+.voorstelrij{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+             padding:8px 0;border-bottom:1px solid var(--hair)}
+.voorstelrij:last-child{border-bottom:0}
+.voorstelrij.beste{color:var(--accent)}
+
+.scaninvoer{display:flex;gap:9px;align-items:center;position:sticky;bottom:0;
+            background:var(--ground);padding:8px 0 0}
+.scaninvoer input{font-size:16px;padding:14px 15px;margin-top:0;font-family:var(--code)}
+.scaninvoer button{padding:14px 16px;white-space:nowrap}
+.scanlog{display:flex;flex-direction:column;gap:3px}
+.scanlogregel{display:flex;gap:9px;font-size:12px;color:var(--ink-2);
+              padding:4px 0;border-bottom:1px solid var(--hair)}
+.scanlogregel.manco{color:var(--bad)}
+.scanklaar{text-align:center;padding:44px 20px}
+.scangroot{font-size:31px;font-weight:600;color:var(--ok);margin-bottom:8px;
+  letter-spacing:-.03em}
+.scanknoppen{display:flex;flex-direction:column;gap:9px;margin-top:20px;
+             max-width:320px;margin-left:auto;margin-right:auto}
+.scanstappen{display:flex;gap:6px;flex-wrap:wrap}
+.scanstap{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+          color:var(--ink-3);background:var(--surface);border:1px solid var(--line);
+          border-radius:5px;padding:5px 11px}
+.scanstap.nu{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.scanstap.gedaan{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+.scanvoortgang{display:flex;justify-content:space-between;font-size:12px;
+  color:var(--ink-2);font-family:var(--code)}
+
+/* De melding mag nooit over het scanveld vallen: dat is het enige
+   element dat altijd bereikbaar moet zijn. */
+body.scanmodus .vlag{bottom:auto;top:12px;max-width:calc(100% - 28px)}
+
+/* ===================== EIGEN GEGEVENS ============================== */
+.impkeuze{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));
+  margin-bottom:18px}
+.impkaart{display:flex;flex-direction:column;gap:5px;align-items:flex-start;text-align:left;
+  background:var(--surface);color:var(--ink);border:1px solid var(--line);
+  border-radius:var(--r);padding:16px 17px;box-shadow:var(--schaduw);cursor:pointer;
+  transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+.impkaart:hover{filter:none;border-color:var(--accent);transform:translateY(-2px);
+  box-shadow:var(--schaduw-op)}
+.impkaart.aan{border-color:var(--accent);background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px var(--accent)}
+.impkaart b{font-size:14.5px;font-weight:600;letter-spacing:-.012em}
+.impkaart .hint{font-weight:400}
+
+.impvak{border:1px dashed var(--line);border-radius:var(--r);padding:15px;margin-bottom:14px}
+.impvak.geladen{border-style:solid;border-color:var(--accent-rand)}
+.impvak .impvak{border:0;padding:0;margin:0}
+.impkop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.impkop .hint{margin-top:3px;max-width:62ch}
+input[type="file"][hidden]{display:none !important}
+.impknop{display:inline-block;margin:0;background:var(--surface);color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r-klein);padding:8px 15px;font-size:13px;
+  font-weight:500;cursor:pointer;white-space:nowrap;text-transform:none;letter-spacing:0;
+  transition:border-color .16s ease,color .16s ease}
+.impknop:hover{border-color:var(--accent);color:var(--accent)}
+.impgelezen{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;
+  margin:13px 0 6px;padding-top:12px;border-top:1px solid var(--hair)}
+.impprobleem{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;
+  padding:3px 0;font-size:13px}
+.impprobleem .hint{font-size:11.5px}
+.stappen{margin:0 0 4px;padding-left:20px;color:var(--ink-2);max-width:80ch}
+.stappen li{margin-bottom:7px}
+.stappen li::marker{color:var(--accent)}
+.stappen b{color:var(--ink)}
+
+/* ===================== INLOGGEN (R-GEB) ============================
+   Eén vak in het midden en verder niets. Wie hier staat, is nog niet
+   binnen: geen menu, geen cijfers, geen afleiding. */
+body.kaal{display:block;background:var(--nav-2)}
+body.kaal main{max-width:none;padding:0;min-height:100vh;
+  display:flex;align-items:center;justify-content:center}
+.aanmeldvak{width:min(420px,calc(100% - 32px));background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);padding:26px 28px 30px;
+  box-shadow:var(--schaduw-op);margin:28px auto}
+.aanmeldvak .merk{display:flex;align-items:center;gap:9px;color:var(--ink);
+  margin-bottom:18px;font:600 19px/1 var(--ui);letter-spacing:-.02em}
+.aanmeldvak .merk svg{width:23px;height:23px;flex:0 0 23px;color:var(--accent)}
+.aanmeldvak h1{margin-top:0}
+.aanmeldvak .lead{margin-bottom:16px;font-size:13.5px}
+.aanmeldform{display:flex;flex-direction:column;gap:2px}
+.aanmeldform label{display:block;margin-bottom:9px}
+.aanmeldform input{width:100%;margin-top:0}
+/* Het scheidingsstreepje tussen wachtwoord en badge: twee manieren om
+   binnen te komen, en ze horen niet op elkaar te lijken. */
+.aanmeldof{display:flex;align-items:center;gap:11px;margin:22px 0 16px;
+  font-size:11px;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--ink-3);font-weight:600}
+.aanmeldof::before,.aanmeldof::after{content:"";flex:1;height:1px;
+  background:var(--hair)}
+
+/* ===================== BEDIENING IN EEN TABELCEL ==================== */
+/* Een paar velden of knoppen op één regel, binnen een cel: vier maten en
+   een knop bij het opmeten, een rolkeuze bij de gebruikers, twee knoppen
+   bij een advies. Zonder deze regel duwt de standaardmarge van een
+   formulier de knop een regel naar beneden en staat hij niet meer naast
+   de rij waar hij bij hoort. */
+.celrij{display:flex;gap:6px;align-items:center;margin:0;flex-wrap:wrap}
+.celrij input{width:5.5em;margin-top:0;padding:6px 8px;font-size:13px;
+  font-family:var(--code)}
+.celrij button,.celrij .knop{padding:6px 13px;font-size:12px;white-space:nowrap}
+.celrij form{margin:0}
+
+/* ===================== ETIKETTEN =================================== */
+.etiketvel{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(246px,1fr))}
+.etiket{border:1px solid var(--line);border-radius:var(--r-klein);padding:10px 11px;
+  background:var(--surface);display:flex;flex-direction:column;gap:6px;
+  break-inside:avoid;page-break-inside:avoid}
+.etiketcode{font-size:20px;font-weight:500;letter-spacing:.02em;line-height:1.1;
+  font-family:var(--code)}
+.etiketmaat{font-size:9px;color:var(--ink-3);letter-spacing:.06em;font-family:var(--code)}
+.c39{display:block;width:100%;height:34px;background:#fff;border-radius:2px}
+
+@media print{
+  #nav,#balkboven,.vlag,.nietprinten,h1,.lead{display:none !important}
+  main{padding:0;max-width:none}
+  main::before{display:none}
+  body{background:#fff}
+  .etiketvel{grid-template-columns:repeat(3,1fr);gap:4mm}
+  .etiket{border-color:#999;background:#fff}
+  .etiketcode,.etiketmaat{color:#000}
+}
+
+/* --- klein scherm --------------------------------------------------- */
+@media (max-width:820px){
+  body{flex-direction:column}
+  #nav{width:100%;flex:none;height:auto;position:static;
+       display:flex;flex-wrap:wrap;gap:3px;padding:14px 12px;
+       background:linear-gradient(120deg,var(--nav-1),var(--nav-2))}
+  #nav .merk{width:100%;margin-bottom:6px}
+  #nav .ondertitel,#nav .navgroep,#nav .visite{display:none}
+  #nav a{border-radius:5px;padding:7px 12px}
+  #nav a::before{display:none}
+  #nav a.actief{background:rgba(122,214,232,.16)}
+  main{padding:16px 14px 60px}
+  .tweeluik{grid-template-columns:1fr}
+  h1{font-size:24px}
+}
+@media (max-width:560px){
+  .scanbalk{flex-wrap:wrap;row-gap:8px}
+  .scanuit{order:1}
+  .scanwie{order:2;margin-left:auto}
+  .scantaken{order:3;flex:0 0 100%;gap:6px}
+  .scantaak{flex:1;text-align:center;padding:9px 6px}
+  .scanwaarde{font-size:26px}
+  .scanveld{padding:13px 14px}
+  .scaninvoer{flex-wrap:wrap}
+  .scaninvoer input{flex:1 1 100%}
+  .scaninvoer button{flex:1}
+  .scanschil{padding:10px 12px 18px;gap:10px}
+}
+
+/* ===================== GRAFIEKEN ===================================
+   De twee reekskleuren zijn gecontroleerd op kleurenblindheid
+   (deutaan, protaan, tritaan) tegen het vlak waarop ze staan, in beide
+   standen. Groen, oranje en rood blijven gereserveerd voor goed, let op
+   en fout - die komen hier nooit als reeks terug. */
+.grafiekvak{margin:6px 0 2px}
+.gr{width:100%;height:auto;display:block;overflow:visible}
+.gr-raster{stroke:var(--hair);stroke-width:1}
+.gr-as{fill:var(--ink-3);font-family:var(--code);font-size:10.5px}
+.gr-lijn{fill:none;stroke:var(--serie-1);stroke-width:2;
+  stroke-linejoin:round;stroke-linecap:round}
+.gr-vlak{fill:var(--serie-1);opacity:.10;stroke:none}
+.gr-stip{fill:var(--serie-1);stroke:var(--surface);stroke-width:2}
+.gr-eind{fill:var(--serie-1);stroke:var(--surface);stroke-width:2}
+.gr-staaf{stroke:none}
+.gr-staaf.s1{fill:var(--serie-1)}
+.gr-staaf.s2{fill:var(--serie-2)}
+.gr-raak{fill:transparent;cursor:crosshair}
+.gr-raak:hover{fill:var(--ink);opacity:.045}
+.gr-legenda{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.gr-sleutel{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2)}
+.gr-vlek{width:11px;height:11px;border-radius:3px;display:inline-block}
+.gr-vlek.s1{background:var(--serie-1)}
+.gr-vlek.s2{background:var(--serie-2)}
+
+.balkgrafiek{display:flex;flex-direction:column;gap:3px;margin:8px 0 2px}
+.bg-rij{display:grid;grid-template-columns:150px 1fr auto 44px;gap:12px;
+  align-items:center;padding:7px 8px;border-radius:var(--r-klein);
+  transition:background .14s ease}
+.bg-rij:hover{background:var(--surface-2)}
+.bg-naam{display:flex;align-items:center;gap:8px;min-width:0}
+.bg-tekst{font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.bg-spoor{height:16px;border-radius:4px;background:var(--surface-2);
+  border:1px solid var(--hair);display:block;overflow:hidden;min-width:24px}
+.bg-spoor i{display:block;height:100%;border-radius:3px;background:var(--serie-1);
+  transform-origin:left}
+#inhoud.binnen .bg-spoor i{animation:balkgroei .6s cubic-bezier(.22,.85,.3,1) both .12s}
+.bg-waarde{font-size:13px;font-family:var(--code);color:var(--ink);white-space:nowrap}
+.bg-van{color:var(--ink-3)}
+.bg-pct{font-size:13px;font-family:var(--code);color:var(--ink-2);text-align:right}
+@media (max-width:700px){
+  .bg-rij{grid-template-columns:104px 1fr auto;gap:8px}
+  .bg-pct{display:none}
+  .bg-van{display:none}
+}
+
+/* --- tekstballon bij aanwijzen -------------------------------------- */
+#tip{position:fixed;z-index:80;pointer-events:none;max-width:280px;
+  background:var(--ink);color:var(--ground);padding:7px 11px;border-radius:6px;
+  font-size:12.5px;line-height:1.45;box-shadow:0 6px 22px rgba(0,0,0,.28);
+  opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease}
+#tip.aan{opacity:1;transform:none}
+#tip[hidden]{display:none}
+
+/* --- iconen in de navigatie ----------------------------------------- */
+#nav a .ico{width:19px;height:19px;flex:0 0 19px;opacity:.75;
+  transition:opacity .16s ease}
+#nav a.actief .ico,#nav a:hover .ico{opacity:1}
+
+/* =====================================================================
+   BOVENBALK
+   Blijft staan bij het scrollen en laat altijd zien waar je bent, wat
+   het systeem zelf gevonden heeft, en wie er is ingelogd.
+   ===================================================================== */
+#balkboven{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
+  margin:-22px -28px 22px;padding:11px 28px;
+  background:color-mix(in srgb,var(--ground) 82%,transparent);
+  backdrop-filter:saturate(150%) blur(12px);
+  -webkit-backdrop-filter:saturate(150%) blur(12px);
+  border-bottom:1px solid var(--hair)}
+.kruimels{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-3);
+  white-space:nowrap;min-width:0}
+.kruimels b{color:var(--ink);font-weight:600;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis}
+.kruimels .sep{opacity:.5}
+
+.ikoonknop{display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;padding:0;flex:0 0 34px;position:relative;
+  background:transparent;border:1px solid transparent;border-radius:9px;
+  color:var(--ink-2);box-shadow:none}
+.ikoonknop svg{width:18px;height:18px}
+.ikoonknop:hover{background:var(--surface);border-color:var(--line);
+  color:var(--ink);filter:none;box-shadow:var(--schaduw)}
+.ikoonknop .stipje{position:absolute;top:6px;right:6px;width:7px;height:7px;
+  border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--ground)}
+.ikoonknop.let{color:var(--warn)}
+
+.zoekknop{display:flex;align-items:center;gap:9px;flex:1;max-width:420px;
+  background:var(--surface);border:1px solid var(--line);border-radius:9px;
+  color:var(--ink-3);font:400 13px/1 var(--ui);padding:8px 11px;box-shadow:none;
+  text-align:left}
+.zoekknop svg{width:15px;height:15px;flex:0 0 15px}
+.zoekknop span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zoekknop:hover{border-color:var(--accent-rand);color:var(--ink-2);filter:none;
+  box-shadow:var(--schaduw)}
+kbd{font:500 10.5px/1 var(--code);border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:5px;padding:3px 5px;color:var(--ink-3);background:var(--surface-2);
+  white-space:nowrap}
+
+.balkrechts{display:flex;align-items:center;gap:8px;margin-left:auto}
+.klantchip{font-size:12px;color:var(--ink-2);font-weight:600;padding:5px 11px;
+  background:var(--surface);border:1px solid var(--line);border-radius:20px;
+  max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wiechip{display:flex;align-items:center;gap:8px;padding:4px 11px 4px 4px;
+  border:1px solid var(--line);border-radius:20px;background:var(--surface);
+  color:var(--ink);font-size:12.5px;font-weight:500}
+.wiechip:hover{text-decoration:none;border-color:var(--accent-rand)}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font:600 10.5px/1 var(--ui);letter-spacing:.02em;
+  background:linear-gradient(145deg,var(--accent),var(--accent-2));color:#fff}
+@media (max-width:1100px){ .klantchip,.wienaam{display:none} }
+@media (max-width:820px){ #balkboven{margin:-16px -14px 16px;padding:9px 14px} }
+
+/* --- smal menu ------------------------------------------------------- */
+body.smal #nav{width:68px;flex:0 0 68px}
+body.smal #nav .ondertitel,body.smal #nav .visite,
+body.smal #nav .merknaam,body.smal #nav .lbltekst{display:none}
+/* De groepskoppen worden streepjes: de indeling blijft zichtbaar, ook
+   zonder de woorden erbij. */
+body.smal #nav .navgroep{display:block;height:1px;padding:0;margin:9px 16px;
+  font-size:0;background:rgba(255,255,255,.09)}
+body.smal #nav .navgroep:first-of-type{margin-top:4px}
+body.smal #nav a{justify-content:center;padding:10px 0}
+body.smal #nav .merk{justify-content:center;padding:0}
+body.smal #nav .merk::after{display:none}
+/* Een getal van vier cijfers past niet op een balk van 68 pixels. Een
+   stip zegt genoeg: er staat iets open, kijk maar als je breed zet. */
+body.smal #nav .badge{position:absolute;top:5px;right:13px;width:8px;height:8px;
+  padding:0;border-radius:50%;font-size:0;overflow:hidden;background:var(--accent-2)}
+body.smal #nav .badge.let{background:var(--warn)}
+@media (max-width:820px){ body.smal #nav{width:100%;flex:none} }
+
+/* =====================================================================
+   SNELZOEKER
+   ===================================================================== */
+#palet{position:fixed;inset:0;z-index:70;display:flex;justify-content:center;
+  padding:12vh 16px 16px;background:color-mix(in srgb,var(--nav-2) 55%,transparent);
+  backdrop-filter:blur(3px);opacity:0;transition:opacity .15s ease}
+#palet.aan{opacity:1}
+#palet[hidden]{display:none}
+.palet-doos{width:min(620px,100%);align-self:flex-start;background:var(--surface);
+  border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.32);transform:translateY(-8px);
+  transition:transform .18s cubic-bezier(.22,.85,.3,1)}
+#palet.aan .palet-doos{transform:none}
+.palet-invoer{display:flex;align-items:center;gap:11px;padding:14px 16px;
+  border-bottom:1px solid var(--hair)}
+.palet-invoer svg{width:18px;height:18px;color:var(--ink-3);flex:0 0 18px}
+.palet-invoer input{border:0;background:transparent;padding:0;margin:0;font-size:16px;
+  color:var(--ink);flex:1}
+.palet-invoer input:focus{outline:none;box-shadow:none}
+.palet-uit{max-height:min(46vh,420px);overflow-y:auto;padding:6px}
+.palet-rij{display:grid;grid-template-columns:74px minmax(0,auto) 1fr;gap:12px;
+  align-items:baseline;width:100%;text-align:left;background:transparent;border:0;
+  border-radius:8px;padding:9px 10px;color:var(--ink);font-size:13.5px;box-shadow:none}
+.palet-rij:hover,.palet-rij.aan{background:var(--accent-soft);filter:none;box-shadow:none}
+.palet-soort{font-size:9.5px;text-transform:uppercase;letter-spacing:.14em;
+  color:var(--ink-3);font-weight:600}
+.palet-titel{font-weight:500;white-space:nowrap}
+.palet-bij{color:var(--ink-2);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.palet-leeg{padding:22px 16px;color:var(--ink-2);font-size:13.5px}
+.palet-voet{display:flex;gap:16px;padding:9px 16px;border-top:1px solid var(--hair);
+  font-size:11.5px;color:var(--ink-3);background:var(--surface-2)}
+.palet-voet span{display:flex;align-items:center;gap:5px}
+@media (max-width:560px){
+  .palet-rij{grid-template-columns:1fr;gap:2px}
+  .palet-voet{display:none}
+}
+
+/* --- zelfcontrole op het dashboard ---------------------------------- */
+.controle{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(120deg,var(--accent-soft),transparent 70%);
+  border:1px solid var(--accent-rand);border-radius:var(--r);padding:13px 16px;
+  margin-bottom:16px}
+.controle-punt{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:0 0 9px;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 22%,transparent)}
+.controle-tekst{font-size:13.5px;color:var(--ink);flex:1;min-width:230px}
+.controle-tekst b{font-weight:600}
+.controle-cijfers{display:flex;gap:18px;flex-wrap:wrap}
+.controle-cijfer{display:flex;flex-direction:column;gap:1px}
+.controle-cijfer b{font:600 19px/1 var(--ui);letter-spacing:-.02em}
+.controle-cijfer span{font-size:10px;text-transform:uppercase;letter-spacing:.13em;
+  color:var(--ink-3);font-weight:600}
+.vervallen td{opacity:.55}
+.vervallen .doorheen{text-decoration:line-through}
+
+body.scanmodus #balkboven{display:none}
+
+/* --- bovenbalk op een telefoon: alleen het hoognodige ---------------- */
+@media (max-width:700px){
+  #balkboven{gap:7px;padding:8px 14px}
+  .kruimels span:first-child,.kruimels .sep{display:none}
+  .zoekknop{flex:0 0 34px;width:34px;padding:0;justify-content:center;max-width:none}
+  .zoekknop span,.zoekknop kbd{display:none}
+  .wiechip{padding:3px;border:0;background:transparent}
+  .balkrechts{gap:4px}
+  .controle-tekst{min-width:0}
+  .controle{gap:10px;padding:12px 13px}
+  .controle-cijfers{gap:14px}
+}
+.bg-rij.enkel{grid-template-columns:190px 1fr auto 92px}
+.bg-spoor.vol{width:100%;background:transparent;border-color:transparent}
+.bg-spoor.vol i{background:linear-gradient(90deg,var(--serie-1),var(--accent-2))}
+@media (max-width:700px){ .bg-rij.enkel{grid-template-columns:112px 1fr auto} }

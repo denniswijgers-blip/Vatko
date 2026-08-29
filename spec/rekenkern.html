@@ -1,0 +1,1629 @@
+<title>Vakto Rekenkern</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5..125,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#E5EBED; --surface:#FAFCFD; --surface-2:#EFF4F6;
+  --line:#CFDADE; --hair:#E1E9EB; --grid:rgba(12,58,70,.055);
+  --ink:#0E1518; --ink-2:#4C5A61; --ink-3:#77868D;
+  --accent:#0A4552; --accent-2:#1B8FA6; --accent-ink:#FFFFFF; --accent-soft:#E1EFF2;
+  --accent-rand:rgba(10,69,82,.28);
+  --ok:#17724A; --ok-soft:#E4F1EA;
+  --warn:#9A5C0A; --warn-soft:#FBF0DF;
+  --bad:#A82A21; --bad-soft:#FAEAE8;
+  --schaduw:0 1px 2px rgba(10,40,50,.05), 0 2px 10px rgba(10,40,50,.045);
+  --ui:Archivo,"Segoe UI",system-ui,-apple-system,sans-serif;
+  --code:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#1C262B; --surface:#232F35; --surface-2:#2A373E;
+    --line:#38474F; --hair:#2F3D44; --grid:rgba(140,205,220,.04);
+    --ink:#E9EFF1; --ink-2:#A2B1B8; --ink-3:#7D8E95;
+    --accent:#58B8CB; --accent-2:#7ED4E3; --accent-ink:#04222A; --accent-soft:#16343D;
+    --accent-rand:rgba(88,184,203,.34);
+    --ok:#54BE8B; --ok-soft:#15291F;
+    --warn:#D2963F; --warn-soft:#2C2314;
+    --bad:#E0796F; --bad-soft:#2F1B19;
+    --schaduw:0 1px 2px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.28);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#1C262B; --surface:#232F35; --surface-2:#2A373E;
+  --line:#38474F; --hair:#2F3D44; --grid:rgba(140,205,220,.04);
+  --ink:#E9EFF1; --ink-2:#A2B1B8; --ink-3:#7D8E95;
+  --accent:#58B8CB; --accent-2:#7ED4E3; --accent-ink:#04222A; --accent-soft:#16343D;
+  --accent-rand:rgba(88,184,203,.34);
+  --ok:#54BE8B; --ok-soft:#15291F;
+  --warn:#D2963F; --warn-soft:#2C2314;
+  --bad:#E0796F; --bad-soft:#2F1B19;
+  --schaduw:0 1px 2px rgba(0,0,0,.45), 0 2px 12px rgba(0,0,0,.28);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:400 15.5px/1.62 var(--ui);-webkit-font-smoothing:antialiased}
+.mono,code{font-family:var(--code);font-size:.92em;letter-spacing:-.01em}
+
+.blad{max-width:1180px;margin:0 auto;padding:0 26px 90px;
+  display:grid;grid-template-columns:210px minmax(0,1fr);gap:44px;align-items:start}
+.blad > *{min-width:0}
+main{min-width:0}
+@media (max-width:900px){ .blad{grid-template-columns:1fr;gap:0;padding:0 16px 60px} }
+
+/* --- kop ---------------------------------------------------------- */
+.kop{grid-column:1/-1;padding:52px 0 30px;border-bottom:2px solid var(--accent);
+  margin-bottom:34px}
+.merk{display:flex;align-items:center;gap:10px;font-weight:600;font-size:19px;
+  letter-spacing:-.035em;font-stretch:108%}
+.merk svg{width:22px;height:22px;color:var(--accent)}
+h1{font-size:clamp(30px,5vw,44px);font-weight:600;letter-spacing:-.04em;font-stretch:106%;
+  line-height:1.05;margin:18px 0 10px;text-wrap:balance;max-width:16ch}
+.onderkop{color:var(--ink-2);max-width:66ch;margin:0;font-size:17px}
+.stempel{display:flex;gap:20px;flex-wrap:wrap;margin-top:22px;font-family:var(--code);
+  font-size:11.5px;color:var(--ink-3)}
+.stempel b{color:var(--ink-2);font-weight:500}
+
+/* --- index -------------------------------------------------------- */
+.index{position:sticky;top:22px;font-size:13px;display:flex;flex-direction:column;gap:1px}
+.index .ilabel{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;margin-bottom:8px}
+.index a{display:flex;gap:9px;color:var(--ink-2);text-decoration:none;padding:4px 8px;
+  border-radius:5px;border-left:2px solid transparent}
+.index a:hover{background:var(--surface);color:var(--ink)}
+.index a.aan{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent);
+  font-weight:500}
+.index a i{font-family:var(--code);font-style:normal;color:var(--ink-3);min-width:14px}
+@media (max-width:900px){
+  .index{position:static;flex-direction:row;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+  .index .ilabel{flex:0 0 100%}
+  .index a{border-left:0;background:var(--surface);border:1px solid var(--line)}
+}
+
+/* --- tekst -------------------------------------------------------- */
+section{scroll-margin-top:20px;margin-bottom:44px}
+h2{font-size:23px;font-weight:600;letter-spacing:-.028em;font-stretch:104%;
+  margin:0 0 6px;display:flex;align-items:baseline;gap:12px;text-wrap:balance}
+h2 .nr{font-family:var(--code);font-size:13px;color:var(--accent);font-weight:500;
+  flex:0 0 auto}
+h3{font-size:16px;font-weight:600;letter-spacing:-.012em;margin:26px 0 8px}
+p{margin:0 0 13px;max-width:70ch;color:var(--ink-2)}
+p strong,li strong{color:var(--ink);font-weight:600}
+.inleiding{color:var(--ink-2);margin-bottom:20px;padding-bottom:16px;
+  border-bottom:1px solid var(--hair);max-width:70ch}
+ul,ol{margin:0 0 14px;padding-left:20px;max-width:70ch;color:var(--ink-2)}
+li{margin-bottom:6px}
+li::marker{color:var(--accent)}
+
+/* --- regelkaart --------------------------------------------------- */
+.regel{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:15px 17px;margin:0 0 12px;box-shadow:var(--schaduw)}
+.regelkop{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-bottom:7px}
+.rid{font-family:var(--code);font-size:11px;font-weight:600;letter-spacing:.02em;
+  background:var(--accent-soft);color:var(--accent);padding:3px 8px;border-radius:4px}
+.rtitel{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.regel p{margin-bottom:0;color:var(--ink-2)}
+.regel p + p{margin-top:9px}
+
+pre{background:var(--surface-2);border:1px solid var(--hair);border-radius:8px;
+  padding:14px 16px;overflow-x:auto;margin:12px 0;
+  font:400 12.5px/1.65 var(--code);color:var(--ink)}
+pre .c{color:var(--ink-3)}
+pre .k{color:var(--accent);font-weight:500}
+
+.tabelwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;margin:12px 0;box-shadow:var(--schaduw)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;padding:11px 12px 9px;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--hair);vertical-align:top;
+  color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--code)}
+td strong{color:var(--ink)}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#test table td:first-child{white-space:nowrap}
+
+.valkuil{background:var(--bad-soft);border-left:3px solid var(--bad);
+  border-radius:0 8px 8px 0;padding:13px 16px;margin:14px 0;max-width:74ch}
+.valkuil b{color:var(--bad);display:block;font-size:11px;letter-spacing:.13em;
+  text-transform:uppercase;margin-bottom:5px}
+.valkuil p{color:var(--ink-2);margin:0}
+.valkuil p + p{margin-top:8px}
+
+.let{background:var(--surface-2);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:13px 16px;margin:14px 0;max-width:74ch}
+.let p{margin:0;color:var(--ink-2)}
+.let b{color:var(--ink)}
+
+.pil{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10.5px;
+  font-weight:600;font-family:var(--code)}
+.pil.g{background:var(--ok-soft);color:var(--ok)}
+.pil.o{background:var(--warn-soft);color:var(--warn)}
+.pil.r{background:var(--bad-soft);color:var(--bad)}
+.pil.a{background:var(--accent-soft);color:var(--accent)}
+
+.voet{grid-column:1/-1;margin-top:20px;padding-top:22px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--ink-3);max-width:74ch}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="blad">
+
+<header class="kop">
+  <div class="merk">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1.6" y="1.6" width="20.8" height="20.8" rx="4" fill="none"
+            stroke="currentColor" stroke-width="1.5" opacity=".55"/>
+      <rect x="6.4" y="12.2" width="11.2" height="5.4" rx="1.4" fill="currentColor"/>
+      <path d="M6.4 8.4h11.2" stroke="currentColor" stroke-width="1.2"
+            stroke-linecap="round" opacity=".4"/></svg>
+    Vakto
+  </div>
+  <h1>De rekenkern, uitgeschreven</h1>
+  <p class="onderkop">Elke regel waarmee Vakto rekent, los van de taal waarin hij nu
+  toevallig geschreven staat. Wie dit document volgt, bouwt de serverversie na in plaats
+  van hem opnieuw te bedenken &mdash; en dat is het verschil tussen één systeem en twee
+  systemen die langzaam uit elkaar lopen.</p>
+  <div class="stempel">
+    <span><b>Versie</b> 1.10</span>
+    <span><b>Bron</b> browserversie, augustus 2026</span>
+    <span><b>Doel</b> Python + PostgreSQL</span>
+    <span><b>Regels</b> 66</span>
+    <span><b>Testgevallen</b> 30</span>
+  </div>
+</header>
+
+<nav class="index" aria-label="Inhoud">
+  <span class="ilabel">Inhoud</span>
+  <a href="#grond"><i>1</i>Grondregels</a>
+  <a href="#model"><i>2</i>Datamodel</a>
+  <a href="#afgeleid"><i>3</i>Afgeleide waarden</a>
+  <a href="#passen"><i>4</i>Passen</a>
+  <a href="#voorstel"><i>5</i>Inslagvoorstel</a>
+  <a href="#boeken"><i>6</i>Boeken</a>
+  <a href="#meten"><i>7</i>Meten en afwijking</a>
+  <a href="#uitgaand"><i>8</i>Uitgaand</a>
+  <a href="#zelf"><i>9</i>Zelfcontrole</a>
+  <a href="#opt"><i>10</i>Optimalisatie</a>
+  <a href="#imp"><i>11</i>Import</a>
+  <a href="#scan"><i>12</i>Scanmodus</a>
+  <a href="#gebruikers"><i>13</i>Gebruikers en rollen</a>
+  <a href="#inst"><i>14</i>Instellingen</a>
+  <a href="#test"><i>15</i>Testgevallen</a>
+  <a href="#volgorde"><i>16</i>Volgorde</a>
+</nav>
+
+<main>
+
+<!-- ============================================================ -->
+<section id="grond">
+  <h2><span class="nr">01</span> Grondregels</h2>
+  <p class="inleiding">Zeven regels die overal gelden. Ze zijn belangrijker dan welke
+  formule dan ook: elke fout die ik in dit systeem heb gemaakt, was een overtreding van
+  één van deze zeven.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-01</span>
+    <span class="rtitel">Voorraad en journaal gaan altijd samen</span></div>
+    <p>Geen enkele voorraadwijziging zonder journaalregel, in dezelfde transactie. Lukt de
+    journaalregel niet, dan gaat de voorraadwijziging ook niet door. In PostgreSQL is dat
+    één <code>BEGIN … COMMIT</code>; in de browser is het één functie waar je niet omheen
+    kunt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-02</span>
+    <span class="rtitel">Afgeleide waarden worden nooit opgeslagen</span></div>
+    <p>Beschikbare voorraad, maatklasse, actuele artikelmaat, dekking in dagen, de status
+    van een melding: allemaal berekend uit de huidige toestand. Sla je ze op, dan lopen ze
+    stil uit de pas en merkt niemand het.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-03</span>
+    <span class="rtitel">Een melding is geen taakje</span></div>
+    <p>Meldingen sluiten zichzelf zodra de aanleiding weg is. Taken vervallen zodra ze
+    overbodig zijn. Een mens vinkt niets af; een mens beslist alleen dingen die een
+    oordeel vragen.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-04</span>
+    <span class="rtitel">Gedrag hoort in een tabel, niet in een <code>if</code></span></div>
+    <p>Alles wat per klant verschilt staat in <code>setting</code>,
+    <code>location_type</code>, <code>size_class_rule</code> of <code>weging</code>. Zodra
+    je iets voor één klant in de code zet, heb je geen algemeen systeem meer.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-05</span>
+    <span class="rtitel">Bezetting telt in volume en gewicht, nooit in stuks</span></div>
+    <p>Een pallet met 300 boutjes mag geen 300 aftrekken van het aantal pompen dat er nog
+    bij kan. Alles wat over ruimte gaat, rekent in mm³ en gram.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-06</span>
+    <span class="rtitel">Tijden in UTC, omrekenen bij het tonen</span></div>
+    <p>Elke <code>at</code> is UTC. Zomertijd is een weergaveprobleem, geen opslagprobleem.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BASIS-07</span>
+    <span class="rtitel">Nooit een scherm zonder limiet</span></div>
+    <p>Elke lijst pagineert. Een query zonder <code>LIMIT</code> werkt prima bij 2.000
+    locaties en legt de boel plat bij 200.000.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="model">
+  <h2><span class="nr">02</span> Datamodel</h2>
+  <p class="inleiding">De tabellen die de rekenkern nodig heeft. Namen zijn Engels omdat
+  het schema dat al is; de schermen blijven Nederlands.</p>
+
+  <div class="tabelwrap"><table>
+    <thead><tr><th>Tabel</th><th>Kern</th><th>Let op</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><strong>location</strong></td>
+        <td>code, zone_id, type_id, aisle, bay, level, seq, L, W, H (mm), max_g (gram), actief, geteld_op</td>
+        <td><code>seq</code> is de looproute, zie R-UIT-03. Afmetingen zijn <em>binnenmaten</em>.</td></tr>
+      <tr><td class="mono"><strong>location_type</strong></td>
+        <td>code, pick, bulk, mix, blok, doel &mdash; vlaggen, geen enum in code</td>
+        <td><code>doel=0</code> betekent: nooit een inslagvoorstel. <code>blok=1</code>: telt niet mee als beschikbaar.</td></tr>
+      <tr><td class="mono"><strong>product</strong></td>
+        <td>sku, oms, group_id, min_qty, max_qty, stapelbaar, barcode, drempel_akkoord</td>
+        <td>Géén afmetingen. Die staan in <code>measurement</code>.
+            <code>drempel_akkoord</code> is de menselijke keuze uit R-OPT-05.</td></tr>
+      <tr><td class="mono"><strong>measurement</strong></td>
+        <td>product_id, at, bron, L, W, H, G, notitie</td>
+        <td>Append-only. De actuele maat is de nieuwste rij, zie R-AFG-01.</td></tr>
+      <tr><td class="mono"><strong>stock</strong></td>
+        <td>product_id, location_id, qty, res</td>
+        <td>Uniek op (product, locatie). <code>res</code> is gereserveerd, zie R-UIT-01.</td></tr>
+      <tr><td class="mono"><strong>journal</strong></td>
+        <td>at, soort, product_id, van, naar, qty, reden, ref</td>
+        <td>Append-only, nooit UPDATE of DELETE. Dit is je bewijsstuk.</td></tr>
+      <tr><td class="mono"><strong>task</strong></td>
+        <td>soort, naam, prio, status, product_id, van, naar, qty, aanleiding, reden, automatisch, at</td>
+        <td>Eén tabel voor alle soorten werk. Status: TODO, DONE, VERVALLEN.</td></tr>
+      <tr><td class="mono"><strong>alert</strong></td>
+        <td>product_id, at, d_vol, d_gew, status, gevolg</td>
+        <td>Status: OPEN, OPGELOST, DISMISSED. OPGELOST zet het systeem zelf.</td></tr>
+      <tr><td class="mono"><strong>order</strong> / <strong>order_line</strong></td>
+        <td>nummer, klant, prio, status / product_id, besteld, gereserveerd, gepickt, manco</td>
+        <td>Statusreeks in R-UIT-06.</td></tr>
+      <tr><td class="mono"><strong>allocation</strong></td>
+        <td>order_id, regel, product_id, location_id, qty, gepickt, status</td>
+        <td>Welke voorraad op welke locatie voor welke order bestemd is. Dit is ook de
+            pickregel: status TODO, DONE of MANCO, zie R-UIT-06.</td></tr>
+      <tr><td class="mono"><strong>event_log</strong></td>
+        <td>at, niveau, bron, bericht, ref</td>
+        <td>Append-only. Waar het systeem opschrijft wat het zelf besloten heeft &mdash;
+            een tekort bij reserveren (R-UIT-02), een melding die vanzelf sluit (R-ZC-01).</td></tr>
+      <tr><td class="mono"><strong>setting</strong></td>
+        <td>sleutel, waarde, groep, uitleg</td>
+        <td>Alles uit hoofdstuk 14 staat hier. Waarde altijd als tekst opslaan, bij lezen omzetten.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="let"><p><b>Twee indexen die je niet moet vergeten.</b>
+  <code>stock(product_id, location_id)</code> uniek, en
+  <code>journal(product_id, at DESC)</code>. Zonder die tweede wordt het berekenen van
+  vraagsnelheid (R-OPT-02) een tabelscan over miljoenen regels.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="afgeleid">
+  <h2><span class="nr">03</span> Afgeleide waarden</h2>
+  <p class="inleiding">Vier dingen die je nergens opslaat. In PostgreSQL zijn dit views;
+  in de browser zijn het functies. Hetzelfde antwoord, altijd.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-AFG-01</span>
+    <span class="rtitel">Actuele artikelmaat</span></div>
+    <p>De meting met de hoogste <code>at</code> voor dit artikel. Is er geen meting, dan is
+    de maat <em>onbekend</em> &mdash; niet nul, en niet een gok. Een artikel zonder maat doet
+    gewoon mee in voorraad en orders, maar krijgt nooit een inslagvoorstel.</p>
+<pre><span class="c">-- view v_product_current</span>
+<span class="k">SELECT DISTINCT ON</span> (product_id) product_id, at, bron, L, W, H, G
+<span class="k">FROM</span> measurement <span class="k">ORDER BY</span> product_id, at <span class="k">DESC</span>;</pre></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-AFG-02</span>
+    <span class="rtitel">Maatklasse van een locatie</span></div>
+    <p>Berekend uit het volume, nooit ingevuld. <code>cm³ = L × W × H / 1000</code>, daarna
+    opzoeken in <code>size_class_rule</code>. Grenzen zijn <code>min ≤ cm³ &lt; max</code>.</p>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Klasse</th><th>Naam</th><th class="num">van (cm³)</th><th class="num">tot (cm³)</th></tr></thead>
+      <tbody>
+        <tr><td class="mono"><strong>XS</strong></td><td>Bak</td><td class="num">0</td><td class="num">8.000</td></tr>
+        <tr><td class="mono"><strong>S</strong></td><td>Klein vak</td><td class="num">8.000</td><td class="num">50.000</td></tr>
+        <tr><td class="mono"><strong>M</strong></td><td>Middelvak</td><td class="num">50.000</td><td class="num">200.000</td></tr>
+        <tr><td class="mono"><strong>L</strong></td><td>Groot vak</td><td class="num">200.000</td><td class="num">900.000</td></tr>
+        <tr><td class="mono"><strong>XL</strong></td><td>Palletplaats</td><td class="num">900.000</td><td class="num">99.000.000</td></tr>
+      </tbody></table></div></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-AFG-03</span>
+    <span class="rtitel">Beschikbare voorraad</span></div>
+<pre>beschikbaar(product) = <span class="k">som van</span> (qty - res)
+  <span class="k">over</span> stock <span class="k">waar</span> qty &gt; 0
+  <span class="k">en</span> location_type.blok = 0</pre>
+    <p>Voorraad op een geblokkeerde locatie (keuring, schade) telt niet mee. Die ligt er
+    wel, maar je kunt hem niet verkopen.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-AFG-04</span>
+    <span class="rtitel">Bezetting van een locatie</span></div>
+<pre>bezet_vol(loc) = som(qty × L × W × H) <span class="c">-- mm³, over alle artikelen</span>
+bezet_gew(loc) = som(qty × G)         <span class="c">-- gram</span></pre>
+    <p>Artikelen zonder maat tellen niet mee in het volume. Dat is een bewuste keuze: liever
+    onderschatten dan een verzonnen getal gebruiken. Het gevolg &mdash; een locatie met veel
+    ongemeten artikelen lijkt leger dan hij is &mdash; los je op door te meten, niet door te
+    schatten.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="passen">
+  <h2><span class="nr">04</span> Passen</h2>
+  <p class="inleiding">De vraag: hoeveel stuks van dit artikel gaan er in deze locatie? Dit
+  is de kern van het hele product en de plek waar het het vaakst subtiel misgaat.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-PAS-01</span>
+    <span class="rtitel">Draaiingen</span></div>
+    <p>Een stapelbaar artikel mag op zes manieren liggen, een niet-stapelbaar op twee
+    (alleen liggend draaien, nooit op zijn kant).</p>
+<pre><span class="k">stapelbaar:</span>     (L,W,H) (L,H,W) (W,L,H) (W,H,L) (H,L,W) (H,W,L)
+<span class="k">niet stapelbaar:</span> (L,W,H) (W,L,H)</pre></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-PAS-02</span>
+    <span class="rtitel">Aantal per draaiing</span></div>
+<pre><span class="k">voor elke</span> draaiing (ol, ow, oh):
+    <span class="k">als</span> ol &gt; loc.L <span class="k">of</span> ow &gt; loc.W <span class="k">of</span> oh &gt; loc.H: overslaan
+
+    <span class="k">als</span> stapelbaar:
+        n = floor(loc.L/ol) × floor(loc.W/ow) × floor(loc.H/oh)
+    <span class="k">anders:</span>
+        n = floor(loc.L/ol) × floor(loc.W/ow)   <span class="c">-- één laag</span>
+
+    beste = max(beste, n)</pre>
+    <p>Past het in geen enkele draaiing, dan is het antwoord <code>0</code> met reden
+    <span class="pil r">AFMETING</span>. Niet <code>null</code>: nul is een geldig antwoord.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-PAS-03</span>
+    <span class="rtitel">Vulfactor en gewicht</span></div>
+<pre>op_maat    = max(1, floor(beste × vulfactor))
+op_gewicht = floor(loc.max_g / product.G)
+
+<span class="k">als</span> op_gewicht &lt; op_maat:  resultaat = op_gewicht, limiet = GEWICHT
+<span class="k">anders:</span>                    resultaat = op_maat,    limiet = AFMETING</pre></div>
+
+  <div class="valkuil"><b>Valkuil — de max(1, …) is geen detail</b>
+    <p>Een pomp die precies één keer in een palletplaats past geeft
+    <code>floor(1 × 0,85) = 0</code>. Zonder die <code>max(1, …)</code> past zo'n artikel
+    <em>nergens</em>, en dan zoek je een dag naar de fout in je scoringsregels terwijl het
+    probleem één afronding is. Dit heeft mij een avond gekost.</p>
+    <p>Let op de volgorde: eerst het aantal per draaiing bepalen, dán de vulfactor
+    toepassen. Andersom rond je twee keer af en klopt er niets meer van.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="voorstel">
+  <h2><span class="nr">05</span> Inslagvoorstel</h2>
+  <p class="inleiding">Welke locatie is de beste plek voor deze partij? Passen is een
+  ja-nee-vraag; dit is een rangschikking. Het verschil tussen een systeem dat werkt en een
+  systeem dat een magazijn langzaam laat vastlopen zit hier.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-INS-01</span>
+    <span class="rtitel">Kandidaten</span></div>
+    <p>Alle locaties met <code>location_type.doel = 1</code> en <code>actief = 1</code>.
+    Voor elke kandidaat: R-PAS uitvoeren; is het resultaat 0, dan valt hij af.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-INS-02</span>
+    <span class="rtitel">Vrije ruimte na wat er al ligt</span></div>
+<pre>vrij = floor( min(
+    fit.qty - reeds_van_dit_artikel,   <span class="c">-- stapelbudget</span>
+    (loc_volume × vulfactor - bezet_vol) / product_volume,
+    (loc.max_g - bezet_gew) / product.G
+))
+<span class="k">als</span> vrij ≤ 0: locatie valt af</pre>
+    <p>Drie budgetten, en het kleinste wint. Staat <code>location_type.mix = 0</code> en
+    ligt er al een <em>ander</em> artikel, dan valt de locatie sowieso af: één soort per
+    vak, tenzij het vak gemengd mag.</p></div>
+
+  <div class="valkuil"><b>Valkuil — het volumebudget is ruimer dan de stapeling</b>
+    <p>De aftrek <code>− reeds_van_dit_artikel</code> in de eerste regel is geen
+    schoonheidsfoutje. Dozen laten lucht over: in een vak van 300×400×220 gaan er
+    geometrisch dertig van 120×90×45, terwijl het volumebudget er zesenveertig toestaat.
+    Vergeet je die aftrek, dan stelt het systeem er zestien bij voor op een vak dat al
+    vol is.</p>
+    <p>Deze fout zat in de eerste versie en is gevonden door testgeval T-19 te schrijven.
+    Precies waar dit document voor bedoeld is.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-INS-03</span>
+    <span class="rtitel">Benutting</span></div>
+<pre>geplaatst = min(gevraagd_aantal, vrij)
+benutting = (geplaatst × product_volume) / (loc_volume × vulfactor)</pre>
+    <p>Dit ene getal is het hart van het product. Veertig schroefsets in een palletplaats
+    komt uit op 1,6% &mdash; en dat voorstel hoort onderaan, niet bovenaan, ook al past het
+    er honderd keer in.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-INS-04</span>
+    <span class="rtitel">Score</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Term</th><th class="num">Punten</th><th>Wanneer</th></tr></thead>
+      <tbody>
+        <tr><td><strong>benutting</strong></td><td class="num mono">+500 × min(1, benutting)</td>
+          <td>altijd</td></tr>
+        <tr><td><strong>zelfde artikel</strong></td><td class="num mono">+400 × min(1, vrij/gevraagd)</td>
+          <td>dit artikel ligt hier al</td></tr>
+        <tr><td><strong>picklocatie aanvullen</strong></td><td class="num mono">+600</td>
+          <td>type.pick = 1 én product.min_qty gezet én er ligt minder dan min_qty</td></tr>
+        <tr><td><strong>hele partij past</strong></td><td class="num mono">+200</td>
+          <td>vrij ≥ gevraagd</td></tr>
+        <tr><td><strong>deelvulling</strong></td><td class="num mono">+150 × (vrij/gevraagd)</td>
+          <td>vrij &lt; gevraagd</td></tr>
+        <tr><td><strong>te ruim</strong></td><td class="num mono">−550 × (1 − benutting/0,20)</td>
+          <td>benutting &lt; 0,20 én instelling <code>prefer_smallest_fit</code> aan</td></tr>
+      </tbody></table></div>
+    <p>Alle termen afronden op hele punten (<code>round</code>), en optellen. Sorteren op
+    score aflopend; bij gelijke score op <code>location.seq</code> oplopend, zodat de
+    volgorde altijd dezelfde is.</p></div>
+
+  <div class="let"><p><b>Hoe zwaar de strafterm moet zijn.</b> Bij een benutting die naar
+  nul gaat, gaat ook de benuttingsbonus naar nul en blijft over:
+  <code>hele_partij_past</code> min de volle straf. Is die som positief, dan wordt "alles
+  past" beloond in een vak dat veel te ruim is. Dus:
+  <code>|te_ruim_straf| &gt; hele_partij_past</code>, en 550 &gt; 200 haalt dat ruim.</p>
+  <p>De straf is bewust <em>niet</em> groter dan <code>zelfde_artikel</code> plus
+  <code>hele_partij_past</code> samen. Een vak waar het artikel al ligt is namelijk een
+  goede plek, ook als het ruim is: dat scheelt een locatie, en locaties zijn het duurste
+  wat een magazijn heeft. Verander je één van deze getallen, controleer dan T-07.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="boeken">
+  <h2><span class="nr">06</span> Boeken</h2>
+  <p class="inleiding">Eén functie waar elke voorraadwijziging doorheen gaat. Er is geen
+  tweede route, ook niet "even snel" voor een import of een correctie.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BOEK-01</span>
+    <span class="rtitel">Handtekening en volgorde</span></div>
+<pre>boek(product, aantal, soort, van, naar, reden, ref)
+
+1. <span class="k">als</span> aantal ≤ 0            → fout "aantal moet groter dan 0 zijn"
+2. <span class="k">als</span> van is gezet:
+     rij = stock(product, van)   <span class="c">-- met rijvergrendeling</span>
+     <span class="k">als</span> rij ontbreekt <span class="k">of</span> rij.qty &lt; aantal
+                              → fout "onvoldoende voorraad op bronlocatie"
+     rij.qty -= aantal
+3. <span class="k">als</span> naar is gezet:
+     rij = stock(product, naar), aanmaken als hij niet bestaat
+     rij.qty += aantal
+4. journal-regel wegschrijven
+5. commit</pre>
+    <p>Soorten: <code>RECEIPT</code>, <code>PUTAWAY</code>, <code>PICK</code>,
+    <code>MOVE</code>, <code>ADJUST</code>, <code>COUNT</code>, <code>IMPORT</code>.
+    Zowel <code>van</code> als <code>naar</code> leeg mag niet.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BOEK-02</span>
+    <span class="rtitel">Rijvergrendeling, in een vaste volgorde</span></div>
+    <p><code>SELECT … FOR UPDATE</code> op de stock-rijen, binnen de transactie. Dit is de
+    enige reden dat SQLite niet volstaat: twee pickers die tegelijk de laatste vijf stuks
+    pakken, moeten er één een foutmelding krijgen en niet allebei succes.</p>
+    <p><strong>Vergrendel altijd in dezelfde volgorde</strong> &mdash; oplopend op
+    <code>location_id</code>. Doe je dat niet, dan loopt een verplaatsing A&rarr;B tegelijk
+    met B&rarr;A vast in een deadlock. Dat klinkt theoretisch en gebeurt in een magazijn
+    vaker dan je denkt: twee mensen die tegelijk tussen dezelfde twee vakken schuiven.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-BOEK-03</span>
+    <span class="rtitel">Boeken hoort in de database, niet in de applicatie</span></div>
+    <p>Zet je <code>boek()</code> in Python, dan geldt R-BASIS-01 alleen zolang iedereen
+    die route gebruikt. Eén importscriptje dat "even snel" een <code>UPDATE</code> doet, en
+    je journaal klopt niet meer. Als functie in de database geldt hij voor iedereen: de
+    webapplicatie, een achtergrondtaak, jijzelf met <code>psql</code> om elf uur 's avonds.</p>
+    <p>De grens: <strong>de database bewaakt integriteit</strong> (boeken, vergrendelen,
+    checks, append-only), <strong>Python doet de berekeningen</strong> (passen, benutting,
+    scoren, optimaliseren). Alles wat je in de rekenkern zet moet zonder database te testen
+    zijn; alles wat je in de database zet moet zonder applicatie te gelden.</p></div>
+
+  <div class="valkuil"><b>Valkuil — nooit twee keer afboeken</b>
+    <p>Bij het afmelden van een pick verleid je jezelf ertoe om zowel de voorraad handmatig
+    te verlagen als <code>boek()</code> aan te roepen. Dan boek je dubbel af en krijg je
+    even later "onvoldoende voorraad op bronlocatie" bij een locatie waar genoeg ligt.</p>
+    <p>De regel: <strong>de reservering geef je zelf vrij, de voorraad laat je aan
+    <code>boek()</code>.</strong> Nooit allebei.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="meten">
+  <h2><span class="nr">07</span> Meten en afwijking</h2>
+  <p class="inleiding">Artikelafmetingen zijn een tijdlijn, geen veld. Dit is samen met de
+  benutting het tweede idee waarop het product staat.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-MEET-01</span>
+    <span class="rtitel">Meting vastleggen</span></div>
+    <p>Voeg een rij toe aan <code>measurement</code> met tijdstip en bron
+    (<code>SUPPLIER</code>, <code>RECEIPT</code>, <code>PACKING</code>,
+    <code>CONTROL</code>). Nooit een bestaande rij bijwerken.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-MEET-02</span>
+    <span class="rtitel">Afwijking bepalen</span></div>
+<pre>vorige = meting die hiervóór de nieuwste was
+<span class="k">als</span> er geen vorige is: geen melding, klaar
+
+d_vol = (nieuw_volume - oud_volume) / oud_volume × 100
+d_gew = (nieuw_G      - oud_G)      / oud_G      × 100
+
+<span class="k">als</span> |d_vol| &lt; drempel <span class="k">en</span> |d_gew| &lt; drempel: geen melding
+
+melding.d_vol = rond(d_vol × 10) / 10        -- pas hier afronden
+melding.d_gew = rond(d_gew × 10) / 10</pre>
+    <p>Drempel is <code>drift.alert_threshold_pct</code>, standaard 15.</p>
+    <p>De volgorde in die laatste twee regels is met opzet: <em>eerst</em> toetsen op het
+    onafgeronde getal, <em>dan</em> pas afronden voor de melding. Andersom wordt 14,96%
+    na afronding 15,0 en slaat het systeem alarm over een afwijking die onder de drempel
+    zit &mdash; een melding die je niet kunt uitleggen aan degene die hem krijgt.</p>
+    <div class="valkuil"><b>Valkuil &mdash; twee talen ronden anders af</b>
+      <p>Gebruik <code>rond(x × 10) / 10</code> en niet de ingebouwde afronding op
+      decimalen. Python's <code>round(12.25, 1)</code> geeft 12,2 (bankiersafronding),
+      JavaScript's <code>Math.round</code> geeft 12,3. Twee versies die hetzelfde artikel
+      een ander percentage geven laten de ene versie kapot lijken terwijl er niets aan de
+      hand is. Zelfde functie <code>rond()</code> als bij R-INS-04.</p></div></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-MEET-03</span>
+    <span class="rtitel">Gevolg voor de huidige voorraad</span></div>
+    <p>Dit is het stuk dat het verschil maakt. Bij een melding loopt het systeem alle
+    locaties langs waar dit artikel nu ligt en rekent met de <em>nieuwe</em> maat opnieuw
+    uit hoeveel er past. Ligt er meer dan er past, dan gaat die locatie in het veld
+    <code>gevolg</code>.</p>
+<pre><span class="k">voor elke</span> stock-rij van dit artikel met qty &gt; 0:
+    <span class="k">als</span> location_type.doel = 0: overslaan
+    fit = R-PAS(nieuwe maat, locatie)
+    <span class="k">als</span> fit.qty &lt; rij.qty:
+        noteer "CODE (ligt {qty}, past nog {fit.qty})"
+
+sorteer de gevonden locaties op location.seq, dan op location.id</pre>
+    <p>Geen enkele locatie in de knel? Dan nog steeds een melding, maar met
+    "geen gevolgen voor huidige voorraadlocaties".</p>
+    <p><b>Doorloopplekken tellen niet mee.</b> Ontvangst, keuring, schade en
+    verzendgereed hebben een nominale maat en zijn geen bewaarplek. Een pallet die daar
+    een dag staat "past" er niet minder om, en een melding erover is nergens mee op te
+    lossen. De vlag is <code>location_type.doel</code>, dus een klant die het anders wil
+    zet het in de tabel om (R-BASIS-04).</p>
+    <p><b>De volgorde ligt vast.</b> Op <code>location.seq</code>, niet op de volgorde
+    waarin de voorraadregels toevallig uit de database komen. De zelfcontrole (R-ZC-01)
+    rekent deze tekst bij elke mutatie opnieuw uit; wisselt de volgorde, dan lijkt een
+    onveranderde melding steeds te veranderen.</p>
+    <div class="let"><p><b>Eén open melding per artikel.</b> Wijkt een artikel twee keer
+    achter elkaar af, dan komt er geen tweede melding bij: de bestaande wordt bijgewerkt
+    en houdt zijn oorspronkelijke tijdstip, zodat je ziet hoe lang dit al speelt. Een
+    melding is namelijk een uitspraak over de huidige toestand en geen regel op een
+    takenlijst &mdash; twee open uitspraken over hetzelfde artikel spreken elkaar tegen.
+    Is de melding eenmaal <code>OPGELOST</code> of <code>DISMISSED</code>, dan mag er
+    later gewoon een nieuwe komen.</p></div></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-MEET-04</span>
+    <span class="rtitel">Wat er opnieuw gemeten moet worden</span></div>
+    <p>Een artikel staat op de meetlijst als: er is nooit gemeten, óf de nieuwste meting
+    heeft bron <code>SUPPLIER</code>, óf de nieuwste meting is ouder dan
+    <code>drift.remeasure_after_days</code> (standaard 180). Sorteren op oudste eerst,
+    en nooit-gemeten helemaal bovenaan &mdash; zonder maat is er geen inslagvoorstel
+    mogelijk, dus dat is het dringendst. Zo is de lijst meteen een werkvolgorde.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="uitgaand">
+  <h2><span class="nr">08</span> Uitgaand</h2>
+  <p class="inleiding">Van order tot verzending. Reserveren is de plek waar zelfbouw­systemen
+  het vaakst omvallen, dus die staat er het uitgebreidst bij.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-01</span>
+    <span class="rtitel">Reserveren verplaatst niets</span></div>
+    <p>Reserveren legt vast <em>welke</em> voorraad op <em>welke</em> locatie voor deze
+    order bestemd is. De <code>qty</code> verandert niet; <code>res</code> gaat omhoog en er
+    komt een <code>allocation</code>-rij bij. Vrije voorraad van een rij is altijd
+    <code>qty − res</code>.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-02</span>
+    <span class="rtitel">Volgorde van kandidaten</span></div>
+<pre>kandidaten = stock-rijen van dit artikel
+             <span class="k">waar</span> (qty - res) &gt; 0 <span class="k">en</span> location_type.blok = 0
+<span class="k">sorteer op:</span>  picklocatie eerst (pick=1 vóór pick=0),
+             daarna location.seq oplopend
+
+<span class="k">voor elke</span> kandidaat totdat de regel vol is:
+    neem = min(nog_nodig, qty - res)
+    res += neem;  allocation toevoegen;  nog_nodig -= neem</pre>
+    <p>Kan niet alles gereserveerd worden, dan krijgt de order status
+    <span class="pil o">WACHT_OP_VOORRAAD</span> en komt er één waarschuwing in het log &mdash;
+    niet bij elke poging opnieuw.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-03</span>
+    <span class="rtitel">Looproute</span></div>
+<pre>seq = gang × 1.000.000 + vak_positie × 100 + niveau × 10
+
+vak_positie = vak            <span class="k">als</span> gang oneven is
+              9999 - vak     <span class="k">als</span> gang even is   <span class="c">-- slangroute</span></pre>
+    <p>Bij vrijgeven worden de gereserveerde regels op <code>seq</code> gesorteerd, niet op
+    ordervolgorde. Dat is het hele verschil tussen een picker die één keer door de gang
+    loopt en een picker die heen en weer sjouwt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-04</span>
+    <span class="rtitel">Picken</span></div>
+<pre>te_max = min(regel.qty - regel.gepickt, stock.qty)
+neem   = max(0, min(opgegeven_aantal, te_max))
+
+<span class="k">als</span> neem &gt; 0:
+    stock.res -= neem            <span class="c">-- zelf doen</span>
+    boek(product, neem, PICK, locatie, null, null, ordernummer)
+    regel.gepickt += neem;  orderregel.gepickt += neem;  allocation.gepickt += neem</pre></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-05</span>
+    <span class="rtitel">Manco &mdash; vier dingen tegelijk</span></div>
+    <p>Is er minder gepickt dan gevraagd, dan is de regel een manco. Dan gebeurt er dit,
+    en niets minder:</p>
+    <ol>
+      <li><strong>Reservering vrijgeven</strong> voor het tekort, zodat een andere order die
+        voorraad wél kan gebruiken.</li>
+      <li><strong>Systeemaantal corrigeren</strong> met een <code>ADJUST</code>-boeking, reden
+        <code>MANCO</code> &mdash; maar <em>nooit meer afboeken dan het systeem denkt te
+        hebben</em>: <code>afboeken = min(tekort, stock.qty)</code>.</li>
+      <li><strong>Teltaak aanmaken</strong> op die locatie. Alleen een mens weet het echte
+        aantal; het systeem weet alleen dat het niet klopt.</li>
+      <li><strong>Orderregel markeren</strong> met het mancoaantal, zodat de klant een
+        eerlijke pakbon krijgt.</li>
+    </ol></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-06</span>
+    <span class="rtitel">Statusreeks</span></div>
+<pre>NIEUW → GERESERVEERD ─────────→ VRIJGEGEVEN → PICKEN → GEPICKT
+     ↘ WACHT_OP_VOORRAAD ↗                              → INGEPAKT → VERZONDEN</pre>
+    <p>Een order gaat naar <span class="pil g">GEPICKT</span> zodra elke regel van de
+    pickopdracht niet meer <code>TODO</code> is &mdash; ook als er manco's tussen zitten.
+    Een manco is een afgehandelde regel, geen open regel.</p>
+    <p>De pickregel is de <code>allocation</code>-rij zelf, met een status ernaast:
+    <code>TODO</code> zolang er nog gepickt moet worden, <code>DONE</code> als het
+    aantal er ligt, <code>MANCO</code> als het er niet lag. Een aparte tabel met
+    pickregels zou dezelfde gegevens nog een keer opschrijven, en dan lopen ze uit
+    elkaar zodra iemand er &eacute;&eacute;n van bijwerkt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-UIT-07</span>
+    <span class="rtitel">Inpakken en verzenden</span></div>
+<pre>gewicht = som over de regels van (artikelgewicht &times; gepickt)
+colli   = max(1, ceil(gewicht / uit.max_colli_gewicht_g))</pre>
+    <p>Artikelen zonder maat tellen niet mee in het gewicht &mdash; liever onderschatten dan
+    een verzonnen getal op de vrachtbrief (R-AFG-04 doet hetzelfde). Verzenden legt het
+    tijdstip vast en zet per regel het verzonden aantal gelijk aan het gepickte aantal;
+    het manco gaat niet mee.</p>
+    <p>Dit is het enige stuk van hoofdstuk 8 dat in Python staat en niet in de database:
+    er wordt niets vergrendeld en niets geboekt, alleen gerekend. Reserveren, picken en
+    manco horen w&eacute;l in de database, om dezelfde reden als boeken (R-BOEK-03) &mdash;
+    ze raken voorraad aan en moeten ook gelden voor wie ze buiten de applicatie om
+    aanroept.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="zelf">
+  <h2><span class="nr">09</span> Zelfcontrole</h2>
+  <p class="inleiding">Draait na elke mutatie. Alles hier is een gevolgtrekking uit de
+  huidige toestand, dus het mag zo vaak draaien als je wilt zonder dat er iets dubbel
+  gebeurt.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-ZC-01</span>
+    <span class="rtitel">Meldingen opnieuw beoordelen</span></div>
+<pre><span class="k">voor elke</span> alert met status OPEN:
+    problemen = locaties waar meer ligt dan er past (R-MEET-03)
+    <span class="k">als</span> leeg:  status = OPGELOST, log-regel schrijven
+    <span class="k">anders:</span>   gevolg bijwerken + verplaatstaak klaarzetten (R-ZC-02)</pre></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-ZC-02</span>
+    <span class="rtitel">Overloop verplaatsen</span></div>
+    <p>Per locatie in de knel: zoek via R-INS een andere locatie voor het teveel. Gevonden,
+    dan een taak <code>OVERLOOP</code> met prioriteit 15. Niet gevonden, dan geen taak &mdash;
+    dat vraagt een menselijke keuze en dat zeg je er ook bij.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-ZC-03</span>
+    <span class="rtitel">Taken laten vervallen</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Soort</th><th>Vervalt wanneer</th></tr></thead>
+      <tbody>
+        <tr><td class="mono"><strong>REPLENISH</strong></td>
+          <td>picklocatie staat weer op of boven <code>min_qty</code>, óf de bronlocatie is leeg</td></tr>
+        <tr><td class="mono"><strong>OVERLOOP</strong></td>
+          <td>bronlocatie is leeg, óf het past er inmiddels weer in</td></tr>
+        <tr><td class="mono"><strong>SAMENVOEG</strong></td>
+          <td>bron is leeg, óf er is voorraad gereserveerd, óf op de doellocatie ligt dit artikel niet meer</td></tr>
+        <tr><td class="mono"><strong>CYCLE_COUNT</strong></td>
+          <td><code>location.geteld_op</code> is nieuwer dan de taak, óf er ligt niets meer</td></tr>
+        <tr><td class="mono"><strong>PICKPLEK</strong></td>
+          <td>het artikel heeft inmiddels een picklocatie</td></tr>
+      </tbody></table></div>
+    <p>Vervallen taken blijven staan met status <code>VERVALLEN</code> en de reden erbij.
+    Verwijderen mag niet: dan kun je achteraf niet meer navragen wat er gebeurde.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-ZC-04</span>
+    <span class="rtitel">Aanvultaken uit de drempel</span></div>
+<pre><span class="k">voor elke</span> stock-rij op een picklocatie:
+    <span class="k">als</span> product.min_qty <span class="k">en</span> rij.qty &lt; min_qty:
+        bron = bulkrij van dit artikel met de meeste vrije voorraad
+        nodig = min((max_qty <span class="k">of</span> min_qty) - rij.qty,
+                    bron.vrij,
+                    ruimte_voor(artikel, picklocatie))   <span class="c">-- R-INS-02</span>
+        <span class="k">als</span> nodig ≤ 0: geen taak
+        taak REPLENISH, prio 25, aanleiding "drempel"</pre>
+    <p>Bestaat er al een open <code>REPLENISH</code> voor dezelfde combinatie van artikel en
+    doellocatie, dan geen tweede.</p>
+    <p>Dit is dezelfde regel als de onderste rij van R-OPT-03, en dus ook hetzelfde stuk
+    code. Bouw je het twee keer, dan geeft de zelfcontrole een taak van 25 stuks waar de
+    optimalisatie er 40 wil, en staat de picker twee keer voor hetzelfde vak.</p>
+    <p><strong>Die derde term is verplicht.</strong> Minimum- en maximumvoorraad zeggen niets
+    over wat er past. Een aanvultaak van 115 stuks naar een vak waar er zestig in gaan is
+    geen taak &mdash; dat is een probleem dat je op de vloer aflevert. Geldt net zo voor de
+    drie aanleidingen in R-OPT-03.</p></div>
+
+  <div class="let"><p><b>Wat wél een mens blijft.</b> Precies twee dingen:
+  "niet meer melden voor dit artikel" (R-MEET), en een aanvuldrempel aanpassen (R-OPT-05).
+  Beide zijn oordelen. Al het andere &mdash; opmerken, klaarzetten, sluiten, laten vervallen
+  &mdash; doet het systeem.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="opt">
+  <h2><span class="nr">10</span> Optimalisatie</h2>
+  <p class="inleiding">Zwaarder dan de zelfcontrole, en niet elke seconde nodig. In de
+  browserversie draait dit hooguit één keer per 900 ms; op een server hoort het in een
+  achtergrondtaak elke paar minuten, of na een golf boekingen.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-OPT-01</span>
+    <span class="rtitel">Samenvoegen</span></div>
+<pre><span class="k">voor elk</span> artikel met 2 t/m 6 voorraadlocaties (alleen doel-locaties):
+    <span class="k">als</span> ergens res &gt; 0: overslaan          <span class="c">-- staat op naam van een order</span>
+    totaal = som van alle qty
+    doel = de locatie waar ALLES op past (R-INS-02 met eigen voorraad
+           niet meegeteld), gescoord op:
+               picklocatie   → +1.000.000
+               huidige qty   → +qty
+    <span class="k">als</span> geen doel: overslaan
+    <span class="k">als</span> doel geen picklocatie is en een bron wél: overslaan
+    <span class="k">voor elke</span> andere locatie: taak SAMENVOEG, prio 35</pre>
+    <p>De regel "nooit een picklocatie leeghalen naar bulk" is niet onderhandelbaar: dan
+    staat de picker morgen voor een leeg vak en heeft de optimalisatie het magazijn
+    slechter gemaakt in plaats van beter.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-OPT-02</span>
+    <span class="rtitel">Vraagsnelheid</span></div>
+<pre>snelheid(product) = som(qty van PICK-boekingen in het venster) / venster_dagen</pre>
+    <p>Venster is <code>opt.venster_dagen</code>, standaard 30. Gemeten in <em>stuks</em> per
+    dag, niet in aantal picks. Cache dit op het aantal journaalregels: zolang er niets
+    geboekt is, hoeft er niets herrekend te worden.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-OPT-03</span>
+    <span class="rtitel">Drie aanleidingen, één taak</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Aanleiding</th><th class="num">Prio</th><th>Voorwaarde</th><th>Aantal</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pil r">ordervraag</span></td><td class="num">10</td>
+          <td>som van openstaande orderregels &gt; wat er op de picklocatie ligt</td>
+          <td class="mono">max(nodig, max_qty) − op_pick</td></tr>
+        <tr><td><span class="pil o">hardloper</span></td><td class="num">20</td>
+          <td>snelheid ≥ <code>hardloper_per_dag</code> én dekking &lt; <code>dekking_dagen</code></td>
+          <td class="mono">ceil(snelheid × dekking_dagen) − op_pick</td></tr>
+        <tr><td><span class="pil a">drempel</span></td><td class="num">25</td>
+          <td>op_pick &lt; <code>min_qty</code></td>
+          <td class="mono">(max_qty of min_qty) − op_pick</td></tr>
+      </tbody></table></div>
+    <p>Vragen twee aanleidingen om hetzelfde vak, dan wordt het <strong>één taak</strong>:
+    hoogste aantal, laagste prioriteitsnummer, reden van de zwaarste aanleiding. Nooit drie
+    loopjes voor dezelfde locatie. <code>dekking = op_pick / snelheid</code>, in dagen.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-OPT-04</span>
+    <span class="rtitel">Telplan</span></div>
+    <p>Elke artikelgroep heeft een eigen <code>telinterval</code> in dagen. Een locatie is
+    aan de beurt als <code>nu − geteld_op &gt; interval</code>. Sorteren op de <em>relatieve</em>
+    overschrijding (<code>over / interval</code>), niet op absolute dagen &mdash; anders komen
+    langzame groepen nooit aan bod. Plafond:
+    <code>opt.max_open_teltaken</code>, standaard 12.</p>
+    <p>Teltaken uit een manco (R-UIT-05) vallen buiten dat plafond: die zijn urgent en
+    hebben een andere aanleiding.</p>
+    <p><b>Een locatie die nog nooit geteld is, heet ook zo.</b> Een leeg
+    <code>geteld_op</code> telt als oneindig over tijd &mdash; dat is precies de bedoeling,
+    want zo komt zo'n vak vanzelf bovenaan. Maar de reden op de taak wordt dan
+    <em>nog nooit geteld</em> en niet het aantal dagen sinds 1970. Bij een nieuwe klant
+    staat anders op elke taak &ldquo;20508 dag(en) over het telinterval&rdquo;, en een
+    picker die dat leest gelooft de rest van het scherm ook niet meer.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-OPT-05</span>
+    <span class="rtitel">Drempeladvies</span></div>
+<pre>zou_moeten = max(1, round(snelheid × dekking_dagen))
+afwijking  = |zou_moeten - min_qty| / max(1, zou_moeten)
+
+<span class="k">als</span> snelheid ≥ 0,5 <span class="k">en</span> afwijking ≥ drempel_afwijking_pct/100:
+    advies tonen (GEEN taak)</pre>
+    <p>Dit is een advies met een knop, geen taak. Hoeveel je op de vloer wilt hebben is een
+    besluit over werkkapitaal en ruimte, en dat neemt een systeem niet.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-OPT-06</span>
+    <span class="rtitel">Hardloper zonder picklocatie</span></div>
+    <p>Snelheid ≥ <code>hardloper_per_dag</code> en nergens voorraad op een picklocatie: stel
+    een vak voor via R-INS (alleen picklocaties). Ook dit is een voorstel met een knop:
+    welk vak je ervoor vrijmaakt is een keuze van de teamleider.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="imp">
+  <h2><span class="nr">11</span> Import</h2>
+  <p class="inleiding">Het verschil tussen "kijk eens wat een mooie demo" en "kijk, dit is
+  jouw magazijn". Niemand levert een bestand aan met de kolomnamen die jij wilt, in de
+  eenheid die jij wilt, zonder gaten. Dus raden we, en laten we zien wat we geraden hebben
+  &mdash; want raden zonder tonen is precies hoe imports stilletjes fout gaan.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-01</span>
+    <span class="rtitel">Bestand lezen</span></div>
+    <p>CSV of xlsx. Bij CSV wordt het scheidingsteken geraden op de kopregel: de kandidaat
+    (<code>;</code> <code>,</code> tab <code>|</code>) die er buiten aanhalingstekens het
+    vaakst in staat wint. Een Nederlandse Excel-export gebruikt de puntkomma, een Engelse
+    de komma; fout raden geeft &eacute;&eacute;n kolom met alles erin, en dat is waar
+    mensen op vastlopen.</p>
+    <p>Een BOM aan het begin gaat eraf. De eerste regel is de kopregel; een lege kop wordt
+    <code>kolom&nbsp;<i>n</i></code>. Rijen die helemaal leeg zijn tellen niet mee. Minder
+    dan twee regels is geen bestand maar een kop.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-02</span>
+    <span class="rtitel">Kolommen herkennen</span></div>
+<pre>voor elke kopnaam, plat geslagen (kleine letters, alleen a-z en 0-9):
+    exact gelijk aan een synoniem       &rarr; 100 punten
+    begint ermee, synoniem &ge; 3 tekens  &rarr;  70 punten
+    bevat het,   synoniem &ge; 4 tekens  &rarr;  55 punten
+hoogste punten eerst; elk veld en elke kolom mag maar &eacute;&eacute;n keer</pre>
+    <p>Dat laatste is de hele truc: zonder die twee-keer-niet komt bij een bestand met
+    "Lengte" en "Lengte verpakking" allebei op hetzelfde veld terecht en verliest er
+    &eacute;&eacute;n stilletjes.</p>
+    <p>Verplicht zijn: <code>code</code> bij locaties, <code>sku</code> bij artikelen, en
+    <code>sku</code> + <code>locatie</code> + <code>qty</code> bij voorraad. De rest mag
+    ontbreken. De uitkomst wordt altijd getoond en is altijd met de hand te corrigeren.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-03</span>
+    <span class="rtitel">Eenheid raden &mdash; per soort anders</span></div>
+<pre>locaties, op de mediaan:      artikelen, op de hoogste waarden:
+    &lt; 3      &rarr; meter            p90 &lt; 3    &rarr; meter
+    &lt; 200    &rarr; centimeter       max &gt; 400 &rarr; millimeter
+    anders   &rarr; millimeter       max &le; 100 &rarr; centimeter
+                                  anders    &rarr; millimeter</pre>
+    <p>Dezelfde regel voor allebei gaat gegarandeerd een keer mis. Een stellingvak van 40
+    is altijd centimeters &mdash; 40 mm diep bestaat niet &mdash; maar een artikel van 40
+    is bijna altijd millimeters. En dan staan er pallets in een bakkenstelling.</p>
+    <p>Gewicht net zo: bij locaties is het kilo tenzij de hoogste waarde boven 20.000 ligt,
+    bij artikelen gram tenzij alles klein is (hoogste onder 2.000 en mediaan onder 300).</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-04</span>
+    <span class="rtitel">Getallen uit een cel</span></div>
+    <p>Alles wat geen cijfer, komma, punt of minteken is gaat eraf &mdash; "12,5 kg" is
+    12,5. Staan er een komma &eacute;n een punt in, dan is de laatste van de twee het
+    decimaalteken en is de andere een duizendtalscheiding. Staat er alleen een komma, dan
+    is dat het decimaalteken. Wat er daarna niet als getal uitkomt, is leeg.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-05</span>
+    <span class="rtitel">Het rapport is belangrijker dan de import</span></div>
+    <p>Per soort bestand: hoeveel rijen gelezen, hoeveel bruikbaar, en welke problemen
+    &mdash; met een teller en hoogstens drie voorbeelden per probleem. Twee ernstgraden:
+    <b>fout</b> (de rij gaat niet mee) en <b>let op</b> (de rij gaat wel mee, maar met een
+    gat).</p>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Wat</th><th>Ernst</th><th>Gevolg</th></tr></thead>
+      <tbody>
+      <tr><td>rij zonder locatiecode of artikelnummer</td><td>fout</td>
+          <td>overgeslagen</td></tr>
+      <tr><td>code of artikelnummer komt twee keer voor</td><td>fout</td>
+          <td>alleen de eerste telt</td></tr>
+      <tr><td>locatie zonder afmeting of zonder draagvermogen</td><td>let op</td>
+          <td>krijgt de standaardmaat, en wordt gemarkeerd als geschat</td></tr>
+      <tr><td>artikel zonder complete maat &eacute;n gewicht</td><td>let op</td>
+          <td>komt op de meetlijst (R-MEET-04)</td></tr>
+      <tr><td>voorraad op een onbekend artikel of onbekende locatie</td><td>fout</td>
+          <td>overgeslagen</td></tr>
+      <tr><td>voorraadregel met nul of geen aantal</td><td>let op</td>
+          <td>overgeslagen</td></tr>
+      </tbody>
+    </table></div>
+    <p>Een klant die ziet dat er 167 artikelen zonder maat zijn, snapt meteen waarom de
+    eerste week meten is. Een import die stilletjes doorgaat, wreekt zich later.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-06</span>
+    <span class="rtitel">Looproute uit de locatiecode</span></div>
+<pre>splits op - _ . / of spatie
+&ge; 3 delen en de laatste twee bevatten een getal:
+    niveau = laatste getal,  vak = een-na-laatste
+    gang   = het getal ervoor, of de letter (A=1, B=2, ...)
+anders: gang 1, vak = volgnummer + 1, niveau 1</pre>
+    <p>Daarna gewoon R-UIT-03. Werkt op <code>01-02-3</code>, <code>A.12.4</code> en
+    <code>1/14/2</code>. Lukt het niet, dan is de volgorde in het bestand de looproute
+    &mdash; dat is nog altijd beter dan willekeurig.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-IMP-07</span>
+    <span class="rtitel">Overnemen</span></div>
+    <p>Zones en artikelgroepen ontstaan uit wat er in het bestand staat; een lege zone
+    heet "Magazijn", een lege groep "Overig". Hoofdletters maken geen tweede zone:
+    EXPEDITIE en Expeditie zijn dezelfde.</p>
+    <p>De soort locatie volgt uit de tekst in het bestand &eacute;n uit de code:
+    ontvangst, keuring, schade en expeditie worden herkend aan hun woorden, bulk aan
+    "bulk", "pallet", "reserve" of "stelling", en de rest wordt picklocatie. Ontbreekt
+    &eacute;&eacute;n van de vier doorloopplekken helemaal, dan wordt hij aangemaakt
+    &mdash; zonder ontvangstlocatie kun je niets ontvangen.</p>
+    <p>Een aangeleverde maat is een <b>meting met bron <code>SUPPLIER</code></b> en geen
+    veld op het artikel (R-AFG-01, R-MEET-04). Zo staat er vanaf dag &eacute;&eacute;n dat
+    het een opgave is en geen weging, en komt het artikel vanzelf op de meetlijst.</p>
+    <p>Beginvoorraad is een mutatie als elke andere: elke regel krijgt een
+    <code>IMPORT</code>-journaalregel (R-BASIS-01). Twee regels voor dezelfde combinatie
+    van artikel en locatie worden opgeteld.</p>
+    <p><b>Een import is een nulmeting en geen bijwerking.</b> Staat er al een journaal,
+    dan weigert hij. Anders overschrijf je een draaiend magazijn met een bestand van
+    vorige week, en dat merk je pas als de picker voor een leeg vak staat. Wil je toch
+    opnieuw beginnen, dan gooi je de database eerst leeg &mdash; dat is een besluit dat
+    iemand met zijn handen moet nemen.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="scan">
+  <h2><span class="nr">12</span> Scanmodus</h2>
+  <p class="inleiding">Het enige scherm dat op de vloer gebruikt wordt, met handschoenen
+  aan en een heftruck ernaast. De regels hieronder komen niet uit een ontwerpboek maar uit
+  wat er misgaat: van het verkeerde schap pakken, een scanner die stuk lijkt omdat de
+  cursor weg is, en een telling die stilvalt omdat het systeem een code niet kent.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-01</span>
+    <span class="rtitel">Eén invoerveld, de stap bepaalt het gedrag</span></div>
+    <p>Een handscanner gedraagt zich als een toetsenbord: hij typt de code en drukt op
+    enter. Er is dus geen aparte techniek nodig &mdash; en geen tweede invoerveld. Wat een
+    gescande code betekent hangt af van de stap waar je in staat, niet van waar de cursor
+    toevallig stond.</p>
+    <p>De cursor hoort <em>altijd</em> in dat ene veld te staan. Raakt hij kwijt, dan lijkt
+    de scanner stuk en gaat iemand hem vervangen.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-02</span>
+    <span class="rtitel">Eerst de locatie, dan pas het artikel</span></div>
+<pre>PICKEN    LOCATIE  &rarr; ARTIKEL &rarr; AANTAL  &rarr; volgende regel
+TELLEN    LOCATIE  &rarr; ARTIKEL &rarr; AANTAL
+INSLAG    ARTIKEL  &rarr; AANTAL  &rarr; LOCATIE
+VRIJ      wat je scant wordt getoond, er gebeurt niets</pre>
+    <p>Bij picken en tellen komt de locatie eerst. Andersom pakt iemand van het verkeerde
+    schap en klopt de voorraad niet meer &mdash; en dat merk je pas bij de volgende
+    telling. Bij inslag is het andersom: je hebt iets in je handen en zoekt er een plek
+    bij.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-03</span>
+    <span class="rtitel">Een verkeerde scan zegt waar je wél heen moet</span></div>
+    <p>Weigeren is niet genoeg. "Fout" laat iemand raden; "je staat bij 01-01-1, je moet
+    naar 03-04-1" laat hem lopen. Elke afwijzing noemt daarom wat er gescand is én wat er
+    verwacht werd.</p>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Situatie</th><th>Wat er gebeurt</th></tr></thead>
+      <tbody>
+      <tr><td>artikel gescand terwijl er een locatie moet komen</td>
+          <td>"Scan eerst de locatie waar je staat"</td></tr>
+      <tr><td>de goede soort, maar de verkeerde</td>
+          <td>de gescande én de gevraagde code worden genoemd</td></tr>
+      <tr><td>een code die nergens bij hoort</td>
+          <td>"Onbekende code: <i>x</i>. Label onleesbaar of niet in het systeem."</td></tr>
+      </tbody>
+    </table></div>
+    <p>Bij goed een piep, bij fout een buzz. Met oordoppen in kijk je niet naar een
+    tekstregel.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-04</span>
+    <span class="rtitel">Picken via de scanner</span></div>
+    <p>De volgende regel is de eerste openstaande regel van de pickopdracht met de laagste
+    prioriteit, op looproute (R-UIT-03). Het voorgestelde aantal is wat er nog open staat;
+    bevestigen doet precies wat R-UIT-04 en R-UIT-05 zeggen, manco en al.</p>
+    <p><b>Overslaan is geen manco.</b> De regel gaat achteraan de opdracht en je komt er
+    later langs. Een manco zegt "dit ligt er niet"; overslaan zegt "nu even niet". Die twee
+    door elkaar halen levert teltaken op voor vakken waar niets aan de hand is.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-05</span>
+    <span class="rtitel">Tellen via de scanner, en de nulmeting</span></div>
+    <p>Het getoonde aantal is wat het systeem denkt te hebben; de teller vult in wat er
+    echt ligt. Een verschil wordt geboekt als <code>COUNT</code> met reden
+    <code>TELVERSCHIL</code>, en het telstempel gaat altijd &mdash; ook als er niets
+    verschilt (R-OPT-04, R-ZC-03).</p>
+    <p>Bij een <b>nulmeting</b> ligt het anders. Een magazijn dat nooit iets vastlegde
+    heeft bijna alleen onbekende codes; weigeren betekent dat het tellen stilvalt. Staat
+    <code>opstart.onbekend_aanmaken</code> aan, dan wordt een onbekende code ter plekke een
+    nieuw artikel, en heet het verschil <code>NULMETING</code> in plaats van
+    <code>TELVERSCHIL</code>. Anders lijkt de eerste dag van een nieuwe klant vol
+    telfouten te zitten.</p>
+    <p>Die instelling gaat uit zodra het tellen klaar is. Blijft hij aan, dan ontstaan er
+    artikelen door een verkeerd label.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-06</span>
+    <span class="rtitel">Inslaan via de scanner</span></div>
+    <p>Alleen op een plek die het inslagvoorstel zelf heeft voorgesteld (R-INS). Scant
+    iemand een ander vak, dan wordt dat geweigerd &mdash; anders is de hele
+    benuttingsberekening een advies dat niemand opvolgt. Een artikel dat nooit is opgemeten
+    kan niet ingeslagen worden: zonder maat is er geen voorstel.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-07</span>
+    <span class="rtitel">Een badge werkt altijd</span></div>
+    <p>Op elk moment, in elke stap. Wisselen van gebruiker gaat op de vloer om de tien
+    minuten en mag nooit betekenen dat je eerst uit een scherm moet klikken. De boeking
+    krijgt de naam van wie er op dat moment ingelogd is.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-SCAN-08</span>
+    <span class="rtitel">Locatie-etiketten</span></div>
+    <p>Een magazijn zonder labels op de stelling is een magazijn waar de scanmodus niet
+    werkt. Vakto drukt ze zelf af, in <b>Code&nbsp;39</b> &mdash; die leest elke handscanner
+    zonder dat je er iets voor hoeft in te stellen, en dat is bij een klant met onbekende
+    apparatuur meer waard dan de dichtheid van een modernere code.</p>
+<pre>tekenset   0-9  A-Z  spatie  -  .        alles daarbuiten wordt een -
+omhulling  een * aan het begin en aan het eind
+verhouding smal : breed = 1 : 3
+rustzone   10 eenheden wit aan weerskanten
+scheiding  1 eenheid tussen twee tekens</pre>
+    <p>Twee dingen die niet mogen verschuiven. De <b>verhouding</b>: wordt de code ergens
+    uitgerekt of samengedrukt, dan piept de scanner en denkt de klant dat het systeem niet
+    werkt &mdash; daarom een SVG met vaste verhoudingen en geen reeks blokjes. En de
+    <b>rustzone</b>: zonder wit eromheen vindt een scanner het begin niet, en dan lijkt het
+    etiket leeg.</p>
+    <p>Op het etiket staat naast de code ook de <b>maatklasse en de binnenmaat</b>. Wie een
+    label plakt ziet dan meteen of hij bij het goede vak staat, en een verkeerd geplakt
+    etiket is de duurste fout van de hele invoering.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="gebruikers">
+  <h2><span class="nr">13</span> Gebruikers en rollen</h2>
+  <p class="inleiding">Tot hier kon iedereen alles. Dat kan zolang er &eacute;&eacute;n
+  persoon naar het scherm kijkt; zodra er een tweede bij komt gaat het mis op twee
+  manieren. Iemand ziet een scherm waar hij niets te zoeken heeft, en &mdash; erger
+  &mdash; bij een telverschil van veertig stuks weet niemand meer wie het geboekt heeft.
+  Dat laatste is geen controledrang. Als er iets misgaat wil je kunnen navragen w&aacute;t
+  er gebeurde, niet iemand straffen.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-01</span>
+    <span class="rtitel">Drie rollen, met een rang</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Rol</th><th>Heet</th><th class="num">Rang</th><th>Doet</th></tr></thead>
+      <tbody>
+      <tr><td class="mono"><strong>OPERATOR</strong></td><td>Magazijnmedewerker</td>
+          <td class="num">1</td><td>picken, tellen, inslaan, opmeten &mdash; het werk op de vloer</td></tr>
+      <tr><td class="mono"><strong>SUPERVISOR</strong></td><td>Teamleider</td>
+          <td class="num">2</td><td>daarnaast orders, dashboard, optimalisatie</td></tr>
+      <tr><td class="mono"><strong>ADMIN</strong></td><td>Beheerder</td>
+          <td class="num">3</td><td>daarnaast instellingen, import, gebruikers</td></tr>
+      </tbody>
+    </table></div>
+    <p>Een rang en geen lijst met vinkjes. Vijf rollen met elk vijftien vinkjes is
+    vijfenzeventig keuzes die niemand bijhoudt; drie rangen zijn er drie. Elk scherm heeft
+    een minimumrang, en je mag erin als jouw rang groter of gelijk is. Staat een scherm er
+    niet bij, dan is de minimumrang 1 &mdash; nieuwe schermen zijn dus zichtbaar voor
+    iedereen tot iemand er iets anders van vindt, en niet onzichtbaar voor iedereen tot
+    iemand het merkt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-02</span>
+    <span class="rtitel">Rechten worden op de server getoetst, niet in het menu</span></div>
+    <p>Een scherm weglaten uit het menu is opmaak, geen beveiliging. Wie het adres typt komt
+    er alsnog. Elke aanvraag toetst daarom zelf of de rang genoeg is, en een POST net zo
+    goed als een GET &mdash; anders is de knop weg maar het formulier nog te versturen.</p>
+    <p>Weigeren doet het systeem met <b>403</b> en een zin die zegt wat er nodig is
+    (&ldquo;hier heb je teamleider voor nodig&rdquo;), niet met een lege pagina. Iemand die
+    niet weet waarom hij niet mag, belt.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-03</span>
+    <span class="rtitel">Twee manieren om binnen te komen</span></div>
+    <div class="tabelwrap"><table>
+      <thead><tr><th>Waar</th><th>Waarmee</th><th>Waarom</th></tr></thead>
+      <tbody>
+      <tr><td>op kantoor, achter een scherm</td><td>gebruikersnaam en wachtwoord</td>
+          <td>het scherm staat open en er loopt iedereen langs</td></tr>
+      <tr><td>op de vloer, met een scanner</td><td>badge</td>
+          <td>met handschoenen aan typ je geen wachtwoord van twaalf tekens</td></tr>
+      </tbody>
+    </table></div>
+    <p>Een badge is dus g&eacute;&eacute;n wachtwoord: hij ligt op tafel en iedereen kan hem
+    lezen. Daarom geeft een badge alleen toegang tot de scanmodus en tot niets anders, en
+    kan hij nooit een hogere rang meebrengen dan de rol van die gebruiker. Een teamleider
+    die zich met zijn badge aanmeldt, staat op de vloer als medewerker &mdash; wil hij bij
+    de orders, dan logt hij in.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-04</span>
+    <span class="rtitel">Wachtwoorden worden nooit bewaard</span></div>
+<pre>opslaan     hash = scrypt(wachtwoord, zout)   zout = 16 willekeurige bytes
+toetsen     vergelijk in constante tijd, nooit met ==
+kolom       "scrypt$n$r$p$&lt;zout&gt;$&lt;hash&gt;", zodat de parameters meeverhuizen</pre>
+    <p>Wat er in de kolom staat is een afdruk waar het wachtwoord niet uit terug te rekenen
+    is. Een gestolen back-up levert dan geen wachtwoorden op &mdash; en dat is geen
+    theoretisch geval, want een back-up staat per definitie ergens anders dan de database.</p>
+    <p>De parameters staan in de kolom zelf en niet in de code. Worden ze over vijf jaar te
+    licht, dan kun je ze verhogen zonder dat de bestaande rijen onleesbaar worden: die
+    dragen hun eigen instelling bij zich.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-05</span>
+    <span class="rtitel">Een sessie is een rij, geen variabele in het geheugen</span></div>
+    <p>De browser krijgt een willekeurig getal van 32 bytes in een koekje; de database houdt
+    bij van wie dat is en tot wanneer. Dat kost een query per aanvraag en levert drie dingen
+    op die je anders niet hebt: een herstart van de server logt niemand uit, twee mensen
+    kunnen tegelijk werken zonder elkaars stand te zien, en een sessie is in te trekken
+    &mdash; iemand die uit dienst gaat is er ook echt uit.</p>
+    <p>Een sessie verloopt na <code>sessie.duur_uren</code> (standaard 12, precies een
+    lange dienst). Uitloggen wist de rij; het koekje alleen wissen is niet genoeg, want dan
+    werkt hij nog bij wie hem heeft opgeschreven.</p>
+    <p>Het koekje is <code>HttpOnly</code> en <code>SameSite=Lax</code>. Draait het systeem
+    achter https &mdash; en dat hoort &mdash; dan ook <code>Secure</code>.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-06</span>
+    <span class="rtitel">Wie het boekte staat erbij</span></div>
+    <p>Elke boeking, elke telling en elke afgemelde taak draagt de gebruiker mee tot in
+    <code>journal.gebruiker</code>. Niet de sessie en niet het IP-adres: de naam waar iemand
+    op aanspreekbaar is. Dat is het enige wat een journaal na drie maanden nog bruikbaar
+    maakt.</p>
+    <p>Inloggen, uitloggen en een geweigerde poging komen in <code>event_log</code>. Een
+    reeks geweigerde pogingen is het enige signaal dat je hebt dat er iemand aan het
+    proberen is.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-07</span>
+    <span class="rtitel">Een verkeerd wachtwoord zegt niet wat er verkeerd was</span></div>
+    <p>&ldquo;Onbekende gebruiker&rdquo; vertelt wie er w&eacute;l bestaat. Een onbekende
+    naam en een verkeerd wachtwoord geven daarom hetzelfde antwoord en kosten evenveel tijd
+    &mdash; ook een onbekende naam laat een hash uitrekenen, anders verraadt de snelheid het
+    alsnog.</p>
+    <p>Na <code>inlog.max_pogingen</code> mislukte pogingen (standaard 10) binnen een
+    kwartier gaat de deur vijftien minuten op slot voor die gebruikersnaam. Niet langer:
+    een slot dat een dag duurt is zelf een storing, en de teamleider die om half zes zijn
+    wachtwoord vergeet moet de dag nog kunnen afmaken.</p></div>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-GEB-08</span>
+    <span class="rtitel">De eerste beheerder maakt zichzelf aan, precies &eacute;&eacute;n keer</span></div>
+    <p>Een schema met een standaardwachtwoord erin is een schema met een achterdeur, want
+    dat wachtwoord staat in de installatiehandleiding en die staat op internet. Is de
+    gebruikerstabel leeg, dan &mdash; en alleen dan &mdash; vraagt het eerste scherm om een
+    beheerder aan te maken. Staat er &eacute;&eacute;n rij in, dan is die weg dicht.</p></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="inst">
+  <h2><span class="nr">14</span> Instellingen</h2>
+  <p class="inleiding">Alles wat per klant verschilt. Deze tabel is het antwoord op "ja
+  maar bij ons gaat dat anders" &mdash; en de reden dat dat antwoord geen programmeerwerk is.</p>
+
+  <div class="regel"><div class="regelkop"><span class="rid">R-INST-01</span>
+    <span class="rtitel">Aanpassen mag, verzinnen niet</span></div>
+    <p>Instellingen wijzigen is rang 3 (R-GEB-01), en elke wijziging gaat met de oude
+    waarde, de nieuwe waarde en de naam van wie het deed naar <code>event_log</code>. Een
+    magazijn waar de vulfactor ineens op 0,4 staat en niemand weet sinds wanneer, is een
+    magazijn waar niemand de voorstellen meer gelooft.</p>
+    <p><b>Alleen sleutels die al bestaan.</b> Een nieuwe rij toevoegen kan niet via het
+    scherm: een sleutel die de code niet kent doet niets, en dan zit iemand een middag te
+    zoeken waarom zijn instelling geen effect heeft. Nieuwe instellingen komen bij een
+    nieuwe versie mee.</p>
+    <p><b>De waarde wordt getoetst voordat hij erin gaat.</b> Een getal moet een getal
+    zijn, een ja-of-nee moet <code>true</code> of <code>false</code> zijn, en wat een
+    ondergrens heeft krijgt die ook &mdash; een vulfactor van 3 bestaat niet. Bewaren en
+    dan bij de eerstvolgende berekening omvallen is het slechtste van twee werelden.</p></div>
+
+  <div class="tabelwrap"><table>
+    <thead><tr><th>Sleutel</th><th class="num">Standaard</th><th>Wat het doet</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">putaway.fill_factor</td><td class="num mono">0.85</td>
+        <td>Je krijgt een schap nooit 100% vol. Verlagen bij onregelmatige verpakkingen.</td></tr>
+      <tr><td class="mono">putaway.prefer_smallest_fit</td><td class="num mono">true</td>
+        <td>Zet de strafterm voor veel te ruime locaties aan.</td></tr>
+      <tr><td class="mono">drift.alert_threshold_pct</td><td class="num mono">15</td>
+        <td>Bij hoeveel procent verschil tussen twee metingen slaat het systeem alarm.</td></tr>
+      <tr><td class="mono">drift.remeasure_after_days</td><td class="num mono">180</td>
+        <td>Na hoeveel dagen een artikel opnieuw op de meetlijst komt.</td></tr>
+      <tr><td class="mono">opt.samenvoegen</td><td class="num mono">true</td>
+        <td>Samenvoegtaken automatisch aanmaken.</td></tr>
+      <tr><td class="mono">opt.dekking_dagen</td><td class="num mono">3</td>
+        <td>Hoeveel dagen verbruik er minimaal op een picklocatie moet liggen.</td></tr>
+      <tr><td class="mono">opt.hardloper_per_dag</td><td class="num mono">6</td>
+        <td>Vanaf hoeveel stuks per dag geldt een artikel als hardloper. <em>Klantafhankelijk:
+          stem dit af op het werkelijke volume.</em></td></tr>
+      <tr><td class="mono">opt.venster_dagen</td><td class="num mono">30</td>
+        <td>Over hoeveel dagen de vraagsnelheid wordt gemeten.</td></tr>
+      <tr><td class="mono">opt.max_open_teltaken</td><td class="num mono">12</td>
+        <td>Plafond op openstaande teltaken uit het telplan.</td></tr>
+      <tr><td class="mono">opt.drempel_afwijking_pct</td><td class="num mono">60</td>
+        <td>Vanaf welk verschil er advies over de aanvuldrempel komt.</td></tr>
+      <tr><td class="mono">opstart.onbekend_aanmaken</td><td class="num mono">false</td>
+        <td>Alleen tijdens een nulmeting: onbekende gescande code wordt een nieuw artikel.</td></tr>
+      <tr><td class="mono">uit.max_colli_gewicht_g</td><td class="num mono">25000</td>
+        <td>Maximaal gewicht per collo in gram, waaruit R-UIT-07 het aantal dozen afleidt.
+            25 kg is wat een pakketvervoerder aanneemt; bij eigen vervoer mag het hoger.</td></tr>
+      <tr><td class="mono">ui.rows_per_page</td><td class="num mono">60</td>
+        <td>Maximaal aantal rijen per scherm. Nooit onbeperkt.</td></tr>
+      <tr><td class="mono">sessie.duur_uren</td><td class="num mono">12</td>
+        <td>Hoe lang een inlog geldig blijft (R-GEB-05). Twaalf uur is precies een lange
+            dienst; wie in ploegen werkt zet hem korter.</td></tr>
+      <tr><td class="mono">inlog.max_pogingen</td><td class="num mono">10</td>
+        <td>Mislukte pogingen binnen een kwartier voordat de gebruikersnaam vijftien
+            minuten op slot gaat (R-GEB-07).</td></tr>
+      <tr><td class="mono">inlog.badge_voor_scanner</td><td class="num mono">true</td>
+        <td>Mag iemand zich met alleen een badge aanmelden voor de scanmodus (R-GEB-03)?
+            Uit betekent: overal een wachtwoord, ook op de vloer.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="test">
+  <h2><span class="nr">15</span> Testgevallen</h2>
+  <p class="inleiding">Dit is het belangrijkste hoofdstuk. Alle waarden hieronder komen uit
+  de draaiende browserversie. Geeft je Python-versie dezelfde antwoorden, dan is de kern
+  correct overgezet &mdash; en dat weet je dan zeker in plaats van dat je het hoopt.</p>
+
+  <h3>Passen (R-PAS)</h3>
+  <p>Vulfactor 0,85 tenzij anders vermeld. Maten in mm, gewicht in gram, draagvermogen in kg.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Artikel</th><th>Locatie</th><th class="num">vul</th>
+      <th class="num">verwacht</th><th>limiet</th><th>Wat het test</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-01</td><td class="mono">1200×800×1500, 68 kg</td>
+        <td class="mono">1200×800×1500, 900 kg</td><td class="num mono">0.85</td>
+        <td class="num mono"><strong>1</strong></td><td><span class="pil a">AFMETING</span></td>
+        <td>de <code>max(1, …)</code>-val</td></tr>
+      <tr><td class="mono">T-02</td><td class="mono">120×90×45, 180 g</td>
+        <td class="mono">1200×800×1500, 900 kg</td><td class="num mono">0.85</td>
+        <td class="num mono"><strong>2312</strong></td><td><span class="pil a">AFMETING</span></td>
+        <td>draaiing (120×45×90) wint</td></tr>
+      <tr><td class="mono">T-03</td><td class="mono">600×300×200, 4 kg</td>
+        <td class="mono">400×700×250, 50 kg</td><td class="num mono">0.85</td>
+        <td class="num mono"><strong>1</strong></td><td><span class="pil a">AFMETING</span></td>
+        <td>past alleen gedraaid (300×600×200)</td></tr>
+      <tr><td class="mono">T-04</td><td class="mono">900×900×900, 5 kg</td>
+        <td class="mono">300×400×220, 12 kg</td><td class="num mono">0.85</td>
+        <td class="num mono"><strong>0</strong></td><td><span class="pil r">AFMETING</span></td>
+        <td>past in geen enkele draaiing</td></tr>
+      <tr><td class="mono">T-05</td><td class="mono">200×200×200, 9 kg</td>
+        <td class="mono">1200×800×1500, 120 kg</td><td class="num mono">0.85</td>
+        <td class="num mono"><strong>13</strong></td><td><span class="pil o">GEWICHT</span></td>
+        <td>gewicht is de beperking</td></tr>
+      <tr><td class="mono">T-06</td><td class="mono">300×300×400, 20 kg, <em>niet stapelbaar</em></td>
+        <td class="mono">1200×800×1500, 900 kg</td><td class="num mono">0.85</td>
+        <td class="num mono"><strong>6</strong></td><td><span class="pil a">AFMETING</span></td>
+        <td>één laag, twee draaiingen</td></tr>
+      <tr><td class="mono">T-06b</td><td class="mono">120×90×45, 180 g</td>
+        <td class="mono">600×400×350, 45 kg</td><td class="num mono">0.60</td>
+        <td class="num mono"><strong>84</strong></td><td><span class="pil a">AFMETING</span></td>
+        <td rowspan="2">zelfde geval, andere vulfactor</td></tr>
+      <tr><td class="mono">T-06c</td><td class="mono">120×90×45, 180 g</td>
+        <td class="mono">600×400×350, 45 kg</td><td class="num mono">1.00</td>
+        <td class="num mono"><strong>140</strong></td><td><span class="pil a">AFMETING</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Inslagvoorstel (R-INS)</h3>
+  <p><strong>T-07.</strong> Leeg magazijn met drie locaties, één artikel van
+  <span class="mono">120×90×45 mm / 180 g</span>, zonder aanvuldrempel, gevraagd:
+  <strong>40 stuks</strong>. Vulfactor 0,85, strafterm aan.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>Locatie</th><th>Maat</th><th class="num">past</th><th class="num">benutting</th>
+      <th class="num">score</th><th>Termen</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><strong>01-01-1</strong> 300×400×220, 12 kg</td>
+        <td><span class="pil a">S</span></td><td class="num mono">30</td>
+        <td class="num mono">64,97%</td><td class="num mono"><strong>438</strong></td>
+        <td class="mono">325 + 113 (deelvulling 30/40)</td></tr>
+      <tr><td class="mono"><strong>02-01-1</strong> 600×400×350, 45 kg</td>
+        <td><span class="pil a">M</span></td><td class="num mono">119</td>
+        <td class="num mono">27,23%</td><td class="num mono"><strong>336</strong></td>
+        <td class="mono">136 + 200 (hele partij)</td></tr>
+      <tr><td class="mono"><strong>03-01-1</strong> 1200×800×1500, 900 kg</td>
+        <td><span class="pil r">XL</span></td><td class="num mono">2312</td>
+        <td class="num mono">1,59%</td><td class="num mono"><strong>−298</strong></td>
+        <td class="mono">8 + 200 − 506 (te ruim)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="let"><p><b>Dit ene testgeval is de hele productgedachte.</b> De palletplaats
+  past alles en scoort toch het laagst van de drie. Zakt jouw Python-versie hier door, dan
+  klopt er iets niet aan de benutting of aan de strafterm &mdash; en dan verkoop je een WMS
+  dat palletplaatsen volgooit met schroefjes.</p></div>
+
+  <h3>Maatklasse (R-AFG-02)</h3>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Afmeting</th><th class="num">cm³</th><th>verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-08</td><td class="mono">200×200×150</td><td class="num mono">6.000</td><td><span class="pil a">XS</span></td></tr>
+      <tr><td class="mono">T-09</td><td class="mono">300×400×220</td><td class="num mono">26.400</td><td><span class="pil a">S</span></td></tr>
+      <tr><td class="mono">T-10</td><td class="mono">600×400×350</td><td class="num mono">84.000</td><td><span class="pil a">M</span></td></tr>
+      <tr><td class="mono">T-11</td><td class="mono">1200×600×500</td><td class="num mono">360.000</td><td><span class="pil a">L</span></td></tr>
+      <tr><td class="mono">T-12</td><td class="mono">1200×800×1500</td><td class="num mono">1.440.000</td><td><span class="pil a">XL</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Vrije ruimte na wat er al ligt (R-INS-02)</h3>
+  <p>Zelfde magazijn als T-07, artikel <span class="mono">120×90×45 mm / 180 g</span>.
+  Deze twee hebben een echte fout gevonden.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Situatie</th><th class="num">verwacht</th><th>Waarom</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-19</td>
+        <td>Op <span class="mono">01-01-1</span> liggen er al 30 (de volle stapelcapaciteit)</td>
+        <td class="num mono"><strong>geen voorstel</strong></td>
+        <td>Het volumebudget zou er nog 16 toestaan. De stapeling is vol, dus het vak valt af.</td></tr>
+      <tr><td class="mono">T-20</td>
+        <td>Op <span class="mono">03-01-1</span> liggen er al 300 van de 2312</td>
+        <td class="num mono"><strong>2012</strong></td>
+        <td>Niet 2312 (alsof er niets lag) en niet 2218 (het ruimere volumebudget).</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Meten en afwijking (R-MEET)</h3>
+  <p>Eén artikel, veertig dagen geleden gemeten op
+  <span class="mono">120×90×45 mm / 180 g</span>, nu opnieuw gemeten op
+  <span class="mono">140×100×50 mm / 210 g</span>. Locatie
+  <span class="mono">01-01-1</span> is <span class="mono">300×400×220, 12 kg</span>;
+  met de nieuwe maat passen er nog <strong>27</strong> in plaats van 30.
+  Alle getallen hieronder zijn uit de draaiende browserversie afgelezen.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Nieuwe meting / situatie</th><th class="num">d_vol</th>
+      <th class="num">d_gew</th><th>verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-22</td><td class="mono">140×100×50, 210 g</td>
+        <td class="num mono"><strong>+44,0%</strong></td><td class="num mono"><strong>+16,7%</strong></td>
+        <td>melding</td></tr>
+      <tr><td class="mono">T-23</td><td>eerste meting ooit</td>
+        <td class="num mono">&mdash;</td><td class="num mono">&mdash;</td>
+        <td><strong>geen</strong> melding &mdash; er is niets om van af te wijken</td></tr>
+      <tr><td class="mono">T-24</td><td class="mono">124×92×46, 186 g</td>
+        <td class="num mono">+8,0%</td><td class="num mono">+3,3%</td>
+        <td><strong>geen</strong> melding, allebei onder de drempel</td></tr>
+      <tr><td class="mono">T-25</td><td>krimpen: van 140×100×50 terug naar 120×90×45</td>
+        <td class="num mono"><strong>−30,6%</strong></td><td class="num mono"><strong>−14,3%</strong></td>
+        <td>melding &mdash; kleiner worden telt ook</td></tr>
+      <tr><td class="mono">T-26</td><td class="mono">121×90×45, 230 g</td>
+        <td class="num mono">+0,8%</td><td class="num mono"><strong>+27,8%</strong></td>
+        <td>melding op gewicht alleen</td></tr>
+      <tr><td class="mono">T-27</td><td>er liggen er <strong>30</strong> op 01-01-1</td>
+        <td class="num mono">+44,0%</td><td class="num mono">+16,7%</td>
+        <td class="mono">"Past niet meer op: 01-01-1 (ligt 30, past nog 27)"</td></tr>
+      <tr><td class="mono">T-28</td><td>er liggen er <strong>10</strong> op 01-01-1</td>
+        <td class="num mono">+44,0%</td><td class="num mono">+16,7%</td>
+        <td class="mono">"Geen gevolgen voor huidige voorraadlocaties."</td></tr>
+      <tr><td class="mono">T-29</td><td>30 op 01-01-1 én 900 op een palletplaats</td>
+        <td class="num mono">+44,0%</td><td class="num mono">+16,7%</td>
+        <td>alleen <span class="mono">01-01-1</span> wordt genoemd</td></tr>
+      <tr><td class="mono">T-30</td><td>zelfde meting, artikel <em>niet stapelbaar</em>, er liggen er 8</td>
+        <td class="num mono">+44,0%</td><td class="num mono">+16,7%</td>
+        <td class="mono">"… (ligt 8, past nog 6)"</td></tr>
+      <tr><td class="mono">T-31</td><td class="mono">120×90×45, 900 g</td>
+        <td class="num mono">0,0%</td><td class="num mono"><strong>+400,0%</strong></td>
+        <td class="mono">"… (ligt 30, past nog 13)" &mdash; <span class="pil o">GEWICHT</span> wordt de grens</td></tr>
+    </tbody>
+  </table></div>
+  <div class="let"><p><b>T-27 is het testgeval dat het product verkoopt.</b> Elk WMS kan
+  zeggen "deze doos is groter geworden". Dit is er een dat zelf uitzoekt wáár dat een
+  probleem oplevert, en het in één zin opschrijft. Zakt T-27, dan is er een melding zonder
+  gevolg &mdash; en daar doet niemand iets mee.</p></div>
+
+  <h3>Gedrag dat je met de hand test</h3>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Doe dit</th><th>Verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-13</td><td>Boek een <code>PICK</code> van meer dan er ligt</td>
+        <td>Fout "onvoldoende voorraad op bronlocatie", <strong>geen</strong> journaalregel, voorraad ongewijzigd</td></tr>
+      <tr><td class="mono">T-14</td><td>Reserveer twee orders die samen meer vragen dan er is</td>
+        <td>Tweede order krijgt <span class="pil o">WACHT_OP_VOORRAAD</span>; nergens <code>res &gt; qty</code></td></tr>
+      <tr><td class="mono">T-15</td><td>Meld een pick af met minder dan gevraagd</td>
+        <td>Manco: reservering vrij, <code>ADJUST</code>-boeking van hoogstens <code>stock.qty</code>, teltaak aangemaakt, orderregel gemarkeerd</td></tr>
+      <tr><td class="mono">T-16</td><td>Voer een <code>OVERLOOP</code>-taak uit</td>
+        <td>De bijbehorende melding gaat vanzelf naar <span class="pil g">OPGELOST</span> met een log-regel</td></tr>
+      <tr><td class="mono">T-17</td><td>Vul een picklocatie handmatig bij tot boven de drempel</td>
+        <td>De aanvultaak krijgt status <code>VERVALLEN</code> met reden "picklocatie is weer op peil"</td></tr>
+      <tr><td class="mono">T-18</td><td>Draai een hele werkdag met de simulatie</td>
+        <td>Nul negatieve voorraadregels, nergens <code>res &gt; qty</code>, geen hangende reserveringen aan het eind</td></tr>
+      <tr><td class="mono">T-32</td><td>Werk een meting bij of verwijder hem met <code>UPDATE</code> / <code>DELETE</code></td>
+        <td>Geweigerd door de trigger, met de melding dat <code>measurement</code> append-only is (R-MEET-01)</td></tr>
+      <tr><td class="mono">T-33</td><td>Meet hetzelfde artikel twee keer achter elkaar afwijkend op</td>
+        <td>Twee metingen in de tijdlijn, maar <strong>één</strong> open melding &mdash; bijgewerkt, niet verdubbeld</td></tr>
+      <tr><td class="mono">T-21</td><td>Twee sessies pakken tegelijk de laatste vijf stuks
+        (allebei <code>BEGIN</code>, de eerste houdt de rij even vast)</td>
+        <td>Precies één slaagt, één foutmelding, voorraad op nul, <strong>één</strong>
+        journaalregel. Slagen ze allebei, dan ontbreekt de rijvergrendeling</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Import (R-IMP)</h3>
+  <p>De drie oefenbestanden uit <code>verkoop/voorbeeldbestanden/</code>. Daar zit met
+  opzet van alles fout in, precies zoals je het bij een klant aantreft: locaties in
+  centimeters, artikelen in een Engelstalig Excel-bestand, gaten in de maten, voorraad op
+  artikelen die niet bestaan, en een puntkomma in het ene bestand tegen een komma in het
+  andere. <b>Dezelfde bestanden horen hetzelfde rapport te geven</b> &mdash; dat is waar
+  stap 7 op afgerekend wordt.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Bestand</th><th>Wat het test</th><th>Verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-34</td>
+        <td>locaties (CSV, puntkomma, centimeters)</td>
+        <td>scheidingsteken, eenheid raden, kolommen herkennen</td>
+        <td>398 rijen, 398 bruikbaar; 7 van 7 kolommen; eenheid <code>cm</code> /
+            <code>kg</code>; 53&times; geen maat, 53&times; geen draagvermogen</td></tr>
+      <tr><td class="mono">T-35</td>
+        <td>artikelen (xlsx, Engelse kopnamen)</td>
+        <td>xlsx uitpakken, Engelse synoniemen, eenheid raden</td>
+        <td>900 rijen, 900 bruikbaar; 9 van 10 kolommen; eenheid <code>mm</code> /
+            <code>g</code>; 167&times; niet gemeten</td></tr>
+      <tr><td class="mono">T-36</td>
+        <td>voorraad (CSV, komma)</td>
+        <td>verwijzingen controleren</td>
+        <td>762 rijen, 759 bruikbaar; 1&times; onbekend artikel, 1&times; onbekende
+            locatie, 1&times; nul</td></tr>
+      <tr><td class="mono">T-37</td>
+        <td>alle drie, overnemen</td>
+        <td>zones, groepen, doorloopplekken, journaal</td>
+        <td>400 locaties (398 + de twee doorloopplekken die ontbraken), 900 artikelen,
+            4 zones, 5 artikelgroepen, 759 voorraadregels en 759
+            <code>IMPORT</code>-journaalregels</td></tr>
+      <tr><td class="mono">T-38</td>
+        <td>hetzelfde bestand twee keer</td>
+        <td>R-IMP-05, dubbele codes</td>
+        <td>De tweede regel telt niet mee en staat als <b>fout</b> in het rapport</td></tr>
+    </tbody>
+  </table></div>
+  <p class="let"><b>T-37 is het testgeval dat de verkoop draagt.</b> Een klant die zijn
+  eigen artikelnummers op zijn eigen locaties terugziet, met de eerste week meetwerk er al
+  bij opgeschreven, hoeft niets meer voorgesteld te krijgen.</p>
+
+  <h3>Gebruikers en rollen (R-GEB)</h3>
+  <p>Deze vier zijn niet uit de browserversie afgelezen &mdash; die kent geen wachtwoorden
+  en geen sessies. Ze staan hier omdat ze net zo goed vast horen te liggen, en omdat het
+  precies de gevallen zijn waarin een fout niemand opvalt tot het te laat is.</p>
+  <div class="tabelwrap"><table>
+    <thead><tr><th>#</th><th>Situatie</th><th>Verwacht</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">T-39</td>
+        <td>Twee mensen tegelijk ingelogd, allebei in de scanmodus op dezelfde picklijst</td>
+        <td>Ieder ziet zijn eigen stand; de een die overslaat schuift bij de ander niets op;
+            precies &eacute;&eacute;n van de twee krijgt de laatste stuks en de voorraad
+            loopt niet scheef. <b>Dit is waar stap 9 op afgerekend wordt.</b></td></tr>
+      <tr><td class="mono">T-40</td>
+        <td>Een magazijnmedewerker vraagt <code>/orders</code> op, en post er daarna
+            rechtstreeks naartoe</td>
+        <td>Allebei <b>403</b> met een leesbare reden (R-GEB-02). Het menu weglaten is
+            niet genoeg.</td></tr>
+      <tr><td class="mono">T-41</td>
+        <td>Elf keer een verkeerd wachtwoord binnen een kwartier</td>
+        <td>Vanaf de eleventh poging op slot voor een kwartier; een onbekende
+            gebruikersnaam geeft exact dezelfde melding als een verkeerd wachtwoord
+            (R-GEB-07)</td></tr>
+      <tr><td class="mono">T-42</td>
+        <td>Een pick, een telling en een afgemelde taak door een ingelogde gebruiker</td>
+        <td>Alle drie dragen zijn naam tot in <code>journal.gebruiker</code>; inloggen en
+            uitloggen staan in <code>event_log</code> (R-GEB-06)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================================================ -->
+<section id="volgorde">
+  <h2><span class="nr">16</span> Volgorde van overzetten</h2>
+  <p class="inleiding">Deze volgorde is niet willekeurig: elke stap is testbaar voordat de
+  volgende begint. Wie halverwege aan schermen begint, kan niets meer bewijzen.</p>
+
+  <div class="tabelwrap"><table>
+    <thead><tr><th class="num">Stap</th><th>Wat</th><th>Klaar als</th><th class="num">Schatting</th></tr></thead>
+    <tbody>
+      <tr><td class="num mono">1</td><td>Schema in PostgreSQL, views voor hoofdstuk 3</td>
+        <td>Views geven dezelfde antwoorden als de browserversie <span class="pil g">gedaan</span></td><td class="num">3 avonden</td></tr>
+      <tr><td class="num mono">2</td><td>Rekenkern zonder database: R-PAS en R-INS als losse functies</td>
+        <td>T-01 t/m T-12 groen in een testbestand <span class="pil g">gedaan</span></td><td class="num">3 avonden</td></tr>
+      <tr><td class="num mono">3</td><td><code>boek()</code> met transactie en rijvergrendeling</td>
+        <td>T-13 en T-21 groen <span class="pil g">gedaan</span></td><td class="num">2 avonden</td></tr>
+      <tr><td class="num mono">4</td><td>Metingen en afwijkingen (hoofdstuk 7)</td>
+        <td>T-22 t/m T-33 groen; een afwijkende meting produceert de juiste
+        <code>gevolg</code>-tekst <span class="pil g">gedaan</span></td><td class="num">2 avonden</td></tr>
+      <tr><td class="num mono">5</td><td>Uitgaand (hoofdstuk 8)</td>
+        <td>T-14 en T-15 groen <span class="pil g">gedaan</span></td><td class="num">5 avonden</td></tr>
+      <tr><td class="num mono">6</td><td>Zelfcontrole en optimalisatie (9 en 10)</td>
+        <td>T-16 en T-17 groen <span class="pil g">gedaan</span></td><td class="num">4 avonden</td></tr>
+      <tr><td class="num mono">7</td><td>Import van klantbestanden</td>
+        <td>Dezelfde oefenbestanden geven hetzelfde rapport
+        <span class="pil g">gedaan</span></td><td class="num">3 avonden</td></tr>
+      <tr><td class="num mono">8</td><td>Schermen en scanmodus</td>
+        <td>Een werkdag is van begin tot eind na te spelen: T-18
+        <span class="pil g">gedaan</span></td><td class="num">6 avonden</td></tr>
+      <tr><td class="num mono">9</td><td>Inloggen, rollen, back-up, server</td>
+        <td>Een tweede persoon kan tegelijk werken zonder dat de voorraad scheef loopt: T-39
+        <span class="pil g">gedaan</span></td><td class="num">4 avonden</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="valkuil"><b>De enige regel die je niet mag breken</b>
+    <p>Zodra de Python-versie een rekenregel heeft die hier niet in staat, of anders dan hier
+    staat, heb je weer twee systemen. Verander je iets aan de logica, verander dan
+    <em>eerst</em> dit document en pas daarna de code &mdash; in beide versies.</p>
+    <p>Zodra de serverversie alles kan, gaat de browserversie uit de lucht als product en
+    blijft hij alleen bestaan als demo. Twee codebases onderhouden naast een baan gaat niet.</p></div>
+</section>
+
+</main>
+
+<footer class="voet">
+  <strong>Versie 1.10</strong> &mdash; de laatste twee schermen die alleen de browserversie
+  nog had: <b>optimalisatie</b> (R-OPT) en <b>etiketten</b>. Daarbij hoort &eacute;&eacute;n
+  nieuwe regel, <b>R-SCAN-08</b>: locatielabels in Code&nbsp;39, met de verhouding 1 : 3 en
+  een rustzone van tien eenheden. Die twee mogen niet verschuiven &mdash; wordt de code
+  uitgerekt of ontbreekt het wit eromheen, dan piept de scanner en denkt de klant dat het
+  systeem niet werkt. De codering is streep voor streep vergeleken met de browserversie.
+  Daarmee kan de serverversie alles wat de browserversie kan.<br><br>
+  <strong>Versie 1.9</strong> &mdash; de twee beheerschermen die alleen de browserversie
+  nog had, staan nu ook op de server: <b>eigen gegevens</b> (R-IMP, het importscherm) en
+  <b>instellingen</b> (hoofdstuk 14). Daarbij hoort &eacute;&eacute;n nieuwe regel,
+  <b>R-INST-01</b>: instellingen wijzigen is rang 3, elke wijziging gaat met de oude
+  waarde en de naam van wie het deed naar <code>event_log</code>, alleen bestaande
+  sleutels mogen, en de waarde wordt getoetst v&oacute;&oacute;rdat hij erin gaat.
+  Bewaren en dan bij de eerstvolgende berekening omvallen is het slechtste van twee
+  werelden.<br><br>
+  <strong>Versie 1.8</strong> &mdash; stap 9 gebouwd en getest, en daarmee is de lijst uit
+  hoofdstuk 16 rond. Er is een hoofdstuk 13 bij: <b>Gebruikers en rollen</b> (R-GEB-01 t/m
+  R-GEB-08); Instellingen, Testgevallen en Volgorde zijn 14, 15 en 16 geworden. Drie rollen
+  met een rang in plaats van een lijst met vinkjes, rechten die op de server getoetst worden
+  en niet in het menu, wachtwoorden die als scrypt-afdruk in de kolom staan met hun eigen
+  parameters erbij, en een sessie die een rij in de database is &mdash; want alleen dan
+  overleeft hij een herstart, kunnen twee mensen tegelijk werken zonder elkaars stand te
+  zien, en is hij in te trekken. Een badge geeft alleen toegang tot de scanmodus: hij ligt
+  op tafel en iedereen kan hem lezen. T-39 t/m T-42 zijn nieuw, en T-39 is waar deze stap
+  op afgerekend werd.<br><br>
+  <strong>Versie 1.7</strong> &mdash; stap 8 gebouwd en getest. De schermen draaien nu
+  ook op de server, met dezelfde stijl als de browserversie &mdash; zo is een verschil in
+  beeld een verschil in gegevens en niet in opmaak. Drie lagen die alleen van elkaar weten
+  wat ze moeten weten: <code>opslag.py</code> kent SQL, <code>schermen.py</code> kent geen
+  database, <code>web.py</code> kent HTTP. Elke handeling is een POST met een omleiding
+  erna, zodat F5 na een pick niets nog een keer afboekt. Eén afwijking kwam boven water:
+  <code>vakto_tellen()</code> boekte een telverschil met reden <code>TELLING</code>,
+  terwijl R-SCAN-05 en de browserversie <code>TELVERSCHIL</code> zeggen (en
+  <code>NULMETING</code> bij een nulmeting). Het document had gelijk; de database is
+  bijgetrokken.<br><br>
+  <strong>Versie 1.6</strong> &mdash; stap 7 gebouwd en getest, en er is een hoofdstuk
+  bij gekomen. De import stond nergens beschreven terwijl er wel degelijk rekenregels in
+  zitten &mdash; eenheden raden, kolommen herkennen, een looproute uit een locatiecode
+  halen. Dat is nu hoofdstuk 11 (R-IMP-01 t/m R-IMP-07); Instellingen, Testgevallen en
+  Volgorde zijn daardoor 12, 13 en 14 geworden. Nieuw is de regel dat een import een
+  <b>nulmeting</b> is: staat er al een journaal, dan weigert hij. En T-34 t/m T-38 leggen
+  vast wat de drie oefenbestanden horen op te leveren, tot op de laatste teller. De
+  serverversie haalde die getallen in &eacute;&eacute;n keer, wat betekent dat de twee
+  versies hetzelfde zeggen over hetzelfde klantbestand.<br><br>
+  <strong>Versie 1.5</strong> &mdash; stap 6 gebouwd en getest. Hoofdstuk 9 en 10 zijn
+  bijna helemaal rekenwerk en staan dus in Python; de database schrijft alleen weg en
+  voert taken uit &mdash; dat laatste is een voorraadmutatie en gaat door
+  <code>vakto_boek()</code> heen. Drie dingen die het schrijven van deze stap aan het
+  licht bracht, allemaal in beide versies rechtgezet: R-ZC-04 en de onderste rij van
+  R-OPT-03 zijn dezelfde regel en horen dus &eacute;&eacute;n stuk code te zijn; bij het
+  samenvoegen van twee aanleidingen hoort de reden van de zwaarste te blijven staan en
+  niet die van de laatste die langskomt; en teltaken uit een manco (R-UIT-05) horen
+  buiten het plafond van R-OPT-04 te vallen, wat de browserversie niet deed.<br><br>
+  <strong>Versie 1.4</strong> &mdash; stap 5 gebouwd en getest. Drie dingen die
+  hiervoor nergens vastlagen: de pickregel is de <code>allocation</code>-rij zelf met een
+  status ernaast (R-UIT-06) in plaats van een tweede tabel die dezelfde gegevens nog eens
+  opschrijft; inpakken en verzenden zaten wel in de browserversie maar in geen enkel
+  document, en staan nu als R-UIT-07 met het collogewicht als instelling; en er is een
+  <code>event_log</code> waar het systeem opschrijft wat het zelf besloten heeft, want
+  R-UIT-02 en R-ZC-01 vragen daar allebei om. Reserveren, picken en manco staan in
+  PostgreSQL en niet in Python &mdash; ze vergrendelen rijen en boeken voorraad, dus geldt
+  R-BOEK-03. Wat dat oplevert staat in
+  <code>tests-sql/test_gelijktijdig_reserveren.sh</code>: twee verkopers die tegelijk de
+  laatste tien stuks pakken, waarvan er &eacute;&eacute;n netjes
+  <span class="pil r">wacht op voorraad</span> krijgt in plaats van een foutmelding of,
+  erger, dezelfde doos.<br><br>
+  <strong>Versie 1.3</strong> &mdash; stap 4 gebouwd en getest. Drie dingen die in de
+  browserversie niet vastlagen en nu wel: afronden op één decimaal gebeurt overal met
+  <code>rond(x × 10) / 10</code> en de drempel wordt op het onafgeronde getal getoetst
+  (R-MEET-02); doorloopplekken tellen niet mee in het gevolg en de volgorde ligt vast op
+  <code>location.seq</code> (R-MEET-03); en er is nog hoogstens één open melding per
+  artikel in plaats van een stapeltje. Allemaal doorgevoerd in beide versies.<br><br>
+  <strong>Versie 1.2</strong> &mdash; stap 1 tot en met 3 zijn gebouwd en getest tegen een
+  echte PostgreSQL. Daaruit kwamen R-BOEK-02 (vergrendel in een vaste volgorde, anders
+  deadlock) en R-BOEK-03 (boeken hoort in de database).<br><br>
+  <strong>Versie 1.1</strong> &mdash; het schrijven van de Python-versie en de testgevallen
+  bracht twee fouten aan het licht die in de browserversie zaten: het inslagvoorstel telde de
+  eigen voorraad niet af van de stapelcapaciteit (R-INS-02, T-19), en aanvultaken keken
+  helemaal niet of het paste (R-ZC-04). Allebei gerepareerd in beide versies.<br><br>
+  Geschreven op basis van de werkende browserversie van augustus 2026. Alle getallen in
+  hoofdstuk 15 zijn uit die versie afgelezen, niet uit het hoofd opgeschreven. Schattingen in
+  hoofdstuk 16 gaan uit van avonden van twee à drie uur naast een volledige baan, met de
+  leercurve erin verwerkt.
+</footer>
+
+</div>
+
+<script>
+/* De index licht mee met waar je bent. Meer heeft dit document niet nodig. */
+const links = [...document.querySelectorAll(".index a")];
+const secties = links.map(a=>document.querySelector(a.getAttribute("href")));
+const waarnemer = new IntersectionObserver((rijen)=>{
+  for(const r of rijen){
+    if(!r.isIntersecting) continue;
+    const i = secties.indexOf(r.target);
+    links.forEach((a,j)=>a.classList.toggle("aan", i===j));
+  }
+}, {rootMargin:"-10% 0px -70% 0px", threshold:0});
+secties.forEach(s=>s && waarnemer.observe(s));
+</script>

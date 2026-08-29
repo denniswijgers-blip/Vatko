@@ -1,0 +1,23 @@
+VAKTO - voorbeeldbestanden voor de import
+=========================================
+
+De drie SJABLOON-bestanden zijn wat je een klant vooraf stuurt.
+Alleen de eerste kolom is echt verplicht; de rest mag ontbreken.
+Kolomnamen hoeven niet te kloppen: Vakto herkent ze zelf en laat je
+de keuze bevestigen voordat er iets wordt overgenomen.
+
+De drie ROMMELIG-bestanden zijn om zelf mee te oefenen. Daar zit
+met opzet van alles fout in, precies zoals je het bij een klant
+aantreft:
+
+  - locaties in CENTIMETERS in plaats van millimeters
+  - artikelen in een Excel-bestand met ENGELSE kolomnamen
+  - 12% van de locaties zonder afmetingen
+  - 18% van de artikelen zonder maat of gewicht
+  - voorraadregels die verwijzen naar een artikel of locatie
+    die niet bestaat
+  - een puntkomma in het ene bestand en een komma in het andere
+
+Probeer die in te lezen via Beheer -> Eigen gegevens -> "Ze hebben
+bestanden". Dat is de beste oefening voor het echte gesprek: je
+weet dan precies hoe het rapport eruitziet als het misgaat.

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lodex — huisstijlkeuze</title>
+<style>
+ *{box-sizing:border-box}
+ body{margin:0;background:#eef0f2;color:#151a1f;
+      font:15px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+ .wrap{max-width:1180px;margin:0 auto;padding:38px 26px 70px}
+ h1{font-size:26px;margin:0 0 6px;font-weight:660;letter-spacing:-.2px}
+ .lead{color:#5c6773;margin:0 0 8px;max-width:74ch}
+ .note{background:#fff;border:1px solid #dfe3e8;border-left:3px solid #0E4F5C;
+       padding:13px 17px;border-radius:0 9px 9px 0;margin:22px 0 34px;
+       font-size:14px;color:#3d4750;max-width:74ch}
+ h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:#5c6773;
+    margin:40px 0 14px;font-weight:640}
+
+ .optie{background:#fff;border:1px solid #dfe3e8;border-radius:14px;
+        overflow:hidden;margin-bottom:26px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+ .optiekop{display:flex;justify-content:space-between;align-items:center;gap:14px;
+           padding:15px 20px;border-bottom:1px solid #eceff2;flex-wrap:wrap}
+ .optiekop b{font-size:16px}
+ .optiekop .hex{font:13px ui-monospace,Menlo,monospace;color:#6b7580}
+ .oordeel{font-size:13px;color:#5c6773;max-width:52ch}
+ .aanbevolen{background:#0E4F5C;color:#fff;font-size:11px;font-weight:700;
+             padding:3px 10px;border-radius:20px;letter-spacing:.6px}
+
+ /* het nagebootste scherm */
+ .ui{display:flex;min-height:290px;font-size:13.5px}
+ .zij{width:172px;flex:0 0 172px;padding:16px 0;color:#a9b4bf}
+ .merk{padding:0 18px 3px;font-weight:680;font-size:16px;color:#fff;letter-spacing:.2px}
+ .merk small{display:block;font-weight:400;font-size:10.5px;color:#8d99a5;
+             letter-spacing:1.4px;text-transform:uppercase;margin-top:3px}
+ .zij nav{margin-top:18px}
+ .zij a{display:block;padding:7px 18px;color:#a9b4bf;text-decoration:none;font-size:13px}
+ .zij a.aan{color:#fff;font-weight:600}
+ .paneel{flex:1;background:#fafbfc;padding:17px 20px;border-left:1px solid #e6e9ec}
+ .tegels{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:15px}
+ .tegel{background:#fff;border:1px solid #e6e9ec;border-radius:9px;padding:11px 13px}
+ .tegel .lab{font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+             color:#7b8590;font-weight:650}
+ .tegel .val{font-size:21px;font-weight:670;line-height:1.2;margin-top:2px}
+ table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;
+       border:1px solid #e6e9ec;border-radius:9px;overflow:hidden}
+ th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;
+    color:#7b8590;padding:8px 11px;border-bottom:1px solid #e6e9ec;font-weight:650}
+ td{padding:8px 11px;border-bottom:1px solid #f1f3f5}
+ tr:last-child td{border-bottom:0}
+ .mono{font-family:ui-monospace,Menlo,monospace}
+ .pil{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:670}
+ .knoppen{margin-top:14px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+ .kn{padding:7px 15px;border-radius:7px;font-size:13px;font-weight:620;color:#fff;
+     border:0;display:inline-block}
+ .kn.stil{background:#fff;border:1px solid #d8dde2;color:#2b333b}
+ .maat{display:inline-block;width:26px;text-align:center;border-radius:5px;
+       font-size:10px;font-weight:750;padding:2px 0}
+
+ /* statuskleuren: voor ELKE optie hetzelfde, want ze horen bij de betekenis
+    en niet bij het merk */
+ .st-ok{background:#e6f2ec;color:#1f6a45}
+ .st-let{background:#fdf1e0;color:#98600d}
+ .st-fout{background:#fbeceb;color:#9a2b22}
+
+ .vgl{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:14px}
+ .staal{background:#fff;border:1px solid #dfe3e8;border-radius:11px;padding:14px 16px}
+ .rij{display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:13px}
+ .blok{width:30px;height:30px;border-radius:7px;flex:0 0 30px}
+ .klein{font-size:12px;color:#6b7580}
+ footer{margin-top:44px;padding-top:22px;border-top:1px solid #dfe3e8;
+        font-size:13.5px;color:#5c6773;max-width:74ch}
+</style></head><body><div class="wrap">
+
+<h1>Lodex — vier kandidaat-huisstijlen</h1>
+<p class="lead">Hetzelfde scherm, vier merkkleuren. Beoordeel ze niet los maar
+<em>in gebruik</em>: hoe leest het onder tl-licht, en botst de merkkleur met de
+statuskleuren die je nodig hebt?</p>
+
+<div class="note">
+  <strong>De regel die de keuze bepaalt.</strong> Rood, oranje en groen zijn in een WMS
+  <em>bezet</em> — ze betekenen fout, let op, en goed. Je merkkleur mag daar niet op
+  lijken, anders vecht je logo met je foutmeldingen. Dat schrapt rood, oranje, felgroen
+  en felblauw. Alle vier de opties hieronder halen ruim de contrastnorm (minimaal 5,9:1
+  op wit, vereist is 4,5:1).
+</div>
+
+<!-- OPTIE 1 -->
+<div class="optie">
+  <div class="optiekop">
+    <div><b>1. Petrol</b> <span class="hex">#0E4F5C</span></div>
+    <div class="oordeel">Diep blauwgroen. Leest als degelijk en technisch, maar is
+      duidelijk geen standaard-bedrijfsblauw. Botst met niets.</div>
+    <span class="aanbevolen">MIJN KEUZE</span>
+  </div>
+  <div class="ui"><div class="zij" style="background:#0E2F36">
+      <div class="merk">Lodex<small>Warehouse</small></div>
+      <nav><a class="aan" style="border-left:3px solid #0E4F5C;padding-left:15px">Dashboard</a>
+        <a>Locaties</a><a>Artikelen</a><a>Inslag</a><a>Voorraad</a></nav></div>
+    <div class="paneel">
+      <div class="tegels">
+        <div class="tegel"><div class="lab">Bezetting</div><div class="val" style="color:#0E4F5C">68%</div></div>
+        <div class="tegel"><div class="lab">Open taken</div><div class="val">14</div></div>
+        <div class="tegel"><div class="lab">Te meten</div><div class="val">7</div></div></div>
+      <table><tr><th>Locatie</th><th>Maat</th><th>Artikel</th><th>Status</th></tr>
+        <tr><td class="mono">02-08-1</td><td><span class="maat" style="background:#e2eef1;color:#0E4F5C">L</span></td><td>OD-4003</td><td><span class="pil st-ok">op peil</span></td></tr>
+        <tr><td class="mono">01-03-1</td><td><span class="maat" style="background:#e2eef1;color:#0E4F5C">M</span></td><td>HS-1003</td><td><span class="pil st-let">aanvullen</span></td></tr>
+        <tr><td class="mono">03-01-2</td><td><span class="maat" style="background:#e2eef1;color:#0E4F5C">XL</span></td><td>HM-2001</td><td><span class="pil st-fout">past niet</span></td></tr></table>
+      <div class="knoppen"><span class="kn" style="background:#0E4F5C">Inslaan</span>
+        <span class="kn stil">Annuleren</span></div></div></div>
+</div>
+
+<!-- OPTIE 2 -->
+<div class="optie">
+  <div class="optiekop">
+    <div><b>2. Inktblauw</b> <span class="hex">#2F3E6E</span></div>
+    <div class="oordeel">Serieus en rustig, maar het dichtst bij wat iedereen in
+      logistiek al gebruikt. Veilig, minder onderscheidend.</div>
+  </div>
+  <div class="ui"><div class="zij" style="background:#1B2340">
+      <div class="merk">Lodex<small>Warehouse</small></div>
+      <nav><a class="aan" style="border-left:3px solid #2F3E6E;padding-left:15px">Dashboard</a>
+        <a>Locaties</a><a>Artikelen</a><a>Inslag</a><a>Voorraad</a></nav></div>
+    <div class="paneel">
+      <div class="tegels">
+        <div class="tegel"><div class="lab">Bezetting</div><div class="val" style="color:#2F3E6E">68%</div></div>
+        <div class="tegel"><div class="lab">Open taken</div><div class="val">14</div></div>
+        <div class="tegel"><div class="lab">Te meten</div><div class="val">7</div></div></div>
+      <table><tr><th>Locatie</th><th>Maat</th><th>Artikel</th><th>Status</th></tr>
+        <tr><td class="mono">02-08-1</td><td><span class="maat" style="background:#e7e9f2;color:#2F3E6E">L</span></td><td>OD-4003</td><td><span class="pil st-ok">op peil</span></td></tr>
+        <tr><td class="mono">01-03-1</td><td><span class="maat" style="background:#e7e9f2;color:#2F3E6E">M</span></td><td>HS-1003</td><td><span class="pil st-let">aanvullen</span></td></tr>
+        <tr><td class="mono">03-01-2</td><td><span class="maat" style="background:#e7e9f2;color:#2F3E6E">XL</span></td><td>HM-2001</td><td><span class="pil st-fout">past niet</span></td></tr></table>
+      <div class="knoppen"><span class="kn" style="background:#2F3E6E">Inslaan</span>
+        <span class="kn stil">Annuleren</span></div></div></div>
+</div>
+
+<!-- OPTIE 3 -->
+<div class="optie">
+  <div class="optiekop">
+    <div><b>3. Diep pruim</b> <span class="hex">#5A2A4E</span></div>
+    <div class="oordeel">Het meest onderscheidend — niemand in logistiek doet dit.
+      Onthoudbaar, maar sommige klanten vinden het te weinig "techniek".</div>
+  </div>
+  <div class="ui"><div class="zij" style="background:#2E1729">
+      <div class="merk">Lodex<small>Warehouse</small></div>
+      <nav><a class="aan" style="border-left:3px solid #5A2A4E;padding-left:15px">Dashboard</a>
+        <a>Locaties</a><a>Artikelen</a><a>Inslag</a><a>Voorraad</a></nav></div>
+    <div class="paneel">
+      <div class="tegels">
+        <div class="tegel"><div class="lab">Bezetting</div><div class="val" style="color:#5A2A4E">68%</div></div>
+        <div class="tegel"><div class="lab">Open taken</div><div class="val">14</div></div>
+        <div class="tegel"><div class="lab">Te meten</div><div class="val">7</div></div></div>
+      <table><tr><th>Locatie</th><th>Maat</th><th>Artikel</th><th>Status</th></tr>
+        <tr><td class="mono">02-08-1</td><td><span class="maat" style="background:#f0e6ee;color:#5A2A4E">L</span></td><td>OD-4003</td><td><span class="pil st-ok">op peil</span></td></tr>
+        <tr><td class="mono">01-03-1</td><td><span class="maat" style="background:#f0e6ee;color:#5A2A4E">M</span></td><td>HS-1003</td><td><span class="pil st-let">aanvullen</span></td></tr>
+        <tr><td class="mono">03-01-2</td><td><span class="maat" style="background:#f0e6ee;color:#5A2A4E">XL</span></td><td>HM-2001</td><td><span class="pil st-fout">past niet</span></td></tr></table>
+      <div class="knoppen"><span class="kn" style="background:#5A2A4E">Inslaan</span>
+        <span class="kn stil">Annuleren</span></div></div></div>
+</div>
+
+<!-- OPTIE 4 -->
+<div class="optie">
+  <div class="optiekop">
+    <div><b>4. Brons</b> <span class="hex">#8A5A2B</span></div>
+    <div class="oordeel">Warm en ongebruikelijk. Nadeel: het ligt dicht bij het
+      oranje van "let op" — precies de botsing die je wilde vermijden.</div>
+  </div>
+  <div class="ui"><div class="zij" style="background:#2F2317">
+      <div class="merk">Lodex<small>Warehouse</small></div>
+      <nav><a class="aan" style="border-left:3px solid #8A5A2B;padding-left:15px">Dashboard</a>
+        <a>Locaties</a><a>Artikelen</a><a>Inslag</a><a>Voorraad</a></nav></div>
+    <div class="paneel">
+      <div class="tegels">
+        <div class="tegel"><div class="lab">Bezetting</div><div class="val" style="color:#8A5A2B">68%</div></div>
+        <div class="tegel"><div class="lab">Open taken</div><div class="val">14</div></div>
+        <div class="tegel"><div class="lab">Te meten</div><div class="val">7</div></div></div>
+      <table><tr><th>Locatie</th><th>Maat</th><th>Artikel</th><th>Status</th></tr>
+        <tr><td class="mono">02-08-1</td><td><span class="maat" style="background:#f5ece0;color:#8A5A2B">L</span></td><td>OD-4003</td><td><span class="pil st-ok">op peil</span></td></tr>
+        <tr><td class="mono">01-03-1</td><td><span class="maat" style="background:#f5ece0;color:#8A5A2B">M</span></td><td>HS-1003</td><td><span class="pil st-let">aanvullen</span></td></tr>
+        <tr><td class="mono">03-01-2</td><td><span class="maat" style="background:#f5ece0;color:#8A5A2B">XL</span></td><td>HM-2001</td><td><span class="pil st-fout">past niet</span></td></tr></table>
+      <div class="knoppen"><span class="kn" style="background:#8A5A2B">Inslaan</span>
+        <span class="kn stil">Annuleren</span></div></div></div>
+</div>
+
+<h2>Het volledige palet bij optie 1</h2>
+<div class="vgl">
+  <div class="staal">
+    <div class="rij"><span class="blok" style="background:#0E4F5C"></span>
+      <div><strong>Petrol</strong><div class="klein">#0E4F5C — knoppen, accenten</div></div></div>
+    <div class="rij"><span class="blok" style="background:#0E2F36"></span>
+      <div><strong>Diep petrol</strong><div class="klein">#0E2F36 — navigatiebalk</div></div></div>
+    <div class="rij"><span class="blok" style="background:#E2EEF1"></span>
+      <div><strong>Licht petrol</strong><div class="klein">#E2EEF1 — actieve rij, markering</div></div></div>
+  </div>
+  <div class="staal">
+    <div class="rij"><span class="blok" style="background:#2E7D52"></span>
+      <div><strong>Goed</strong><div class="klein">#2E7D52 — op peil, verwerkt</div></div></div>
+    <div class="rij"><span class="blok" style="background:#C77D11"></span>
+      <div><strong>Let op</strong><div class="klein">#C77D11 — aanvullen, afwijking</div></div></div>
+    <div class="rij"><span class="blok" style="background:#C0362C"></span>
+      <div><strong>Fout</strong><div class="klein">#C0362C — past niet, geweigerd</div></div></div>
+  </div>
+  <div class="staal">
+    <div class="rij"><span class="blok" style="background:#151A1F"></span>
+      <div><strong>Tekst</strong><div class="klein">#151A1F</div></div></div>
+    <div class="rij"><span class="blok" style="background:#5C6773"></span>
+      <div><strong>Zachte tekst</strong><div class="klein">#5C6773 — labels, hints</div></div></div>
+    <div class="rij"><span class="blok" style="background:#EEF0F2;border:1px solid #dfe3e8"></span>
+      <div><strong>Achtergrond</strong><div class="klein">#EEF0F2</div></div></div>
+  </div>
+</div>
+
+<footer>
+  <strong>Wat ik onderweg heb gerepareerd.</strong> De statuskleuren die ik eerder in het
+  systeem zette lagen te dicht bij elkaar: oranje en rood waren zelfs voor mensen zonder
+  kleurenblindheid lastig uit elkaar te houden. Ze zijn hierboven vervangen door een
+  paar dat wél voldoende verschilt. In een magazijn is dat geen detail — iemand met
+  handschoenen aan, onder tl-licht, moet in een halve seconde zien of een melding
+  "let op" of "fout" is.
+</footer>
+</div></body></html>
