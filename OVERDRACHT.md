@@ -295,9 +295,16 @@ node zelfcontrole-vectoren.mjs
 
 De browsertests hebben `playwright` nodig: `npm install playwright` in `demo/test/`.
 
-**Versiebeheer.** Er zit git op het project, met drie momenten vastgelegd. `git log
---oneline` laat ze zien; `git status` laat zien wat je sindsdien veranderd hebt. Leg
-na elke afgeronde stap opnieuw vast, dan kun je altijd terug.
+**Versiebeheer.** Het project staat op GitHub:
+
+| | |
+|---|---|
+| Repository | `denniswijgers-blip/Vatko` |
+| Branch | `claude/cowork-project-step-5-cdoe74` |
+
+Twaalf momenten vastgelegd, één per afgeronde stap. `git log --oneline` laat ze zien;
+`git status` laat zien wat je sindsdien veranderd hebt. Leg na elke afgeronde stap
+opnieuw vast, dan kun je altijd terug.
 
 ---
 
@@ -322,6 +329,9 @@ codebases onderhouden naast een baan gaat niet.
 
 ## Links
 
+De artifacts hieronder zijn gepubliceerd vóór de laatste stappen; de bestanden in de
+repository zijn leidend. Vraag om ze bij te werken als je ze wilt doorsturen.
+
 - Specificatie (v1.10): https://claude.ai/code/artifact/dd8951b3-eb2d-4da3-9e88-2830f6a505fb
 - Werkende demo: https://claude.ai/code/artifact/2e9f6aeb-2b7c-4122-8cb3-363d010babc3
 - Businessplan: https://claude.ai/code/artifact/502071aa-3f51-4f08-b0f9-ff2004bf2557
@@ -331,14 +341,28 @@ codebases onderhouden naast een baan gaat niet.
 
 ## Een nieuw gesprek beginnen
 
-Stuur dit bestand mee plus de map waar je aan werkt — meestal alleen `server/`. Niet
-allebei de versies tegelijk: dat is de helft duurder en sinds stap 8 nog maar zelden
-nodig.
+**Stuur dit bestand mee. Meer is niet nodig** — hierin staat waar het project is, wat
+de afspraken zijn en waar alles staat.
+
+Werk je in Claude Code op het web, dan is de repository er al: `denniswijgers-blip/Vatko`,
+branch `claude/cowork-project-step-5-cdoe74`. Werk je lokaal, stuur dan de map mee waar
+je aan werkt — meestal alleen `server/`. Niet allebei de versies tegelijk: dat is de
+helft duurder en sinds stap 8 nog maar zelden nodig.
 
 Openingszin die werkt:
 
 > Dit is mijn WMS-project Vakto. In OVERDRACHT.md staat waar we zijn en welke
-> afspraken gelden. Ik wil [wat je wilt].
+> afspraken gelden — lees ook `server/LEESMIJ.md` voor de serverkant. Werk verder op
+> branch `claude/cowork-project-step-5-cdoe74`. Ik wil [wat je wilt].
 
 De negen stappen zijn af, dus er is geen "volgende stap" meer die vastligt. Wat er nu
 speelt is onderhoud, een eerste klant, en wat die klant vraagt.
+
+**Waar je aan zou kunnen beginnen**, als je nog niet weet wat:
+
+| | |
+|---|---|
+| De demo bijwerken | de gepubliceerde artifact-links hieronder zijn van vóór de laatste stappen |
+| De proef voorbereiden | een draaiboek voor die eerste dag bij iemand uit je netwerk |
+| Op een server zetten | `server/DRAAIEN.md` stap voor stap doorlopen |
+| Bijschaven | wat je opvalt als je zelf een tijdje door de schermen klikt |
